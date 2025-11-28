@@ -51,22 +51,36 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 1. **用户认证**: 使用Replit Auth支持邮箱/密码和OAuth登录
 2. **多钱包管理**: 支持现金、银行卡、数字钱包等多种支付方式
 3. **交易管理**: 支持支出、收入、转账三种交易类型
-4. **仪表盘**: 显示总资产摘要和最近交易历史
-5. **数据隔离**: 严格的用户数据隔离确保安全
+4. **多币种支持**: 默认MYR (马来西亚林吉特)，支持跨币种交易和自定义汇率
+5. **仪表盘**: 显示总资产摘要和最近交易历史
+6. **数据隔离**: 严格的用户数据隔离确保安全
 
 ## 数据模型
-- **users**: 用户信息表
+- **users**: 用户信息表 (id, email, firstName, lastName, profileImageUrl, defaultCurrency)
 - **sessions**: 会话存储表
-- **wallets**: 钱包表 (id, userId, name, type, balance, icon, color, isDefault)
+- **wallets**: 钱包表 (id, userId, name, type, currency, balance, icon, color, isDefault)
 - **categories**: 分类表 (id, userId, name, type, icon, color, isDefault)
-- **transactions**: 交易表 (id, userId, type, amount, walletId, toWalletId, categoryId, description, date)
+- **transactions**: 交易表 (id, userId, type, amount, currency, originalAmount, exchangeRate, walletId, toWalletId, toWalletAmount, toExchangeRate, categoryId, description, date)
 
 ## API路由
 - `GET /api/auth/user` - 获取当前用户信息
+- `PATCH /api/user/currency` - 更新用户默认币种
 - `GET /api/wallets` - 获取用户钱包列表
 - `GET /api/categories` - 获取用户分类列表
 - `GET /api/transactions` - 获取用户交易记录
 - `POST /api/transactions` - 创建新交易
+
+## 支持的货币
+- MYR (马来西亚林吉特) - RM
+- CNY (人民币) - ¥
+- USD (美元) - $
+- SGD (新加坡元) - S$
+- EUR (欧元) - €
+- GBP (英镑) - £
+- JPY (日元) - ¥
+- HKD (港币) - HK$
+- TWD (新台币) - NT$
+- THB (泰铢) - ฿
 
 ## 新用户初始化
 新用户登录时自动创建:

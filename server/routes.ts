@@ -2,8 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertTransactionSchema } from "@shared/schema";
+import { insertTransactionSchema, supportedCurrencies } from "@shared/schema";
 import { z } from "zod";
+
+const supportedCurrencyCodes = supportedCurrencies.map(c => c.code);
 
 export async function registerRoutes(
   httpServer: Server,
@@ -32,6 +34,11 @@ export async function registerRoutes(
       
       if (!currency || typeof currency !== 'string') {
         return res.status(400).json({ message: "Currency is required" });
+      }
+      
+      // Validate against supported currencies
+      if (!supportedCurrencyCodes.includes(currency)) {
+        return res.status(400).json({ message: "Unsupported currency" });
       }
       
       const user = await storage.updateUserCurrency(userId, currency);
@@ -101,9 +108,9 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       
       // Get currency-related fields from request
-      const inputCurrency = req.body.currency || "MYR";
+      const inputCurrency = req.body.currency || null; // null means use wallet currency
       const inputAmount = parseFloat(req.body.amount);
-      const exchangeRate = parseFloat(req.body.exchangeRate) || 1;
+      const exchangeRate = req.body.exchangeRate ? parseFloat(req.body.exchangeRate) : null;
       const toWalletAmount = req.body.toWalletAmount ? parseFloat(req.body.toWalletAmount) : null;
       const toExchangeRate = req.body.toExchangeRate ? parseFloat(req.body.toExchangeRate) : null;
 
@@ -112,9 +119,9 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid amount" });
       }
 
-      // Validate exchange rate
-      if (exchangeRate <= 0) {
-        return res.status(400).json({ message: "Invalid exchange rate" });
+      // Validate transaction type
+      if (!['expense', 'income', 'transfer'].includes(req.body.type)) {
+        return res.status(400).json({ message: "Invalid transaction type" });
       }
 
       // Verify wallet ownership
@@ -123,33 +130,43 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid wallet" });
       }
 
-      // Calculate wallet amount (convert input currency to wallet currency)
-      // If input currency matches wallet currency, no conversion needed
-      const walletAmount = inputCurrency === wallet.currency 
-        ? inputAmount 
-        : inputAmount * exchangeRate;
+      const walletCurrency = wallet.currency || "MYR";
+      const transactionCurrency = inputCurrency || walletCurrency;
+      const isCrosssCurrency = transactionCurrency !== walletCurrency;
 
-      // Validate transaction type
-      if (!['expense', 'income', 'transfer'].includes(req.body.type)) {
-        return res.status(400).json({ message: "Invalid transaction type" });
+      // Validate exchange rate when currencies differ
+      if (isCrosssCurrency) {
+        if (!exchangeRate || exchangeRate <= 0) {
+          return res.status(400).json({ message: "Exchange rate is required for cross-currency transactions" });
+        }
       }
 
-      // Build transaction data with currency fields
-      const transactionData = {
+      // Calculate wallet amount
+      // Exchange rate meaning: 1 transaction currency = X wallet currency
+      // So: walletAmount = inputAmount * exchangeRate
+      const walletAmount = isCrosssCurrency 
+        ? inputAmount * exchangeRate
+        : inputAmount;
+
+      // Build transaction data
+      // Always store currency (default to wallet currency)
+      const transactionData: any = {
         userId,
         type: req.body.type,
         amount: walletAmount.toFixed(2),
-        currency: inputCurrency,
-        originalAmount: inputAmount.toFixed(2),
-        exchangeRate: exchangeRate.toFixed(6),
+        currency: isCrosssCurrency ? transactionCurrency : walletCurrency,
         walletId: req.body.walletId,
         toWalletId: req.body.toWalletId || null,
-        toWalletAmount: toWalletAmount?.toFixed(2) || null,
-        toExchangeRate: toExchangeRate?.toFixed(6) || null,
         categoryId: req.body.categoryId || null,
         description: req.body.description || null,
         date: new Date(req.body.date),
       };
+
+      // Only store originalAmount and exchangeRate when there's actual conversion
+      if (isCrosssCurrency) {
+        transactionData.originalAmount = inputAmount.toFixed(2);
+        transactionData.exchangeRate = exchangeRate.toFixed(6);
+      }
 
       // For transfers, verify toWallet ownership
       if (transactionData.type === 'transfer') {
@@ -164,35 +181,44 @@ export async function registerRoutes(
           return res.status(400).json({ message: "Invalid destination wallet" });
         }
 
+        const toWalletCurrency = toWallet.currency || "MYR";
+        const isToWalletCrossCurrency = walletCurrency !== toWalletCurrency;
+
         // Update source wallet (decrease by wallet amount)
         const sourceBalance = parseFloat(wallet.balance || "0") - walletAmount;
         await storage.updateWalletBalance(wallet.id, userId, sourceBalance.toString());
 
         // Calculate destination amount
-        // If toWalletAmount is provided, use it (user specified conversion)
-        // Otherwise, if same currency, use same amount
-        // Otherwise, require toWalletAmount
         let destAmount = walletAmount;
-        if (toWalletAmount !== null) {
+        
+        if (isToWalletCrossCurrency) {
+          // Cross-currency transfer requires toWalletAmount
+          if (toWalletAmount === null || toWalletAmount <= 0) {
+            return res.status(400).json({ message: "Cross-currency transfer requires destination amount" });
+          }
           destAmount = toWalletAmount;
-        } else if (toWallet.currency !== wallet.currency) {
-          // Different currencies but no conversion provided - use original amount
+          transactionData.toWalletAmount = destAmount.toFixed(2);
+          if (toExchangeRate && toExchangeRate > 0) {
+            transactionData.toExchangeRate = toExchangeRate.toFixed(6);
+          }
+        } else {
+          // Same currency - ignore any toWalletAmount, use same amount
           destAmount = walletAmount;
+          transactionData.toWalletAmount = walletAmount.toFixed(2);
         }
 
         // Update destination wallet (increase)
         const destBalance = parseFloat(toWallet.balance || "0") + destAmount;
         await storage.updateWalletBalance(toWallet.id, userId, destBalance.toString());
-
-        // Update transaction data with to wallet amount
-        transactionData.toWalletAmount = destAmount.toFixed(2);
       } else if (transactionData.type === 'expense') {
         // Decrease wallet balance for expense
-        const newBalance = parseFloat(wallet.balance || "0") - walletAmount;
+        const currentBalance = parseFloat(wallet.balance || "0");
+        const newBalance = currentBalance - walletAmount;
         await storage.updateWalletBalance(wallet.id, userId, newBalance.toString());
       } else if (transactionData.type === 'income') {
         // Increase wallet balance for income
-        const newBalance = parseFloat(wallet.balance || "0") + walletAmount;
+        const currentBalance = parseFloat(wallet.balance || "0");
+        const newBalance = currentBalance + walletAmount;
         await storage.updateWalletBalance(wallet.id, userId, newBalance.toString());
       }
 

@@ -132,21 +132,34 @@ export function TransactionModal({
 
   const mutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
-      const exchangeRate = parseFloat(data.exchangeRate || "1");
-      const toWalletAmount = data.toWalletAmount ? parseFloat(data.toWalletAmount) : null;
+      const wallet = wallets.find((w) => String(w.id) === data.walletId);
+      const toWallet = wallets.find((w) => String(w.id) === data.toWalletId);
+      const walletCurrency = wallet?.currency || "MYR";
+      const isCrossCurrency = data.currency !== walletCurrency;
+      const isTransferCrossCurrency = data.type === "transfer" && toWallet && wallet && wallet.currency !== toWallet.currency;
       
-      await apiRequest("POST", "/api/transactions", {
+      const requestData: Record<string, unknown> = {
         type: data.type,
         amount: data.amount,
-        currency: data.currency,
-        exchangeRate: exchangeRate,
         walletId: parseInt(data.walletId),
         toWalletId: data.toWalletId ? parseInt(data.toWalletId) : null,
-        toWalletAmount: toWalletAmount,
         categoryId: data.categoryId ? parseInt(data.categoryId) : null,
         description: data.description || null,
         date: data.date.toISOString(),
-      });
+      };
+
+      // Only include currency conversion data when needed
+      if (isCrossCurrency) {
+        requestData.currency = data.currency;
+        requestData.exchangeRate = parseFloat(data.exchangeRate || "1");
+      }
+
+      // Only include toWalletAmount for cross-currency transfers
+      if (isTransferCrossCurrency && data.toWalletAmount) {
+        requestData.toWalletAmount = parseFloat(data.toWalletAmount);
+      }
+      
+      await apiRequest("POST", "/api/transactions", requestData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
@@ -188,6 +201,23 @@ export function TransactionModal({
       });
       return;
     }
+    
+    // For cross-currency transfers, require destination amount
+    if (data.type === "transfer") {
+      const fromWallet = wallets.find((w) => String(w.id) === data.walletId);
+      const toWallet = wallets.find((w) => String(w.id) === data.toWalletId);
+      if (fromWallet && toWallet && fromWallet.currency !== toWallet.currency) {
+        if (!data.toWalletAmount || parseFloat(data.toWalletAmount) <= 0) {
+          toast({
+            title: "转账失败",
+            description: "跨币种转账需要输入转入金额",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+    
     mutation.mutate(data);
   };
 

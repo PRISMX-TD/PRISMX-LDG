@@ -10,14 +10,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Wallet, LogOut, Settings, Globe } from "lucide-react";
+import { Wallet, LogOut, Globe } from "lucide-react";
 import type { User } from "@shared/schema";
 import { supportedCurrencies, getCurrencyInfo } from "@shared/schema";
 
@@ -28,6 +32,7 @@ interface HeaderProps {
 export function Header({ user }: HeaderProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   
   const displayName =
     user.firstName && user.lastName
@@ -40,7 +45,6 @@ export function Header({ user }: HeaderProps) {
       : displayName.slice(0, 2).toUpperCase();
 
   const currentCurrency = user.defaultCurrency || "MYR";
-  const currentCurrencyInfo = getCurrencyInfo(currentCurrency);
 
   const currencyMutation = useMutation({
     mutationFn: async (currency: string) => {
@@ -48,6 +52,7 @@ export function Header({ user }: HeaderProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setCurrencyDialogOpen(false);
       toast({
         title: "设置已更新",
         description: "默认币种已更改",
@@ -63,94 +68,116 @@ export function Header({ user }: HeaderProps) {
   });
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-      <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Wallet className="w-5 h-5 text-primary-foreground" />
+    <>
+      <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+        <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-lg hidden sm:block">
+              PRISMX Ledger
+            </span>
           </div>
-          <span className="font-semibold text-lg hidden sm:block">
-            PRISMX Ledger
-          </span>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative h-9 w-9 rounded-full"
-                data-testid="button-user-menu"
-              >
-                <Avatar className="h-9 w-9">
-                  <AvatarImage
-                    src={user.profileImageUrl || undefined}
-                    alt={displayName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <div className="flex items-center gap-3 px-2 py-2">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={user.profileImageUrl || undefined}
-                    alt={displayName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col space-y-0.5 min-w-0">
-                  <p className="text-sm font-medium truncate" data-testid="text-user-name">
-                    {displayName}
-                  </p>
-                  {user.email && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-9 w-9 rounded-full"
+                  data-testid="button-user-menu"
+                >
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage
+                      src={user.profileImageUrl || undefined}
+                      alt={displayName}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <div className="flex items-center gap-3 px-2 py-2">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage
+                      src={user.profileImageUrl || undefined}
+                      alt={displayName}
+                      className="object-cover"
+                    />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col space-y-0.5 min-w-0">
+                    <p className="text-sm font-medium truncate" data-testid="text-user-name">
+                      {displayName}
                     </p>
-                  )}
+                    {user.email && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger data-testid="button-currency-settings">
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onSelect={() => setCurrencyDialogOpen(true)}
+                  data-testid="button-currency-settings"
+                >
                   <Globe className="mr-2 h-4 w-4" />
                   <span>默认币种</span>
                   <span className="ml-auto text-xs text-muted-foreground">{currentCurrency}</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-48">
-                  <DropdownMenuRadioGroup 
-                    value={currentCurrency} 
-                    onValueChange={(value) => currencyMutation.mutate(value)}
-                  >
-                    {supportedCurrencies.map((currency) => (
-                      <DropdownMenuRadioItem 
-                        key={currency.code} 
-                        value={currency.code}
-                        data-testid={`option-default-currency-${currency.code}`}
-                      >
-                        <span className="mr-2">{currency.symbol}</span>
-                        {currency.name}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <a href="/api/logout" className="flex items-center" data-testid="button-logout">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>退出登录</span>
-                </a>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <a href="/api/logout" className="flex items-center" data-testid="button-logout">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>退出登录</span>
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <Dialog open={currencyDialogOpen} onOpenChange={setCurrencyDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]" data-testid="dialog-currency-settings">
+          <DialogHeader>
+            <DialogTitle>选择默认币种</DialogTitle>
+            <DialogDescription>
+              选择您的首选货币，此设置将用于显示总资产等汇总数据
+            </DialogDescription>
+          </DialogHeader>
+          <RadioGroup 
+            value={currentCurrency} 
+            onValueChange={(value) => currencyMutation.mutate(value)}
+            className="grid gap-2 pt-4"
+          >
+            {supportedCurrencies.map((currency) => (
+              <div key={currency.code} className="flex items-center space-x-3">
+                <RadioGroupItem 
+                  value={currency.code} 
+                  id={`currency-${currency.code}`}
+                  data-testid={`option-default-currency-${currency.code}`}
+                  disabled={currencyMutation.isPending}
+                />
+                <Label 
+                  htmlFor={`currency-${currency.code}`}
+                  className="flex items-center gap-2 cursor-pointer flex-1"
+                >
+                  <span className="w-8 font-mono text-muted-foreground">{currency.symbol}</span>
+                  <span>{currency.name}</span>
+                  <span className="text-xs text-muted-foreground">({currency.code})</span>
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
