@@ -3,6 +3,10 @@ import {
   wallets,
   categories,
   transactions,
+  budgets,
+  savingsGoals,
+  recurringTransactions,
+  billReminders,
   type User,
   type UpsertUser,
   type Wallet,
@@ -11,9 +15,17 @@ import {
   type InsertCategory,
   type Transaction,
   type InsertTransaction,
+  type Budget,
+  type InsertBudget,
+  type SavingsGoal,
+  type InsertSavingsGoal,
+  type RecurringTransaction,
+  type InsertRecurringTransaction,
+  type BillReminder,
+  type InsertBillReminder,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, between } from "drizzle-orm";
 
 // Default categories for new users
 const defaultExpenseCategories = [
@@ -61,14 +73,68 @@ export interface IStorage {
   getCategories(userId: string): Promise<Category[]>;
   getCategory(id: number, userId: string): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: number, userId: string, data: Partial<InsertCategory>): Promise<Category | undefined>;
+  deleteCategory(id: number, userId: string): Promise<boolean>;
 
   // Transaction operations
-  getTransactions(userId: string): Promise<any[]>;
+  getTransactions(userId: string, filters?: TransactionFilters): Promise<any[]>;
   getTransaction(id: number, userId: string): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getTransactionStats(userId: string, startDate: Date, endDate: Date): Promise<TransactionStats>;
+
+  // Budget operations
+  getBudgets(userId: string, month?: number, year?: number): Promise<Budget[]>;
+  getBudget(id: number, userId: string): Promise<Budget | undefined>;
+  createBudget(budget: InsertBudget): Promise<Budget>;
+  updateBudget(id: number, userId: string, data: Partial<InsertBudget>): Promise<Budget | undefined>;
+  deleteBudget(id: number, userId: string): Promise<boolean>;
+  getBudgetSpending(userId: string, month: number, year: number): Promise<BudgetWithSpending[]>;
+
+  // Savings goal operations
+  getSavingsGoals(userId: string): Promise<SavingsGoal[]>;
+  getSavingsGoal(id: number, userId: string): Promise<SavingsGoal | undefined>;
+  createSavingsGoal(goal: InsertSavingsGoal): Promise<SavingsGoal>;
+  updateSavingsGoal(id: number, userId: string, data: Partial<InsertSavingsGoal>): Promise<SavingsGoal | undefined>;
+  deleteSavingsGoal(id: number, userId: string): Promise<boolean>;
+
+  // Recurring transaction operations
+  getRecurringTransactions(userId: string): Promise<RecurringTransaction[]>;
+  getRecurringTransaction(id: number, userId: string): Promise<RecurringTransaction | undefined>;
+  createRecurringTransaction(recurring: InsertRecurringTransaction): Promise<RecurringTransaction>;
+  updateRecurringTransaction(id: number, userId: string, data: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction | undefined>;
+  deleteRecurringTransaction(id: number, userId: string): Promise<boolean>;
+
+  // Bill reminder operations
+  getBillReminders(userId: string): Promise<BillReminder[]>;
+  getBillReminder(id: number, userId: string): Promise<BillReminder | undefined>;
+  createBillReminder(reminder: InsertBillReminder): Promise<BillReminder>;
+  updateBillReminder(id: number, userId: string, data: Partial<InsertBillReminder>): Promise<BillReminder | undefined>;
+  deleteBillReminder(id: number, userId: string): Promise<boolean>;
 
   // Initialization
   initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
+}
+
+// Types for filters and stats
+export interface TransactionFilters {
+  startDate?: Date;
+  endDate?: Date;
+  categoryId?: number;
+  walletId?: number;
+  type?: string;
+  search?: string;
+}
+
+export interface TransactionStats {
+  totalIncome: number;
+  totalExpense: number;
+  categoryBreakdown: { categoryId: number; categoryName: string; total: number; color: string }[];
+}
+
+export interface BudgetWithSpending extends Budget {
+  spent: number;
+  categoryName: string;
+  categoryColor: string;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -193,9 +259,27 @@ export class DatabaseStorage implements IStorage {
     return newCategory;
   }
 
-  // Transaction operations
-  async getTransactions(userId: string): Promise<any[]> {
+  // Category update and delete
+  async updateCategory(id: number, userId: string, data: Partial<InsertCategory>): Promise<Category | undefined> {
+    const [updated] = await db
+      .update(categories)
+      .set(data)
+      .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteCategory(id: number, userId: string): Promise<boolean> {
     const result = await db
+      .delete(categories)
+      .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Transaction operations
+  async getTransactions(userId: string, filters?: TransactionFilters): Promise<any[]> {
+    let query = db
       .select({
         id: transactions.id,
         userId: transactions.userId,
@@ -205,6 +289,7 @@ export class DatabaseStorage implements IStorage {
         toWalletId: transactions.toWalletId,
         categoryId: transactions.categoryId,
         description: transactions.description,
+        tags: transactions.tags,
         date: transactions.date,
         createdAt: transactions.createdAt,
         category: categories,
@@ -214,11 +299,41 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(categories, eq(transactions.categoryId, categories.id))
       .leftJoin(wallets, eq(transactions.walletId, wallets.id))
       .where(eq(transactions.userId, userId))
-      .orderBy(desc(transactions.date));
+      .orderBy(desc(transactions.date))
+      .$dynamic();
+
+    const result = await query;
+
+    // Apply filters in memory for simplicity
+    let filtered = result;
+    if (filters) {
+      if (filters.startDate) {
+        filtered = filtered.filter(t => new Date(t.date) >= filters.startDate!);
+      }
+      if (filters.endDate) {
+        filtered = filtered.filter(t => new Date(t.date) <= filters.endDate!);
+      }
+      if (filters.categoryId) {
+        filtered = filtered.filter(t => t.categoryId === filters.categoryId);
+      }
+      if (filters.walletId) {
+        filtered = filtered.filter(t => t.walletId === filters.walletId);
+      }
+      if (filters.type) {
+        filtered = filtered.filter(t => t.type === filters.type);
+      }
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        filtered = filtered.filter(t => 
+          t.description?.toLowerCase().includes(searchLower) ||
+          t.category?.name.toLowerCase().includes(searchLower)
+        );
+      }
+    }
 
     // Get toWallet data for transfers
     const transactionsWithToWallet = await Promise.all(
-      result.map(async (t) => {
+      filtered.map(async (t) => {
         let toWallet = null;
         if (t.toWalletId) {
           const [tw] = await db
@@ -236,6 +351,7 @@ export class DatabaseStorage implements IStorage {
           toWalletId: t.toWalletId,
           categoryId: t.categoryId,
           description: t.description,
+          tags: t.tags,
           date: t.date,
           createdAt: t.createdAt,
           category: t.category,
@@ -262,6 +378,191 @@ export class DatabaseStorage implements IStorage {
       .values(transaction)
       .returning();
     return newTransaction;
+  }
+
+  async getTransactionStats(userId: string, startDate: Date, endDate: Date): Promise<TransactionStats> {
+    const allTransactions = await this.getTransactions(userId, { startDate, endDate });
+    
+    let totalIncome = 0;
+    let totalExpense = 0;
+    const categoryTotals: Map<number, { name: string; total: number; color: string }> = new Map();
+
+    for (const t of allTransactions) {
+      const amount = parseFloat(t.amount);
+      if (t.type === 'income') {
+        totalIncome += amount;
+      } else if (t.type === 'expense') {
+        totalExpense += amount;
+        if (t.categoryId && t.category) {
+          const existing = categoryTotals.get(t.categoryId);
+          if (existing) {
+            existing.total += amount;
+          } else {
+            categoryTotals.set(t.categoryId, {
+              name: t.category.name,
+              total: amount,
+              color: t.category.color || '#6B7280',
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      totalIncome,
+      totalExpense,
+      categoryBreakdown: Array.from(categoryTotals.entries()).map(([categoryId, data]) => ({
+        categoryId,
+        categoryName: data.name,
+        total: data.total,
+        color: data.color,
+      })).sort((a, b) => b.total - a.total),
+    };
+  }
+
+  // Budget operations
+  async getBudgets(userId: string, month?: number, year?: number): Promise<Budget[]> {
+    if (month !== undefined && year !== undefined) {
+      return db.select().from(budgets)
+        .where(and(eq(budgets.userId, userId), eq(budgets.month, month), eq(budgets.year, year)));
+    }
+    return db.select().from(budgets).where(eq(budgets.userId, userId));
+  }
+
+  async getBudget(id: number, userId: string): Promise<Budget | undefined> {
+    const [budget] = await db.select().from(budgets)
+      .where(and(eq(budgets.id, id), eq(budgets.userId, userId)));
+    return budget;
+  }
+
+  async createBudget(budget: InsertBudget): Promise<Budget> {
+    const [newBudget] = await db.insert(budgets).values(budget).returning();
+    return newBudget;
+  }
+
+  async updateBudget(id: number, userId: string, data: Partial<InsertBudget>): Promise<Budget | undefined> {
+    const [updated] = await db.update(budgets).set(data)
+      .where(and(eq(budgets.id, id), eq(budgets.userId, userId))).returning();
+    return updated;
+  }
+
+  async deleteBudget(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(budgets)
+      .where(and(eq(budgets.id, id), eq(budgets.userId, userId))).returning();
+    return result.length > 0;
+  }
+
+  async getBudgetSpending(userId: string, month: number, year: number): Promise<BudgetWithSpending[]> {
+    const monthBudgets = await this.getBudgets(userId, month, year);
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    const result: BudgetWithSpending[] = [];
+    
+    for (const budget of monthBudgets) {
+      const category = await this.getCategory(budget.categoryId, userId);
+      const transactions = await this.getTransactions(userId, {
+        startDate,
+        endDate,
+        categoryId: budget.categoryId,
+        type: 'expense',
+      });
+      
+      const spent = transactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      
+      result.push({
+        ...budget,
+        spent,
+        categoryName: category?.name || 'Unknown',
+        categoryColor: category?.color || '#6B7280',
+      });
+    }
+    
+    return result;
+  }
+
+  // Savings goal operations
+  async getSavingsGoals(userId: string): Promise<SavingsGoal[]> {
+    return db.select().from(savingsGoals).where(eq(savingsGoals.userId, userId));
+  }
+
+  async getSavingsGoal(id: number, userId: string): Promise<SavingsGoal | undefined> {
+    const [goal] = await db.select().from(savingsGoals)
+      .where(and(eq(savingsGoals.id, id), eq(savingsGoals.userId, userId)));
+    return goal;
+  }
+
+  async createSavingsGoal(goal: InsertSavingsGoal): Promise<SavingsGoal> {
+    const [newGoal] = await db.insert(savingsGoals).values(goal).returning();
+    return newGoal;
+  }
+
+  async updateSavingsGoal(id: number, userId: string, data: Partial<InsertSavingsGoal>): Promise<SavingsGoal | undefined> {
+    const [updated] = await db.update(savingsGoals).set(data)
+      .where(and(eq(savingsGoals.id, id), eq(savingsGoals.userId, userId))).returning();
+    return updated;
+  }
+
+  async deleteSavingsGoal(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(savingsGoals)
+      .where(and(eq(savingsGoals.id, id), eq(savingsGoals.userId, userId))).returning();
+    return result.length > 0;
+  }
+
+  // Recurring transaction operations
+  async getRecurringTransactions(userId: string): Promise<RecurringTransaction[]> {
+    return db.select().from(recurringTransactions).where(eq(recurringTransactions.userId, userId));
+  }
+
+  async getRecurringTransaction(id: number, userId: string): Promise<RecurringTransaction | undefined> {
+    const [recurring] = await db.select().from(recurringTransactions)
+      .where(and(eq(recurringTransactions.id, id), eq(recurringTransactions.userId, userId)));
+    return recurring;
+  }
+
+  async createRecurringTransaction(recurring: InsertRecurringTransaction): Promise<RecurringTransaction> {
+    const [newRecurring] = await db.insert(recurringTransactions).values(recurring).returning();
+    return newRecurring;
+  }
+
+  async updateRecurringTransaction(id: number, userId: string, data: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction | undefined> {
+    const [updated] = await db.update(recurringTransactions).set(data)
+      .where(and(eq(recurringTransactions.id, id), eq(recurringTransactions.userId, userId))).returning();
+    return updated;
+  }
+
+  async deleteRecurringTransaction(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(recurringTransactions)
+      .where(and(eq(recurringTransactions.id, id), eq(recurringTransactions.userId, userId))).returning();
+    return result.length > 0;
+  }
+
+  // Bill reminder operations
+  async getBillReminders(userId: string): Promise<BillReminder[]> {
+    return db.select().from(billReminders).where(eq(billReminders.userId, userId)).orderBy(billReminders.dueDate);
+  }
+
+  async getBillReminder(id: number, userId: string): Promise<BillReminder | undefined> {
+    const [reminder] = await db.select().from(billReminders)
+      .where(and(eq(billReminders.id, id), eq(billReminders.userId, userId)));
+    return reminder;
+  }
+
+  async createBillReminder(reminder: InsertBillReminder): Promise<BillReminder> {
+    const [newReminder] = await db.insert(billReminders).values(reminder).returning();
+    return newReminder;
+  }
+
+  async updateBillReminder(id: number, userId: string, data: Partial<InsertBillReminder>): Promise<BillReminder | undefined> {
+    const [updated] = await db.update(billReminders).set(data)
+      .where(and(eq(billReminders.id, id), eq(billReminders.userId, userId))).returning();
+    return updated;
+  }
+
+  async deleteBillReminder(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(billReminders)
+      .where(and(eq(billReminders.id, id), eq(billReminders.userId, userId))).returning();
+    return result.length > 0;
   }
 
   // Initialize default data for new users with idempotent inserts

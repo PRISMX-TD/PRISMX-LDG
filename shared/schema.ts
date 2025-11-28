@@ -79,7 +79,66 @@ export const transactions = pgTable("transactions", {
   toExchangeRate: decimal("to_exchange_rate", { precision: 15, scale: 6 }), // exchange rate for destination wallet
   categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
   description: text("description"),
+  tags: text("tags").array(), // tags for transaction
   date: timestamp("date").notNull().defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Budgets table - monthly budget per category
+export const budgets = pgTable("budgets", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Savings goals table
+export const savingsGoals = pgTable("savings_goals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  targetAmount: decimal("target_amount", { precision: 15, scale: 2 }).notNull(),
+  currentAmount: decimal("current_amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  currency: varchar("currency", { length: 10 }).notNull().default("MYR"),
+  targetDate: timestamp("target_date"),
+  icon: varchar("icon", { length: 50 }),
+  color: varchar("color", { length: 20 }),
+  isCompleted: boolean("is_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Recurring transactions table
+export const recurringTransactions = pgTable("recurring_transactions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 20 }).notNull(), // expense, income
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  walletId: integer("wallet_id").notNull().references(() => wallets.id, { onDelete: "cascade" }),
+  categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
+  description: text("description"),
+  frequency: varchar("frequency", { length: 20 }).notNull(), // daily, weekly, monthly, yearly
+  dayOfMonth: integer("day_of_month"), // 1-31 for monthly
+  dayOfWeek: integer("day_of_week"), // 0-6 for weekly (0=Sunday)
+  nextExecutionDate: timestamp("next_execution_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Bill reminders table
+export const billReminders = pgTable("bill_reminders", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }),
+  dueDate: timestamp("due_date").notNull(),
+  frequency: varchar("frequency", { length: 20 }).notNull(), // once, weekly, monthly, yearly
+  categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
+  walletId: integer("wallet_id").references(() => wallets.id, { onDelete: "set null" }),
+  isPaid: boolean("is_paid").default(false),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -88,6 +147,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   wallets: many(wallets),
   categories: many(categories),
   transactions: many(transactions),
+  budgets: many(budgets),
+  savingsGoals: many(savingsGoals),
+  recurringTransactions: many(recurringTransactions),
+  billReminders: many(billReminders),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -98,6 +161,7 @@ export const walletsRelations = relations(wallets, ({ one, many }) => ({
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   user: one(users, { fields: [categories.userId], references: [users.id] }),
   transactions: many(transactions),
+  budgets: many(budgets),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
@@ -105,6 +169,27 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   wallet: one(wallets, { fields: [transactions.walletId], references: [wallets.id] }),
   toWallet: one(wallets, { fields: [transactions.toWalletId], references: [wallets.id] }),
   category: one(categories, { fields: [transactions.categoryId], references: [categories.id] }),
+}));
+
+export const budgetsRelations = relations(budgets, ({ one }) => ({
+  user: one(users, { fields: [budgets.userId], references: [users.id] }),
+  category: one(categories, { fields: [budgets.categoryId], references: [categories.id] }),
+}));
+
+export const savingsGoalsRelations = relations(savingsGoals, ({ one }) => ({
+  user: one(users, { fields: [savingsGoals.userId], references: [users.id] }),
+}));
+
+export const recurringTransactionsRelations = relations(recurringTransactions, ({ one }) => ({
+  user: one(users, { fields: [recurringTransactions.userId], references: [users.id] }),
+  wallet: one(wallets, { fields: [recurringTransactions.walletId], references: [wallets.id] }),
+  category: one(categories, { fields: [recurringTransactions.categoryId], references: [categories.id] }),
+}));
+
+export const billRemindersRelations = relations(billReminders, ({ one }) => ({
+  user: one(users, { fields: [billReminders.userId], references: [users.id] }),
+  category: one(categories, { fields: [billReminders.categoryId], references: [categories.id] }),
+  wallet: one(wallets, { fields: [billReminders.walletId], references: [wallets.id] }),
 }));
 
 // Types
@@ -120,6 +205,18 @@ export type Category = typeof categories.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 
+export type InsertBudget = typeof budgets.$inferInsert;
+export type Budget = typeof budgets.$inferSelect;
+
+export type InsertSavingsGoal = typeof savingsGoals.$inferInsert;
+export type SavingsGoal = typeof savingsGoals.$inferSelect;
+
+export type InsertRecurringTransaction = typeof recurringTransactions.$inferInsert;
+export type RecurringTransaction = typeof recurringTransactions.$inferSelect;
+
+export type InsertBillReminder = typeof billReminders.$inferInsert;
+export type BillReminder = typeof billReminders.$inferSelect;
+
 // Zod schemas for validation
 export const insertWalletSchema = createInsertSchema(wallets).omit({
   id: true,
@@ -132,6 +229,26 @@ export const insertCategorySchema = createInsertSchema(categories).omit({
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBudgetSchema = createInsertSchema(budgets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRecurringTransactionSchema = createInsertSchema(recurringTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBillReminderSchema = createInsertSchema(billReminders).omit({
   id: true,
   createdAt: true,
 });
