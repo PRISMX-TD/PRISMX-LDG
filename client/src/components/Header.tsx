@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -6,16 +10,25 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Wallet, LogOut, User as UserIcon } from "lucide-react";
+import { Wallet, LogOut, Settings, Globe } from "lucide-react";
 import type { User } from "@shared/schema";
+import { supportedCurrencies, getCurrencyInfo } from "@shared/schema";
 
 interface HeaderProps {
   user: User;
 }
 
 export function Header({ user }: HeaderProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const displayName =
     user.firstName && user.lastName
       ? `${user.firstName} ${user.lastName}`
@@ -25,6 +38,29 @@ export function Header({ user }: HeaderProps) {
     user.firstName && user.lastName
       ? `${user.firstName[0]}${user.lastName[0]}`
       : displayName.slice(0, 2).toUpperCase();
+
+  const currentCurrency = user.defaultCurrency || "MYR";
+  const currentCurrencyInfo = getCurrencyInfo(currentCurrency);
+
+  const currencyMutation = useMutation({
+    mutationFn: async (currency: string) => {
+      await apiRequest("PATCH", "/api/user/currency", { currency });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "设置已更新",
+        description: "默认币种已更改",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "更新失败",
+        description: "请稍后重试",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
@@ -79,6 +115,31 @@ export function Header({ user }: HeaderProps) {
                   )}
                 </div>
               </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger data-testid="button-currency-settings">
+                  <Globe className="mr-2 h-4 w-4" />
+                  <span>默认币种</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{currentCurrency}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-48">
+                  <DropdownMenuRadioGroup 
+                    value={currentCurrency} 
+                    onValueChange={(value) => currencyMutation.mutate(value)}
+                  >
+                    {supportedCurrencies.map((currency) => (
+                      <DropdownMenuRadioItem 
+                        key={currency.code} 
+                        value={currency.code}
+                        data-testid={`option-default-currency-${currency.code}`}
+                      >
+                        <span className="mr-2">{currency.symbol}</span>
+                        {currency.name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="cursor-pointer">
                 <a href="/api/logout" className="flex items-center" data-testid="button-logout">

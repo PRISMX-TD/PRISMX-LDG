@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Wallet } from "@shared/schema";
+import { getCurrencyInfo } from "@shared/schema";
 import {
   Wallet as WalletIcon,
   CreditCard,
@@ -30,6 +31,7 @@ const walletTypeIcons: Record<string, typeof WalletIcon> = {
 export function WalletCard({ wallet, onClick }: WalletCardProps) {
   const Icon = walletTypeIcons[wallet.type] || WalletIcon;
   const balance = parseFloat(wallet.balance || "0");
+  const currencyInfo = getCurrencyInfo(wallet.currency || "MYR");
   
   return (
     <Card
@@ -55,7 +57,7 @@ export function WalletCard({ wallet, onClick }: WalletCardProps) {
           <div>
             <h3 className="font-medium text-base">{wallet.name}</h3>
             <p className="text-xs text-muted-foreground">
-              {walletTypeLabels[wallet.type] || wallet.type}
+              {walletTypeLabels[wallet.type] || wallet.type} · {wallet.currency || "MYR"}
             </p>
           </div>
         </div>
@@ -73,7 +75,7 @@ export function WalletCard({ wallet, onClick }: WalletCardProps) {
             }`}
             data-testid={`text-balance-${wallet.id}`}
           >
-            ¥{balance.toLocaleString("zh-CN", {
+            {currencyInfo.symbol}{balance.toLocaleString("zh-CN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}

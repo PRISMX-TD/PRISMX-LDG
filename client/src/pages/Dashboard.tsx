@@ -121,7 +121,11 @@ export default function Dashboard() {
 
       <main className="container mx-auto px-4 sm:px-6 py-6 space-y-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <TotalAssetsCard wallets={wallets} isLoading={isWalletsLoading} />
+          <TotalAssetsCard 
+            wallets={wallets} 
+            isLoading={isWalletsLoading} 
+            defaultCurrency={user?.defaultCurrency || "MYR"}
+          />
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
@@ -262,6 +266,7 @@ export default function Dashboard() {
         onOpenChange={setIsModalOpen}
         wallets={wallets}
         categories={categories}
+        defaultCurrency={user?.defaultCurrency || "MYR"}
       />
     </div>
   );

@@ -24,6 +24,27 @@ export async function registerRoutes(
     }
   });
 
+  // Update user's default currency
+  app.patch('/api/user/currency', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { currency } = req.body;
+      
+      if (!currency || typeof currency !== 'string') {
+        return res.status(400).json({ message: "Currency is required" });
+      }
+      
+      const user = await storage.updateUserCurrency(userId, currency);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user currency:", error);
+      res.status(500).json({ message: "Failed to update currency" });
+    }
+  });
+
   // Wallet routes
   app.get('/api/wallets', isAuthenticated, async (req: any, res) => {
     try {
@@ -79,43 +100,56 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       
-      // Validate request body using Zod schema
-      const validationResult = insertTransactionSchema.safeParse({
-        userId,
-        type: req.body.type,
-        amount: req.body.amount?.toString(),
-        walletId: req.body.walletId,
-        toWalletId: req.body.toWalletId || null,
-        categoryId: req.body.categoryId || null,
-        description: req.body.description || null,
-        date: new Date(req.body.date),
-      });
-
-      if (!validationResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid request data",
-          errors: validationResult.error.flatten()
-        });
-      }
-
-      const transactionData = validationResult.data;
-
-      // Validate transaction type
-      if (!['expense', 'income', 'transfer'].includes(transactionData.type)) {
-        return res.status(400).json({ message: "Invalid transaction type" });
-      }
+      // Get currency-related fields from request
+      const inputCurrency = req.body.currency || "MYR";
+      const inputAmount = parseFloat(req.body.amount);
+      const exchangeRate = parseFloat(req.body.exchangeRate) || 1;
+      const toWalletAmount = req.body.toWalletAmount ? parseFloat(req.body.toWalletAmount) : null;
+      const toExchangeRate = req.body.toExchangeRate ? parseFloat(req.body.toExchangeRate) : null;
 
       // Validate amount
-      const amount = parseFloat(transactionData.amount);
-      if (isNaN(amount) || amount <= 0) {
+      if (isNaN(inputAmount) || inputAmount <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
       }
 
+      // Validate exchange rate
+      if (exchangeRate <= 0) {
+        return res.status(400).json({ message: "Invalid exchange rate" });
+      }
+
       // Verify wallet ownership
-      const wallet = await storage.getWallet(transactionData.walletId, userId);
+      const wallet = await storage.getWallet(req.body.walletId, userId);
       if (!wallet) {
         return res.status(400).json({ message: "Invalid wallet" });
       }
+
+      // Calculate wallet amount (convert input currency to wallet currency)
+      // If input currency matches wallet currency, no conversion needed
+      const walletAmount = inputCurrency === wallet.currency 
+        ? inputAmount 
+        : inputAmount * exchangeRate;
+
+      // Validate transaction type
+      if (!['expense', 'income', 'transfer'].includes(req.body.type)) {
+        return res.status(400).json({ message: "Invalid transaction type" });
+      }
+
+      // Build transaction data with currency fields
+      const transactionData = {
+        userId,
+        type: req.body.type,
+        amount: walletAmount.toFixed(2),
+        currency: inputCurrency,
+        originalAmount: inputAmount.toFixed(2),
+        exchangeRate: exchangeRate.toFixed(6),
+        walletId: req.body.walletId,
+        toWalletId: req.body.toWalletId || null,
+        toWalletAmount: toWalletAmount?.toFixed(2) || null,
+        toExchangeRate: toExchangeRate?.toFixed(6) || null,
+        categoryId: req.body.categoryId || null,
+        description: req.body.description || null,
+        date: new Date(req.body.date),
+      };
 
       // For transfers, verify toWallet ownership
       if (transactionData.type === 'transfer') {
@@ -130,20 +164,35 @@ export async function registerRoutes(
           return res.status(400).json({ message: "Invalid destination wallet" });
         }
 
-        // Update source wallet (decrease)
-        const sourceBalance = parseFloat(wallet.balance || "0") - amount;
+        // Update source wallet (decrease by wallet amount)
+        const sourceBalance = parseFloat(wallet.balance || "0") - walletAmount;
         await storage.updateWalletBalance(wallet.id, userId, sourceBalance.toString());
 
+        // Calculate destination amount
+        // If toWalletAmount is provided, use it (user specified conversion)
+        // Otherwise, if same currency, use same amount
+        // Otherwise, require toWalletAmount
+        let destAmount = walletAmount;
+        if (toWalletAmount !== null) {
+          destAmount = toWalletAmount;
+        } else if (toWallet.currency !== wallet.currency) {
+          // Different currencies but no conversion provided - use original amount
+          destAmount = walletAmount;
+        }
+
         // Update destination wallet (increase)
-        const destBalance = parseFloat(toWallet.balance || "0") + amount;
+        const destBalance = parseFloat(toWallet.balance || "0") + destAmount;
         await storage.updateWalletBalance(toWallet.id, userId, destBalance.toString());
+
+        // Update transaction data with to wallet amount
+        transactionData.toWalletAmount = destAmount.toFixed(2);
       } else if (transactionData.type === 'expense') {
         // Decrease wallet balance for expense
-        const newBalance = parseFloat(wallet.balance || "0") - amount;
+        const newBalance = parseFloat(wallet.balance || "0") - walletAmount;
         await storage.updateWalletBalance(wallet.id, userId, newBalance.toString());
       } else if (transactionData.type === 'income') {
         // Increase wallet balance for income
-        const newBalance = parseFloat(wallet.balance || "0") + amount;
+        const newBalance = parseFloat(wallet.balance || "0") + walletAmount;
         await storage.updateWalletBalance(wallet.id, userId, newBalance.toString());
       }
 

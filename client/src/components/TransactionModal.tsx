@@ -37,16 +37,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, ArrowRightLeft } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import type { Wallet, Category, TransactionType } from "@shared/schema";
+import { supportedCurrencies, getCurrencyInfo } from "@shared/schema";
 
 interface TransactionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wallets: Wallet[];
   categories: Category[];
+  defaultCurrency?: string;
 }
 
 const transactionSchema = z.object({
@@ -55,8 +57,11 @@ const transactionSchema = z.object({
     (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
     "请输入有效金额"
   ),
+  currency: z.string().min(1, "请选择币种"),
+  exchangeRate: z.string().optional(),
   walletId: z.string().min(1, "请选择钱包"),
   toWalletId: z.string().optional(),
+  toWalletAmount: z.string().optional(),
   categoryId: z.string().optional(),
   description: z.string().optional(),
   date: z.date(),
@@ -69,6 +74,7 @@ export function TransactionModal({
   onOpenChange,
   wallets,
   categories,
+  defaultCurrency = "MYR",
 }: TransactionModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -79,34 +85,64 @@ export function TransactionModal({
     defaultValues: {
       type: "expense",
       amount: "",
+      currency: defaultCurrency,
+      exchangeRate: "1",
       walletId: "",
       toWalletId: "",
+      toWalletAmount: "",
       categoryId: "",
       description: "",
       date: new Date(),
     },
   });
 
+  const watchCurrency = form.watch("currency");
+  const watchWalletId = form.watch("walletId");
+  const watchToWalletId = form.watch("toWalletId");
+  const watchAmount = form.watch("amount");
+  const watchExchangeRate = form.watch("exchangeRate");
+
+  const selectedWallet = wallets.find((w) => String(w.id) === watchWalletId);
+  const selectedToWallet = wallets.find((w) => String(w.id) === watchToWalletId);
+
+  const needsCurrencyConversion = selectedWallet && watchCurrency !== selectedWallet.currency;
+  const needsTransferConversion = activeTab === "transfer" && selectedWallet && selectedToWallet && selectedWallet.currency !== selectedToWallet.currency;
+
   useEffect(() => {
     form.setValue("type", activeTab);
     form.setValue("categoryId", "");
     form.setValue("toWalletId", "");
+    form.setValue("toWalletAmount", "");
   }, [activeTab, form]);
 
   useEffect(() => {
     if (open && wallets.length > 0) {
       const defaultWallet = wallets.find((w) => w.isDefault) || wallets[0];
       form.setValue("walletId", String(defaultWallet.id));
+      form.setValue("currency", defaultCurrency);
+      form.setValue("exchangeRate", "1");
     }
-  }, [open, wallets, form]);
+  }, [open, wallets, form, defaultCurrency]);
+
+  useEffect(() => {
+    if (selectedWallet && watchCurrency === selectedWallet.currency) {
+      form.setValue("exchangeRate", "1");
+    }
+  }, [watchCurrency, selectedWallet, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
+      const exchangeRate = parseFloat(data.exchangeRate || "1");
+      const toWalletAmount = data.toWalletAmount ? parseFloat(data.toWalletAmount) : null;
+      
       await apiRequest("POST", "/api/transactions", {
         type: data.type,
         amount: data.amount,
+        currency: data.currency,
+        exchangeRate: exchangeRate,
         walletId: parseInt(data.walletId),
         toWalletId: data.toWalletId ? parseInt(data.toWalletId) : null,
+        toWalletAmount: toWalletAmount,
         categoryId: data.categoryId ? parseInt(data.categoryId) : null,
         description: data.description || null,
         date: data.date.toISOString(),
@@ -165,9 +201,16 @@ export function TransactionModal({
     transfer: "转账",
   };
 
+  const currencyInfo = getCurrencyInfo(watchCurrency);
+  const walletCurrencyInfo = selectedWallet ? getCurrencyInfo(selectedWallet.currency) : null;
+
+  const calculatedWalletAmount = needsCurrencyConversion && watchAmount && watchExchangeRate
+    ? (parseFloat(watchAmount) * parseFloat(watchExchangeRate || "1")).toFixed(2)
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" data-testid="modal-transaction" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" data-testid="modal-transaction" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-semibold">
             记一笔
@@ -194,32 +237,98 @@ export function TransactionModal({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>金额</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">
-                        ¥
-                      </span>
-                      <Input
-                        {...field}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        className="pl-8 text-2xl font-mono h-14 text-right"
-                        data-testid="input-amount"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="flex gap-2">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>金额</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">
+                          {currencyInfo.symbol}
+                        </span>
+                        <Input
+                          {...field}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          className="pl-10 text-xl font-mono h-12 text-right"
+                          data-testid="input-amount"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem className="w-28">
+                    <FormLabel>币种</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-12" data-testid="select-currency">
+                          <SelectValue placeholder="币种" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {supportedCurrencies.map((currency) => (
+                          <SelectItem
+                            key={currency.code}
+                            value={currency.code}
+                            data-testid={`option-currency-${currency.code}`}
+                          >
+                            {currency.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {needsCurrencyConversion && (
+              <div className="p-3 bg-muted rounded-lg space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ArrowRightLeft className="h-4 w-4" />
+                  <span>需要货币转换 ({watchCurrency} → {selectedWallet?.currency})</span>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="exchangeRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">汇率 (1 {watchCurrency} = ? {selectedWallet?.currency})</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          step="0.0001"
+                          min="0.0001"
+                          placeholder="1.0000"
+                          className="font-mono"
+                          data-testid="input-exchange-rate"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {calculatedWalletAmount && (
+                  <div className="text-sm text-muted-foreground">
+                    将记录: {walletCurrencyInfo?.symbol}{calculatedWalletAmount} {selectedWallet?.currency}
+                  </div>
+                )}
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -242,7 +351,7 @@ export function TransactionModal({
                           value={String(wallet.id)}
                           data-testid={`option-wallet-${wallet.id}`}
                         >
-                          {wallet.name}
+                          {wallet.name} ({wallet.currency})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -253,36 +362,73 @@ export function TransactionModal({
             />
 
             {activeTab === "transfer" && (
-              <FormField
-                control={form.control}
-                name="toWalletId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>转入钱包</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-to-wallet">
-                          <SelectValue placeholder="选择转入钱包" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {wallets
-                          .filter((w) => String(w.id) !== form.watch("walletId"))
-                          .map((wallet) => (
-                            <SelectItem
-                              key={wallet.id}
-                              value={String(wallet.id)}
-                              data-testid={`option-to-wallet-${wallet.id}`}
-                            >
-                              {wallet.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+              <>
+                <FormField
+                  control={form.control}
+                  name="toWalletId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>转入钱包</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-to-wallet">
+                            <SelectValue placeholder="选择转入钱包" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {wallets
+                            .filter((w) => String(w.id) !== form.watch("walletId"))
+                            .map((wallet) => (
+                              <SelectItem
+                                key={wallet.id}
+                                value={String(wallet.id)}
+                                data-testid={`option-to-wallet-${wallet.id}`}
+                              >
+                                {wallet.name} ({wallet.currency})
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {needsTransferConversion && (
+                  <div className="p-3 bg-muted rounded-lg space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <ArrowRightLeft className="h-4 w-4" />
+                      <span>不同币种转账 ({selectedWallet?.currency} → {selectedToWallet?.currency})</span>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="toWalletAmount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">转入金额 ({selectedToWallet?.currency})</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                {getCurrencyInfo(selectedToWallet?.currency || "MYR").symbol}
+                              </span>
+                              <Input
+                                {...field}
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                className="pl-10 font-mono"
+                                data-testid="input-to-wallet-amount"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 )}
-              />
+              </>
             )}
 
             {activeTab !== "transfer" && (

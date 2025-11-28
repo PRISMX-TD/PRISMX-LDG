@@ -1,4 +1,5 @@
 import type { Transaction, Category, Wallet } from "@shared/schema";
+import { getCurrencyInfo } from "@shared/schema";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import {
@@ -131,13 +132,21 @@ export function TransactionItem({
           className={`font-semibold font-mono ${getTypeColor()}`}
           data-testid={`text-amount-${transaction.id}`}
         >
-          {getAmountPrefix()}¥
+          {getAmountPrefix()}{getCurrencyInfo(wallet?.currency || "MYR").symbol}
           {amount.toLocaleString("zh-CN", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
         </p>
-        {category && !isTransfer && (
+        {transaction.currency && transaction.currency !== (wallet?.currency || "MYR") && transaction.originalAmount && (
+          <p className="text-xs text-muted-foreground">
+            原: {getCurrencyInfo(transaction.currency).symbol}{parseFloat(transaction.originalAmount).toLocaleString("zh-CN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </p>
+        )}
+        {category && !isTransfer && !transaction.originalAmount && (
           <p className="text-xs text-muted-foreground">{category.name}</p>
         )}
       </div>
