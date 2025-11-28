@@ -152,7 +152,7 @@ export async function registerRoutes(
       
       // Validate type if provided
       if (type !== undefined) {
-        const validTypes = ['cash', 'bank_card', 'digital_wallet', 'credit_card'];
+        const validTypes = ['cash', 'bank_card', 'digital_wallet', 'credit_card', 'investment', 'savings', 'other'];
         if (!validTypes.includes(type)) {
           return res.status(400).json({ message: "Invalid wallet type" });
         }
