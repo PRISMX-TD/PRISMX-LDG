@@ -1,8 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, TransactionFilters } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertTransactionSchema, supportedCurrencies } from "@shared/schema";
+import { 
+  insertTransactionSchema, 
+  supportedCurrencies,
+  insertBudgetSchema,
+  insertSavingsGoalSchema,
+  insertRecurringTransactionSchema,
+  insertBillReminderSchema,
+  insertCategorySchema,
+} from "@shared/schema";
 import { z } from "zod";
 
 const supportedCurrencyCodes = supportedCurrencies.map(c => c.code);
@@ -248,15 +256,188 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/categories', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, type, icon, color } = req.body;
+      
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ message: "Category name is required" });
+      }
+      
+      if (!type || !['expense', 'income'].includes(type)) {
+        return res.status(400).json({ message: "Invalid category type" });
+      }
+      
+      const category = await storage.createCategory({
+        userId,
+        name: name.trim(),
+        type,
+        icon: icon || "other",
+        color: color || "#6B7280",
+        isDefault: false,
+      });
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating category:", error);
+      res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  app.patch('/api/categories/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { name, icon, color } = req.body;
+      
+      const existingCategory = await storage.getCategory(id, userId);
+      if (!existingCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      const updateData: any = {};
+      if (name !== undefined) {
+        const trimmedName = typeof name === 'string' ? name.trim() : '';
+        if (trimmedName.length === 0) {
+          return res.status(400).json({ message: "Category name cannot be empty" });
+        }
+        updateData.name = trimmedName;
+      }
+      if (icon !== undefined) updateData.icon = icon;
+      if (color !== undefined) updateData.color = color;
+      
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      
+      const category = await storage.updateCategory(id, userId, updateData);
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating category:", error);
+      res.status(500).json({ message: "Failed to update category" });
+    }
+  });
+
+  app.delete('/api/categories/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const existingCategory = await storage.getCategory(id, userId);
+      if (!existingCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      // Don't allow deleting default categories
+      if (existingCategory.isDefault) {
+        return res.status(400).json({ message: "Cannot delete default category" });
+      }
+      
+      const deleted = await storage.deleteCategory(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(500).json({ message: "Failed to delete category" });
+      }
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
   // Transaction routes
   app.get('/api/transactions', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const transactions = await storage.getTransactions(userId);
+      
+      // Build filters from query params
+      const filters: TransactionFilters = {};
+      if (req.query.startDate) {
+        filters.startDate = new Date(req.query.startDate);
+      }
+      if (req.query.endDate) {
+        filters.endDate = new Date(req.query.endDate);
+      }
+      if (req.query.categoryId) {
+        filters.categoryId = parseInt(req.query.categoryId);
+      }
+      if (req.query.walletId) {
+        filters.walletId = parseInt(req.query.walletId);
+      }
+      if (req.query.type) {
+        filters.type = req.query.type;
+      }
+      if (req.query.search) {
+        filters.search = req.query.search;
+      }
+      
+      const transactions = await storage.getTransactions(userId, Object.keys(filters).length > 0 ? filters : undefined);
       res.json(transactions);
     } catch (error) {
       console.error("Error fetching transactions:", error);
       res.status(500).json({ message: "Failed to fetch transactions" });
+    }
+  });
+
+  // Transaction stats
+  app.get('/api/transactions/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start date and end date are required" });
+      }
+      
+      const stats = await storage.getTransactionStats(
+        userId,
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching transaction stats:", error);
+      res.status(500).json({ message: "Failed to fetch transaction stats" });
+    }
+  });
+  
+  // Export transactions as CSV
+  app.get('/api/transactions/export', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Build filters from query params
+      const filters: TransactionFilters = {};
+      if (req.query.startDate) {
+        filters.startDate = new Date(req.query.startDate);
+      }
+      if (req.query.endDate) {
+        filters.endDate = new Date(req.query.endDate);
+      }
+      
+      const transactions = await storage.getTransactions(userId, Object.keys(filters).length > 0 ? filters : undefined);
+      
+      // Build CSV content
+      const headers = ['日期', '类型', '金额', '币种', '分类', '钱包', '描述', '标签'];
+      const rows = transactions.map(t => [
+        new Date(t.date).toLocaleDateString('zh-CN'),
+        t.type === 'expense' ? '支出' : t.type === 'income' ? '收入' : '转账',
+        t.amount,
+        t.wallet?.currency || 'MYR',
+        t.category?.name || '',
+        t.wallet?.name || '',
+        t.description || '',
+        (t.tags || []).join(', ')
+      ]);
+      
+      const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="transactions_${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send('\ufeff' + csv); // BOM for Excel compatibility
+    } catch (error) {
+      console.error("Error exporting transactions:", error);
+      res.status(500).json({ message: "Failed to export transactions" });
     }
   });
 
@@ -386,6 +567,364 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating transaction:", error);
       res.status(500).json({ message: "Failed to create transaction" });
+    }
+  });
+
+  // Budget routes
+  app.get('/api/budgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { month, year } = req.query;
+      
+      const budgets = month && year 
+        ? await storage.getBudgets(userId, parseInt(month as string), parseInt(year as string))
+        : await storage.getBudgets(userId);
+      res.json(budgets);
+    } catch (error) {
+      console.error("Error fetching budgets:", error);
+      res.status(500).json({ message: "Failed to fetch budgets" });
+    }
+  });
+
+  app.get('/api/budgets/spending', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { month, year } = req.query;
+      
+      if (!month || !year) {
+        return res.status(400).json({ message: "Month and year are required" });
+      }
+      
+      const budgets = await storage.getBudgetSpending(userId, parseInt(month as string), parseInt(year as string));
+      res.json(budgets);
+    } catch (error) {
+      console.error("Error fetching budget spending:", error);
+      res.status(500).json({ message: "Failed to fetch budget spending" });
+    }
+  });
+
+  app.post('/api/budgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { categoryId, amount, month, year } = req.body;
+      
+      if (!categoryId || !amount || !month || !year) {
+        return res.status(400).json({ message: "Category, amount, month, and year are required" });
+      }
+      
+      const category = await storage.getCategory(categoryId, userId);
+      if (!category) {
+        return res.status(400).json({ message: "Invalid category" });
+      }
+      
+      const budget = await storage.createBudget({
+        userId,
+        categoryId,
+        amount: amount.toString(),
+        month: parseInt(month),
+        year: parseInt(year),
+      });
+      res.status(201).json(budget);
+    } catch (error) {
+      console.error("Error creating budget:", error);
+      res.status(500).json({ message: "Failed to create budget" });
+    }
+  });
+
+  app.patch('/api/budgets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { amount } = req.body;
+      
+      const existingBudget = await storage.getBudget(id, userId);
+      if (!existingBudget) {
+        return res.status(404).json({ message: "Budget not found" });
+      }
+      
+      const budget = await storage.updateBudget(id, userId, { amount: amount.toString() });
+      res.json(budget);
+    } catch (error) {
+      console.error("Error updating budget:", error);
+      res.status(500).json({ message: "Failed to update budget" });
+    }
+  });
+
+  app.delete('/api/budgets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const deleted = await storage.deleteBudget(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Budget not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting budget:", error);
+      res.status(500).json({ message: "Failed to delete budget" });
+    }
+  });
+
+  // Savings goal routes
+  app.get('/api/savings-goals', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const goals = await storage.getSavingsGoals(userId);
+      res.json(goals);
+    } catch (error) {
+      console.error("Error fetching savings goals:", error);
+      res.status(500).json({ message: "Failed to fetch savings goals" });
+    }
+  });
+
+  app.post('/api/savings-goals', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, targetAmount, currency, targetDate, icon, color } = req.body;
+      
+      if (!name || !targetAmount) {
+        return res.status(400).json({ message: "Name and target amount are required" });
+      }
+      
+      const goal = await storage.createSavingsGoal({
+        userId,
+        name: name.trim(),
+        targetAmount: targetAmount.toString(),
+        currentAmount: "0",
+        currency: currency || "MYR",
+        targetDate: targetDate ? new Date(targetDate) : null,
+        icon: icon || "piggy-bank",
+        color: color || "#10B981",
+        isCompleted: false,
+      });
+      res.status(201).json(goal);
+    } catch (error) {
+      console.error("Error creating savings goal:", error);
+      res.status(500).json({ message: "Failed to create savings goal" });
+    }
+  });
+
+  app.patch('/api/savings-goals/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { name, targetAmount, currentAmount, targetDate, icon, color, isCompleted } = req.body;
+      
+      const existingGoal = await storage.getSavingsGoal(id, userId);
+      if (!existingGoal) {
+        return res.status(404).json({ message: "Savings goal not found" });
+      }
+      
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (targetAmount !== undefined) updateData.targetAmount = targetAmount.toString();
+      if (currentAmount !== undefined) updateData.currentAmount = currentAmount.toString();
+      if (targetDate !== undefined) updateData.targetDate = targetDate ? new Date(targetDate) : null;
+      if (icon !== undefined) updateData.icon = icon;
+      if (color !== undefined) updateData.color = color;
+      if (isCompleted !== undefined) updateData.isCompleted = isCompleted;
+      
+      const goal = await storage.updateSavingsGoal(id, userId, updateData);
+      res.json(goal);
+    } catch (error) {
+      console.error("Error updating savings goal:", error);
+      res.status(500).json({ message: "Failed to update savings goal" });
+    }
+  });
+
+  app.delete('/api/savings-goals/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const deleted = await storage.deleteSavingsGoal(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Savings goal not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting savings goal:", error);
+      res.status(500).json({ message: "Failed to delete savings goal" });
+    }
+  });
+
+  // Recurring transaction routes
+  app.get('/api/recurring-transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const recurring = await storage.getRecurringTransactions(userId);
+      res.json(recurring);
+    } catch (error) {
+      console.error("Error fetching recurring transactions:", error);
+      res.status(500).json({ message: "Failed to fetch recurring transactions" });
+    }
+  });
+
+  app.post('/api/recurring-transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { type, amount, walletId, categoryId, description, frequency, dayOfMonth, dayOfWeek, nextExecutionDate } = req.body;
+      
+      if (!type || !amount || !walletId || !frequency || !nextExecutionDate) {
+        return res.status(400).json({ message: "Type, amount, wallet, frequency, and next execution date are required" });
+      }
+      
+      const wallet = await storage.getWallet(walletId, userId);
+      if (!wallet) {
+        return res.status(400).json({ message: "Invalid wallet" });
+      }
+      
+      const recurring = await storage.createRecurringTransaction({
+        userId,
+        type,
+        amount: amount.toString(),
+        walletId,
+        categoryId: categoryId || null,
+        description: description || null,
+        frequency,
+        dayOfMonth: dayOfMonth || null,
+        dayOfWeek: dayOfWeek || null,
+        nextExecutionDate: new Date(nextExecutionDate),
+        isActive: true,
+      });
+      res.status(201).json(recurring);
+    } catch (error) {
+      console.error("Error creating recurring transaction:", error);
+      res.status(500).json({ message: "Failed to create recurring transaction" });
+    }
+  });
+
+  app.patch('/api/recurring-transactions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { amount, categoryId, description, frequency, dayOfMonth, dayOfWeek, nextExecutionDate, isActive } = req.body;
+      
+      const existing = await storage.getRecurringTransaction(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Recurring transaction not found" });
+      }
+      
+      const updateData: any = {};
+      if (amount !== undefined) updateData.amount = amount.toString();
+      if (categoryId !== undefined) updateData.categoryId = categoryId;
+      if (description !== undefined) updateData.description = description;
+      if (frequency !== undefined) updateData.frequency = frequency;
+      if (dayOfMonth !== undefined) updateData.dayOfMonth = dayOfMonth;
+      if (dayOfWeek !== undefined) updateData.dayOfWeek = dayOfWeek;
+      if (nextExecutionDate !== undefined) updateData.nextExecutionDate = new Date(nextExecutionDate);
+      if (isActive !== undefined) updateData.isActive = isActive;
+      
+      const recurring = await storage.updateRecurringTransaction(id, userId, updateData);
+      res.json(recurring);
+    } catch (error) {
+      console.error("Error updating recurring transaction:", error);
+      res.status(500).json({ message: "Failed to update recurring transaction" });
+    }
+  });
+
+  app.delete('/api/recurring-transactions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const deleted = await storage.deleteRecurringTransaction(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Recurring transaction not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting recurring transaction:", error);
+      res.status(500).json({ message: "Failed to delete recurring transaction" });
+    }
+  });
+
+  // Bill reminder routes
+  app.get('/api/bill-reminders', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const reminders = await storage.getBillReminders(userId);
+      res.json(reminders);
+    } catch (error) {
+      console.error("Error fetching bill reminders:", error);
+      res.status(500).json({ message: "Failed to fetch bill reminders" });
+    }
+  });
+
+  app.post('/api/bill-reminders', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, amount, dueDate, frequency, categoryId, walletId, notes } = req.body;
+      
+      if (!name || !dueDate || !frequency) {
+        return res.status(400).json({ message: "Name, due date, and frequency are required" });
+      }
+      
+      const reminder = await storage.createBillReminder({
+        userId,
+        name: name.trim(),
+        amount: amount ? amount.toString() : null,
+        dueDate: new Date(dueDate),
+        frequency,
+        categoryId: categoryId || null,
+        walletId: walletId || null,
+        isPaid: false,
+        notes: notes || null,
+      });
+      res.status(201).json(reminder);
+    } catch (error) {
+      console.error("Error creating bill reminder:", error);
+      res.status(500).json({ message: "Failed to create bill reminder" });
+    }
+  });
+
+  app.patch('/api/bill-reminders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { name, amount, dueDate, frequency, categoryId, walletId, isPaid, notes } = req.body;
+      
+      const existing = await storage.getBillReminder(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Bill reminder not found" });
+      }
+      
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (amount !== undefined) updateData.amount = amount ? amount.toString() : null;
+      if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
+      if (frequency !== undefined) updateData.frequency = frequency;
+      if (categoryId !== undefined) updateData.categoryId = categoryId;
+      if (walletId !== undefined) updateData.walletId = walletId;
+      if (isPaid !== undefined) updateData.isPaid = isPaid;
+      if (notes !== undefined) updateData.notes = notes;
+      
+      const reminder = await storage.updateBillReminder(id, userId, updateData);
+      res.json(reminder);
+    } catch (error) {
+      console.error("Error updating bill reminder:", error);
+      res.status(500).json({ message: "Failed to update bill reminder" });
+    }
+  });
+
+  app.delete('/api/bill-reminders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const deleted = await storage.deleteBillReminder(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Bill reminder not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting bill reminder:", error);
+      res.status(500).json({ message: "Failed to delete bill reminder" });
     }
   });
 
