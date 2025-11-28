@@ -130,16 +130,47 @@ export async function registerRoutes(
       }
       
       const updateData: any = {};
-      if (name !== undefined) updateData.name = name.trim();
-      if (type !== undefined) updateData.type = type;
+      
+      // Validate and trim name if provided
+      if (name !== undefined) {
+        const trimmedName = typeof name === 'string' ? name.trim() : '';
+        if (trimmedName.length === 0) {
+          return res.status(400).json({ message: "Wallet name cannot be empty" });
+        }
+        updateData.name = trimmedName;
+      }
+      
+      // Validate type if provided
+      if (type !== undefined) {
+        const validTypes = ['cash', 'bank_card', 'digital_wallet', 'credit_card'];
+        if (!validTypes.includes(type)) {
+          return res.status(400).json({ message: "Invalid wallet type" });
+        }
+        updateData.type = type;
+      }
+      
+      // Validate currency if provided
       if (currency !== undefined) {
         if (!supportedCurrencyCodes.includes(currency)) {
           return res.status(400).json({ message: "Unsupported currency" });
         }
         updateData.currency = currency;
       }
-      if (color !== undefined) updateData.color = color;
+      
+      // Validate color if provided (hex format)
+      if (color !== undefined) {
+        if (typeof color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+          return res.status(400).json({ message: "Invalid color format" });
+        }
+        updateData.color = color;
+      }
+      
       if (icon !== undefined) updateData.icon = icon;
+      
+      // Ensure at least one field is being updated
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
       
       const wallet = await storage.updateWallet(id, userId, updateData);
       res.json(wallet);
