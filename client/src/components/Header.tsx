@@ -21,7 +21,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Wallet, LogOut, Globe } from "lucide-react";
+import { Wallet, LogOut, Globe, Tags } from "lucide-react";
+import { Link } from "wouter";
 import type { User } from "@shared/schema";
 import { supportedCurrencies, getCurrencyInfo } from "@shared/schema";
 
@@ -122,6 +123,12 @@ export function Header({ user }: HeaderProps) {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
+                <Link href="/categories">
+                  <DropdownMenuItem className="cursor-pointer" data-testid="button-categories-settings">
+                    <Tags className="mr-2 h-4 w-4" />
+                    <span>分类管理</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onSelect={() => setCurrencyDialogOpen(true)}
