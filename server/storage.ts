@@ -46,6 +46,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserCurrency(userId: string, currency: string): Promise<User | undefined>;
 
   // Wallet operations
   getWallets(userId: string): Promise<Wallet[]>;
@@ -64,7 +65,7 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
 
   // Initialization
-  initializeUserDefaults(userId: string): Promise<void>;
+  initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -88,8 +89,17 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     // Initialize defaults for new users
-    await this.initializeUserDefaults(user.id);
+    await this.initializeUserDefaults(user.id, user.defaultCurrency);
     
+    return user;
+  }
+
+  async updateUserCurrency(userId: string, currency: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ defaultCurrency: currency, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
     return user;
   }
 
@@ -217,19 +227,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Initialize default data for new users with idempotent inserts
-  async initializeUserDefaults(userId: string): Promise<void> {
-    // Use a lock mechanism to prevent concurrent initialization
+  async initializeUserDefaults(userId: string, defaultCurrency: string = "MYR"): Promise<void> {
     // Check if user already has wallets (not a new user)
     const existingWallets = await this.getWallets(userId);
     if (existingWallets.length > 0) {
       return;
     }
 
-    // Create default wallets using batch insert with conflict handling
+    // Create default wallets using batch insert with currency
     const walletInserts = defaultWallets.map((wallet) => ({
       userId,
       name: wallet.name,
       type: wallet.type,
+      currency: defaultCurrency,
       icon: wallet.icon,
       color: wallet.color,
       isDefault: wallet.isDefault,

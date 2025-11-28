@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  defaultCurrency: varchar("default_currency", { length: 10 }).notNull().default("MYR"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -42,6 +43,7 @@ export const wallets = pgTable("wallets", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 100 }).notNull(),
   type: varchar("type", { length: 50 }).notNull(), // cash, bank_card, digital_wallet, credit_card
+  currency: varchar("currency", { length: 10 }).notNull().default("MYR"),
   balance: decimal("balance", { precision: 15, scale: 2 }).notNull().default("0"),
   icon: varchar("icon", { length: 50 }), // icon name for display
   color: varchar("color", { length: 20 }), // hex color for card display
@@ -66,9 +68,14 @@ export const transactions = pgTable("transactions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   type: varchar("type", { length: 20 }).notNull(), // expense, income, transfer
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(), // amount in wallet currency
+  currency: varchar("currency", { length: 10 }).notNull().default("MYR"), // transaction input currency
+  originalAmount: decimal("original_amount", { precision: 15, scale: 2 }), // amount in original currency
+  exchangeRate: decimal("exchange_rate", { precision: 15, scale: 6 }).default("1"), // rate to convert to wallet currency
   walletId: integer("wallet_id").notNull().references(() => wallets.id, { onDelete: "cascade" }),
   toWalletId: integer("to_wallet_id").references(() => wallets.id, { onDelete: "cascade" }), // for transfers
+  toWalletAmount: decimal("to_wallet_amount", { precision: 15, scale: 2 }), // amount received in destination wallet (for transfers with different currencies)
+  toExchangeRate: decimal("to_exchange_rate", { precision: 15, scale: 6 }), // exchange rate for destination wallet
   categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
   description: text("description"),
   date: timestamp("date").notNull().defaultNow(),
@@ -139,3 +146,24 @@ export type WalletType = typeof walletTypes[number];
 // Category types enum  
 export const categoryTypes = ['expense', 'income'] as const;
 export type CategoryType = typeof categoryTypes[number];
+
+// Supported currencies
+export const supportedCurrencies = [
+  { code: 'MYR', name: '马来西亚林吉特', symbol: 'RM' },
+  { code: 'CNY', name: '人民币', symbol: '¥' },
+  { code: 'USD', name: '美元', symbol: '$' },
+  { code: 'SGD', name: '新加坡元', symbol: 'S$' },
+  { code: 'EUR', name: '欧元', symbol: '€' },
+  { code: 'GBP', name: '英镑', symbol: '£' },
+  { code: 'JPY', name: '日元', symbol: '¥' },
+  { code: 'HKD', name: '港币', symbol: 'HK$' },
+  { code: 'TWD', name: '新台币', symbol: 'NT$' },
+  { code: 'THB', name: '泰铢', symbol: '฿' },
+] as const;
+
+export type CurrencyCode = typeof supportedCurrencies[number]['code'];
+
+// Helper to get currency info
+export function getCurrencyInfo(code: string) {
+  return supportedCurrencies.find(c => c.code === code) || supportedCurrencies[0];
+}
