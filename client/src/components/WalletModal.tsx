@@ -58,6 +58,7 @@ interface WalletFormData {
   type: string;
   currency: string;
   color: string;
+  exchangeRateToDefault: string;
 }
 
 interface WalletModalProps {
@@ -78,8 +79,12 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
       type: "cash",
       currency: defaultCurrency,
       color: "#3B82F6",
+      exchangeRateToDefault: "1",
     },
   });
+
+  const watchedCurrency = form.watch("currency");
+  const showExchangeRate = watchedCurrency !== defaultCurrency;
 
   useEffect(() => {
     if (wallet) {
@@ -88,6 +93,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
         type: wallet.type || "cash",
         currency: wallet.currency || defaultCurrency,
         color: wallet.color || "#3B82F6",
+        exchangeRateToDefault: wallet.exchangeRateToDefault || "1",
       });
     } else {
       form.reset({
@@ -95,6 +101,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
         type: "cash",
         currency: defaultCurrency,
         color: "#3B82F6",
+        exchangeRateToDefault: "1",
       });
     }
   }, [wallet, defaultCurrency, form]);
@@ -261,6 +268,44 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                   </FormItem>
                 )}
               />
+
+              {showExchangeRate && (
+                <FormField
+                  control={form.control}
+                  name="exchangeRateToDefault"
+                  rules={{ 
+                    required: "请输入汇率",
+                    validate: (value) => {
+                      const rate = parseFloat(value);
+                      if (isNaN(rate) || rate <= 0) {
+                        return "汇率必须为正数";
+                      }
+                      return true;
+                    }
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        汇率 (1 {watchedCurrency} = ? {defaultCurrency})
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.0001"
+                          min="0.0001"
+                          placeholder="输入汇率"
+                          {...field}
+                          data-testid="input-exchange-rate"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        用于计算总资产时转换为默认货币
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

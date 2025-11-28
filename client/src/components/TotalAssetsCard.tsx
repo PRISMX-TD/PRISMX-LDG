@@ -12,19 +12,20 @@ interface TotalAssetsCardProps {
 export function TotalAssetsCard({ wallets, isLoading, defaultCurrency = "MYR" }: TotalAssetsCardProps) {
   const currencyInfo = getCurrencyInfo(defaultCurrency);
   
-  const totalBalance = wallets.reduce(
-    (sum, wallet) => sum + parseFloat(wallet.balance || "0"),
-    0
-  );
-  
-  const currencyGroups = wallets.reduce((acc, wallet) => {
-    const currency = wallet.currency || "MYR";
-    if (!acc[currency]) acc[currency] = 0;
-    acc[currency] += parseFloat(wallet.balance || "0");
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const currencies = Object.keys(currencyGroups);
+  // Calculate total in default currency using exchange rates
+  const totalInDefaultCurrency = wallets.reduce((sum, wallet) => {
+    const balance = parseFloat(wallet.balance || "0");
+    const walletCurrency = wallet.currency || "MYR";
+    
+    // If wallet is in default currency, use balance directly
+    if (walletCurrency === defaultCurrency) {
+      return sum + balance;
+    }
+    
+    // Otherwise, convert using the exchange rate
+    const exchangeRate = parseFloat(wallet.exchangeRateToDefault || "1");
+    return sum + (balance * exchangeRate);
+  }, 0);
 
   if (isLoading) {
     return (
@@ -51,39 +52,18 @@ export function TotalAssetsCard({ wallets, isLoading, defaultCurrency = "MYR" }:
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {currencies.length <= 1 ? (
-          <div className="flex items-baseline gap-1">
-            <span className="text-lg opacity-80">{currencyInfo.symbol}</span>
-            <span
-              className="text-4xl font-bold font-mono tracking-tight"
-              data-testid="text-total-assets"
-            >
-              {totalBalance.toLocaleString("zh-CN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-          </div>
-        ) : (
-          <div className="space-y-1" data-testid="text-total-assets">
-            {currencies.map((currency) => {
-              const info = getCurrencyInfo(currency);
-              const amount = currencyGroups[currency];
-              return (
-                <div key={currency} className="flex items-baseline gap-1">
-                  <span className="text-sm opacity-80">{info.symbol}</span>
-                  <span className="text-2xl font-bold font-mono tracking-tight">
-                    {amount.toLocaleString("zh-CN", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                  <span className="text-xs opacity-60 ml-1">{currency}</span>
-                </div>
-              );
+        <div className="flex items-baseline gap-1">
+          <span className="text-lg opacity-80">{currencyInfo.symbol}</span>
+          <span
+            className="text-4xl font-bold font-mono tracking-tight"
+            data-testid="text-total-assets"
+          >
+            {totalInDefaultCurrency.toLocaleString("zh-CN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
             })}
-          </div>
-        )}
+          </span>
+        </div>
         <div className="flex items-center gap-2 mt-3 text-sm opacity-80">
           <TrendingUp className="w-4 h-4" />
           <span>{wallets.length} 个账户</span>

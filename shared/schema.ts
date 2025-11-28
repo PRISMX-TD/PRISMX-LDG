@@ -45,6 +45,7 @@ export const wallets = pgTable("wallets", {
   type: varchar("type", { length: 50 }).notNull(), // cash, bank_card, digital_wallet, credit_card
   currency: varchar("currency", { length: 10 }).notNull().default("MYR"),
   balance: decimal("balance", { precision: 15, scale: 2 }).notNull().default("0"),
+  exchangeRateToDefault: decimal("exchange_rate_to_default", { precision: 15, scale: 6 }).default("1"), // rate to convert to user's default currency
   icon: varchar("icon", { length: 50 }), // icon name for display
   color: varchar("color", { length: 20 }), // hex color for card display
   isDefault: boolean("is_default").default(false),

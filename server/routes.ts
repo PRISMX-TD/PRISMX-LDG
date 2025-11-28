@@ -116,7 +116,7 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
-      const { name, type, currency, color, icon, isDefault } = req.body;
+      const { name, type, currency, color, icon, isDefault, exchangeRateToDefault } = req.body;
       
       const existingWallet = await storage.getWallet(id, userId);
       if (!existingWallet) {
@@ -166,6 +166,15 @@ export async function registerRoutes(
       }
       
       if (icon !== undefined) updateData.icon = icon;
+      
+      // Validate and handle exchange rate if provided
+      if (exchangeRateToDefault !== undefined) {
+        const rate = parseFloat(exchangeRateToDefault);
+        if (isNaN(rate) || rate <= 0) {
+          return res.status(400).json({ message: "Exchange rate must be a positive number" });
+        }
+        updateData.exchangeRateToDefault = rate.toFixed(6);
+      }
       
       // Ensure at least one field is being updated
       if (Object.keys(updateData).length === 0) {
