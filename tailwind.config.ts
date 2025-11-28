@@ -81,6 +81,22 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        success: {
+          DEFAULT: "hsl(var(--success) / <alpha-value>)",
+          foreground: "hsl(var(--success-foreground) / <alpha-value>)",
+        },
+        income: {
+          DEFAULT: "hsl(var(--income) / <alpha-value>)",
+          foreground: "hsl(var(--income-foreground) / <alpha-value>)",
+        },
+        expense: {
+          DEFAULT: "hsl(var(--expense) / <alpha-value>)",
+          foreground: "hsl(var(--expense-foreground) / <alpha-value>)",
+        },
+        transfer: {
+          DEFAULT: "hsl(var(--transfer) / <alpha-value>)",
+          foreground: "hsl(var(--transfer-foreground) / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
