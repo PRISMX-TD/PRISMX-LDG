@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
@@ -13,6 +14,8 @@ import { TransactionModal } from "@/components/TransactionModal";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { EmptyState } from "@/components/EmptyState";
 import { WalletModal } from "@/components/WalletModal";
+import { BudgetCard } from "@/components/BudgetCard";
+import { SavingsGoalCard } from "@/components/SavingsGoalCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -236,18 +239,23 @@ export default function Dashboard() {
           )}
         </section>
 
+        <div className="grid gap-6 md:grid-cols-2">
+          <BudgetCard currency={user?.defaultCurrency || "MYR"} categories={categories} />
+          <SavingsGoalCard currency={user?.defaultCurrency || "MYR"} />
+        </div>
+
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <Receipt className="w-5 h-5" />
               最近交易
             </h2>
-            {transactions.length > 10 && (
+            <Link href="/transactions">
               <Button variant="ghost" size="sm" data-testid="button-view-all">
                 查看全部
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
-            )}
+            </Link>
           </div>
 
           <Card>
