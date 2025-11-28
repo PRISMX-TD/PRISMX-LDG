@@ -12,6 +12,7 @@ import {
 import { TransactionModal } from "@/components/TransactionModal";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { EmptyState } from "@/components/EmptyState";
+import { WalletModal } from "@/components/WalletModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,12 +23,14 @@ import {
   TrendingDown,
   TrendingUp,
   ArrowRightLeft,
+  Plus,
 } from "lucide-react";
 import type {
   Wallet as WalletType,
   Category,
   Transaction,
 } from "@shared/schema";
+import { getCurrencyInfo } from "@shared/schema";
 
 interface TransactionWithRelations extends Transaction {
   category?: Category | null;
@@ -39,6 +42,8 @@ export default function Dashboard() {
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -99,6 +104,7 @@ export default function Dashboard() {
   };
 
   const { income: monthlyIncome, expense: monthlyExpense } = getMonthlyStats();
+  const userCurrencyInfo = getCurrencyInfo(user?.defaultCurrency || "MYR");
 
   if (isAuthLoading) {
     return (
@@ -142,7 +148,7 @@ export default function Dashboard() {
                   className="text-3xl font-bold font-mono text-income"
                   data-testid="text-monthly-income"
                 >
-                  +¥
+                  +{userCurrencyInfo.symbol}
                   {monthlyIncome.toLocaleString("zh-CN", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -167,7 +173,7 @@ export default function Dashboard() {
                   className="text-3xl font-bold font-mono text-expense"
                   data-testid="text-monthly-expense"
                 >
-                  -¥
+                  -{userCurrencyInfo.symbol}
                   {monthlyExpense.toLocaleString("zh-CN", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -184,6 +190,18 @@ export default function Dashboard() {
               <Wallet className="w-5 h-5" />
               我的钱包
             </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedWallet(null);
+                setIsWalletModalOpen(true);
+              }}
+              data-testid="button-add-wallet"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              添加钱包
+            </Button>
           </div>
 
           {isWalletsLoading ? (
@@ -205,7 +223,14 @@ export default function Dashboard() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {wallets.map((wallet) => (
-                <WalletCard key={wallet.id} wallet={wallet} />
+                <WalletCard
+                  key={wallet.id}
+                  wallet={wallet}
+                  onClick={() => {
+                    setSelectedWallet(wallet);
+                    setIsWalletModalOpen(true);
+                  }}
+                />
               ))}
             </div>
           )}
@@ -266,6 +291,13 @@ export default function Dashboard() {
         onOpenChange={setIsModalOpen}
         wallets={wallets}
         categories={categories}
+        defaultCurrency={user?.defaultCurrency || "MYR"}
+      />
+
+      <WalletModal
+        open={isWalletModalOpen}
+        onOpenChange={setIsWalletModalOpen}
+        wallet={selectedWallet}
         defaultCurrency={user?.defaultCurrency || "MYR"}
       />
     </div>

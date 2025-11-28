@@ -79,6 +79,113 @@ export async function registerRoutes(
     }
   });
 
+  // Create new wallet
+  app.post('/api/wallets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, type, currency, color, icon } = req.body;
+      
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      const walletCurrency = currency || "MYR";
+      if (!supportedCurrencyCodes.includes(walletCurrency)) {
+        return res.status(400).json({ message: "Unsupported currency" });
+      }
+      
+      const wallet = await storage.createWallet({
+        userId,
+        name: name.trim(),
+        type: type || "cash",
+        currency: walletCurrency,
+        color: color || "#3B82F6",
+        icon: icon || "wallet",
+        balance: "0",
+        isDefault: false,
+      });
+      res.status(201).json(wallet);
+    } catch (error) {
+      console.error("Error creating wallet:", error);
+      res.status(500).json({ message: "Failed to create wallet" });
+    }
+  });
+
+  // Update wallet
+  app.patch('/api/wallets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { name, type, currency, color, icon, isDefault } = req.body;
+      
+      const existingWallet = await storage.getWallet(id, userId);
+      if (!existingWallet) {
+        return res.status(404).json({ message: "Wallet not found" });
+      }
+      
+      // Handle setting as default wallet
+      if (isDefault === true) {
+        const wallet = await storage.setDefaultWallet(id, userId);
+        return res.json(wallet);
+      }
+      
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (type !== undefined) updateData.type = type;
+      if (currency !== undefined) {
+        if (!supportedCurrencyCodes.includes(currency)) {
+          return res.status(400).json({ message: "Unsupported currency" });
+        }
+        updateData.currency = currency;
+      }
+      if (color !== undefined) updateData.color = color;
+      if (icon !== undefined) updateData.icon = icon;
+      
+      const wallet = await storage.updateWallet(id, userId, updateData);
+      res.json(wallet);
+    } catch (error) {
+      console.error("Error updating wallet:", error);
+      res.status(500).json({ message: "Failed to update wallet" });
+    }
+  });
+
+  // Delete wallet
+  app.delete('/api/wallets/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const existingWallet = await storage.getWallet(id, userId);
+      if (!existingWallet) {
+        return res.status(404).json({ message: "Wallet not found" });
+      }
+      
+      // Check if this is the last wallet
+      const wallets = await storage.getWallets(userId);
+      if (wallets.length <= 1) {
+        return res.status(400).json({ message: "Cannot delete the last wallet" });
+      }
+      
+      // If deleting default wallet, set another as default
+      if (existingWallet.isDefault) {
+        const otherWallet = wallets.find(w => w.id !== id);
+        if (otherWallet) {
+          await storage.setDefaultWallet(otherWallet.id, userId);
+        }
+      }
+      
+      const deleted = await storage.deleteWallet(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(500).json({ message: "Failed to delete wallet" });
+      }
+    } catch (error) {
+      console.error("Error deleting wallet:", error);
+      res.status(500).json({ message: "Failed to delete wallet" });
+    }
+  });
+
   // Category routes
   app.get('/api/categories', isAuthenticated, async (req: any, res) => {
     try {
@@ -144,8 +251,9 @@ export async function registerRoutes(
       // Calculate wallet amount
       // Exchange rate meaning: 1 transaction currency = X wallet currency
       // So: walletAmount = inputAmount * exchangeRate
+      const effectiveExchangeRate = exchangeRate || 1;
       const walletAmount = isCrosssCurrency 
-        ? inputAmount * exchangeRate
+        ? inputAmount * effectiveExchangeRate
         : inputAmount;
 
       // Build transaction data
@@ -165,7 +273,7 @@ export async function registerRoutes(
       // Only store originalAmount and exchangeRate when there's actual conversion
       if (isCrosssCurrency) {
         transactionData.originalAmount = inputAmount.toFixed(2);
-        transactionData.exchangeRate = exchangeRate.toFixed(6);
+        transactionData.exchangeRate = effectiveExchangeRate.toFixed(6);
       }
 
       // For transfers, verify toWallet ownership

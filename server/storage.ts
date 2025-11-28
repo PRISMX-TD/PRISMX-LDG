@@ -52,7 +52,10 @@ export interface IStorage {
   getWallets(userId: string): Promise<Wallet[]>;
   getWallet(id: number, userId: string): Promise<Wallet | undefined>;
   createWallet(wallet: InsertWallet): Promise<Wallet>;
+  updateWallet(id: number, userId: string, data: Partial<InsertWallet>): Promise<Wallet | undefined>;
+  deleteWallet(id: number, userId: string): Promise<boolean>;
   updateWalletBalance(id: number, userId: string, amount: string): Promise<Wallet | undefined>;
+  setDefaultWallet(id: number, userId: string): Promise<Wallet | undefined>;
 
   // Category operations
   getCategories(userId: string): Promise<Category[]>;
@@ -129,6 +132,41 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(wallets)
       .set({ balance: newBalance })
+      .where(and(eq(wallets.id, id), eq(wallets.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async updateWallet(
+    id: number,
+    userId: string,
+    data: Partial<InsertWallet>
+  ): Promise<Wallet | undefined> {
+    const [updated] = await db
+      .update(wallets)
+      .set(data)
+      .where(and(eq(wallets.id, id), eq(wallets.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteWallet(id: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(wallets)
+      .where(and(eq(wallets.id, id), eq(wallets.userId, userId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async setDefaultWallet(id: number, userId: string): Promise<Wallet | undefined> {
+    await db
+      .update(wallets)
+      .set({ isDefault: false })
+      .where(eq(wallets.userId, userId));
+    
+    const [updated] = await db
+      .update(wallets)
+      .set({ isDefault: true })
       .where(and(eq(wallets.id, id), eq(wallets.userId, userId)))
       .returning();
     return updated;
