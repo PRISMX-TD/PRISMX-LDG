@@ -22,7 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Tag } from "lucide-react";
+import { 
+  ArrowLeft, Plus, Pencil, Trash2, Loader2, Tag,
+  Utensils, ShoppingBag, Car, Home, Gamepad2, Pill, 
+  GraduationCap, Gift, CreditCard, Smartphone, Plane, 
+  Shirt, Music, Coffee, Wallet, Briefcase, TrendingUp,
+  DollarSign, Heart, Zap
+} from "lucide-react";
 import { Link } from "wouter";
 import type { Category } from "@shared/schema";
 
@@ -33,7 +39,33 @@ const COLORS = [
   "#F43F5E", "#78716C", "#64748B",
 ];
 
-const ICONS = ["💰", "🍔", "🛒", "🚗", "🏠", "🎮", "💊", "📚", "🎁", "💳", "📱", "✈️", "👔", "🎵", "☕"];
+const ICON_OPTIONS = [
+  { value: "utensils", label: "餐饮", Icon: Utensils },
+  { value: "shopping-bag", label: "购物", Icon: ShoppingBag },
+  { value: "car", label: "交通", Icon: Car },
+  { value: "home", label: "住房", Icon: Home },
+  { value: "gamepad", label: "娱乐", Icon: Gamepad2 },
+  { value: "pill", label: "医疗", Icon: Pill },
+  { value: "graduation-cap", label: "教育", Icon: GraduationCap },
+  { value: "gift", label: "礼物", Icon: Gift },
+  { value: "credit-card", label: "支付", Icon: CreditCard },
+  { value: "smartphone", label: "通讯", Icon: Smartphone },
+  { value: "plane", label: "旅行", Icon: Plane },
+  { value: "shirt", label: "服饰", Icon: Shirt },
+  { value: "music", label: "音乐", Icon: Music },
+  { value: "coffee", label: "饮品", Icon: Coffee },
+  { value: "wallet", label: "钱包", Icon: Wallet },
+  { value: "briefcase", label: "工作", Icon: Briefcase },
+  { value: "trending-up", label: "投资", Icon: TrendingUp },
+  { value: "dollar-sign", label: "收入", Icon: DollarSign },
+  { value: "heart", label: "健康", Icon: Heart },
+  { value: "zap", label: "其他", Icon: Zap },
+];
+
+const getIconComponent = (iconName: string | null | undefined) => {
+  const found = ICON_OPTIONS.find((i) => i.value === iconName);
+  return found ? found.Icon : Tag;
+};
 
 export default function Categories() {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -256,19 +288,25 @@ export default function Categories() {
             </div>
 
             <div className="space-y-2">
-              <Label>图标 (可选)</Label>
-              <Select value={icon} onValueChange={setIcon}>
-                <SelectTrigger data-testid="select-category-icon">
-                  <SelectValue placeholder="选择图标" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ICONS.map((i) => (
-                    <SelectItem key={i} value={i}>
-                      <span className="text-lg">{i}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>图标</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {ICON_OPTIONS.map(({ value, label, Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all ${
+                      icon === value
+                        ? "border-primary bg-primary/10 ring-2 ring-primary"
+                        : "border-border hover-elevate"
+                    }`}
+                    onClick={() => setIcon(value)}
+                    title={label}
+                    data-testid={`icon-${value}`}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -320,6 +358,8 @@ interface CategoryItemProps {
 }
 
 function CategoryItem({ category, onEdit, onDelete, isDeleting }: CategoryItemProps) {
+  const IconComponent = getIconComponent(category.icon);
+  
   return (
     <div
       className="flex items-center justify-between p-3 rounded-lg border bg-card hover-elevate"
@@ -327,10 +367,10 @@ function CategoryItem({ category, onEdit, onDelete, isDeleting }: CategoryItemPr
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-white"
           style={{ backgroundColor: category.color || "#6366F1" }}
         >
-          {category.icon || category.name.slice(0, 1)}
+          <IconComponent className="w-4 h-4" />
         </div>
         <div>
           <p className="font-medium">{category.name}</p>
