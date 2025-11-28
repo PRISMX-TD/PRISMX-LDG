@@ -58,7 +58,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 ## 数据模型
 - **users**: 用户信息表 (id, email, firstName, lastName, profileImageUrl, defaultCurrency)
 - **sessions**: 会话存储表
-- **wallets**: 钱包表 (id, userId, name, type, currency, balance, icon, color, isDefault)
+- **wallets**: 钱包表 (id, userId, name, type, currency, balance, exchangeRateToDefault, icon, color, isDefault)
 - **categories**: 分类表 (id, userId, name, type, icon, color, isDefault)
 - **transactions**: 交易表 (id, userId, type, amount, currency, originalAmount, exchangeRate, walletId, toWalletId, toWalletAmount, toExchangeRate, categoryId, description, date)
 
