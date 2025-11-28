@@ -83,7 +83,7 @@ export async function registerRoutes(
   app.post('/api/wallets', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { name, type, currency, color, icon } = req.body;
+      const { name, type, currency, color, icon, exchangeRateToDefault } = req.body;
       
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return res.status(400).json({ message: "Name is required" });
@@ -92,6 +92,15 @@ export async function registerRoutes(
       const walletCurrency = currency || "MYR";
       if (!supportedCurrencyCodes.includes(walletCurrency)) {
         return res.status(400).json({ message: "Unsupported currency" });
+      }
+      
+      // Validate exchange rate if provided
+      let rateToDefault = "1";
+      if (exchangeRateToDefault !== undefined) {
+        const rate = parseFloat(exchangeRateToDefault);
+        if (!isNaN(rate) && rate > 0) {
+          rateToDefault = rate.toFixed(6);
+        }
       }
       
       const wallet = await storage.createWallet({
@@ -103,6 +112,7 @@ export async function registerRoutes(
         icon: icon || "wallet",
         balance: "0",
         isDefault: false,
+        exchangeRateToDefault: rateToDefault,
       });
       res.status(201).json(wallet);
     } catch (error) {
