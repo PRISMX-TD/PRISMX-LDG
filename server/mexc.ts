@@ -165,6 +165,7 @@ export async function fetchMexcFuturesAssets(apiKey: string, apiSecret: string):
     return [];
   }
 
+  console.log('Futures API raw data:', JSON.stringify(result.data, null, 2));
   return result.data;
 }
 
@@ -206,18 +207,21 @@ export async function getBalancesWithValues(apiKey: string, apiSecret: string): 
   }
 
   for (const asset of futuresAssets) {
-    const total = asset.equity || asset.availableBalance || 0;
+    const equity = asset.equity || 0;
+    const availableBalance = asset.availableBalance || 0;
+    const total = equity > 0 ? equity : availableBalance;
     
     if (total <= 0) continue;
+    if (asset.currency === 'MXPOINT') continue;
 
     const enhanced: BalanceWithValue = {
       asset: asset.currency,
-      free: asset.availableBalance.toString(),
+      free: availableBalance.toString(),
       locked: asset.frozenBalance.toString(),
       accountType: '合约'
     };
 
-    if (asset.currency === 'USDT') {
+    if (asset.currency === 'USDT' || asset.currency === 'USDC') {
       enhanced.price = '1';
       enhanced.usdtValue = total.toFixed(2);
     } else {
