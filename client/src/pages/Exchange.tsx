@@ -46,6 +46,7 @@ interface ExchangeCredential {
   id: number;
   exchange: string;
   label: string;
+  manualBalance?: string;
   isActive: boolean;
   lastSyncAt: string | null;
   createdAt: string;
@@ -63,6 +64,8 @@ interface MexcBalance {
 
 interface MexcBalancesResponse {
   balances: MexcBalance[];
+  apiTotalValue: string;
+  manualBalance: string;
   totalUsdtValue: string;
   lastSyncAt: string;
 }
@@ -74,6 +77,8 @@ export default function Exchange() {
   const [apiSecret, setApiSecret] = useState("");
   const [label, setLabel] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+  const [manualBalanceInput, setManualBalanceInput] = useState("");
+  const [isEditingManualBalance, setIsEditingManualBalance] = useState(false);
 
   const { data: credentials = [], isLoading: isLoadingCredentials } = useQuery<ExchangeCredential[]>({
     queryKey: ["/api/exchange-credentials"],
@@ -122,6 +127,25 @@ export default function Exchange() {
     onError: () => {
       toast({ 
         title: "删除失败", 
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateManualBalanceMutation = useMutation({
+    mutationFn: async ({ id, manualBalance }: { id: number; manualBalance: string }) => {
+      const res = await apiRequest("PATCH", `/api/exchange-credentials/${id}/manual-balance`, { manualBalance });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "其他账户余额已更新" });
+      setIsEditingManualBalance(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/exchange-credentials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mexc/balances"] });
+    },
+    onError: () => {
+      toast({ 
+        title: "更新失败", 
         variant: "destructive",
       });
     },
@@ -383,10 +407,14 @@ export default function Exchange() {
                 </div>
                 {balances?.totalUsdtValue && (
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">总估值 (USDT)</p>
+                    <p className="text-sm text-muted-foreground">总资产折合 (USDT)</p>
                     <p className="text-2xl font-bold text-primary" data-testid="text-total-value">
                       ${formatCurrency(balances.totalUsdtValue)}
                     </p>
+                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                      <p>现货+合约: ${formatCurrency(balances.apiTotalValue)}</p>
+                      <p>其他账户: ${formatCurrency(balances.manualBalance)}</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -475,6 +503,77 @@ export default function Exchange() {
               )}
             </CardContent>
           </Card>
+
+          {credentials.filter(c => c.exchange === 'mexc').map((credential) => (
+            <Card key={`manual-${credential.id}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  其他账户余额
+                </CardTitle>
+                <CardDescription>
+                  API无法获取的账户余额（理财、DEX+、跟单、交易机器人、Alpha、法币等）
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isEditingManualBalance ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="输入其他账户余额 (USDT)"
+                      value={manualBalanceInput}
+                      onChange={(e) => setManualBalanceInput(e.target.value)}
+                      className="max-w-xs"
+                      data-testid="input-manual-balance"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        updateManualBalanceMutation.mutate({
+                          id: credential.id,
+                          manualBalance: manualBalanceInput || "0",
+                        });
+                      }}
+                      disabled={updateManualBalanceMutation.isPending}
+                      data-testid="button-save-manual-balance"
+                    >
+                      {updateManualBalanceMutation.isPending ? "保存中..." : "保存"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsEditingManualBalance(false)}
+                      data-testid="button-cancel-manual-balance"
+                    >
+                      取消
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-semibold" data-testid="text-manual-balance">
+                        ${formatCurrency(credential.manualBalance || "0")} USDT
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        此余额需要您手动更新
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setManualBalanceInput(credential.manualBalance || "0");
+                        setIsEditingManualBalance(true);
+                      }}
+                      data-testid="button-edit-manual-balance"
+                    >
+                      修改
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </>
       )}
 

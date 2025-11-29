@@ -165,7 +165,6 @@ export async function fetchMexcFuturesAssets(apiKey: string, apiSecret: string):
     return [];
   }
 
-  console.log('Futures API raw data:', JSON.stringify(result.data, null, 2));
   return result.data;
 }
 

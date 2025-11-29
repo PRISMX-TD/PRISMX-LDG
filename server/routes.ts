@@ -985,6 +985,7 @@ export async function registerRoutes(
         id: c.id,
         exchange: c.exchange,
         label: c.label,
+        manualBalance: c.manualBalance || '0',
         isActive: c.isActive,
         lastSyncAt: c.lastSyncAt,
         createdAt: c.createdAt,
@@ -1081,6 +1082,36 @@ export async function registerRoutes(
     }
   });
 
+  // Update manual balance for exchange credentials
+  app.patch('/api/exchange-credentials/:id/manual-balance', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { manualBalance } = req.body;
+      
+      if (manualBalance === undefined || isNaN(parseFloat(manualBalance))) {
+        return res.status(400).json({ message: "有效的余额金额是必需的" });
+      }
+      
+      const updated = await storage.updateExchangeCredential(id, userId, {
+        manualBalance: manualBalance.toString(),
+      });
+      
+      if (updated) {
+        res.json({ 
+          id: updated.id,
+          manualBalance: updated.manualBalance,
+          message: "其他账户余额已更新" 
+        });
+      } else {
+        res.status(404).json({ message: "凭证未找到" });
+      }
+    } catch (error) {
+      console.error("Error updating manual balance:", error);
+      res.status(500).json({ message: "更新余额失败" });
+    }
+  });
+
   // MEXC account balance endpoint
   app.get('/api/mexc/balances', isAuthenticated, async (req: any, res) => {
     try {
@@ -1105,13 +1136,19 @@ export async function registerRoutes(
         lastSyncAt: new Date(),
       });
 
-      // Calculate total value in USDT
-      const totalUsdtValue = balances.reduce((sum, b) => {
+      // Calculate total value in USDT (from API)
+      const apiTotalValue = balances.reduce((sum, b) => {
         return sum + parseFloat(b.usdtValue || '0');
       }, 0);
 
+      // Add manual balance for accounts API can't access
+      const manualBalance = parseFloat(credential.manualBalance || '0');
+      const totalUsdtValue = apiTotalValue + manualBalance;
+
       res.json({
         balances,
+        apiTotalValue: apiTotalValue.toFixed(2),
+        manualBalance: manualBalance.toFixed(2),
         totalUsdtValue: totalUsdtValue.toFixed(2),
         lastSyncAt: new Date().toISOString(),
       });

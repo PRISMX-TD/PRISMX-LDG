@@ -150,6 +150,7 @@ export const exchangeCredentials = pgTable("exchange_credentials", {
   apiKey: text("api_key").notNull(), // encrypted
   apiSecret: text("api_secret").notNull(), // encrypted
   label: varchar("label", { length: 100 }), // user-friendly name
+  manualBalance: decimal("manual_balance", { precision: 15, scale: 2 }).default("0"), // manual balance for accounts API can't access (理财、跟单等)
   isActive: boolean("is_active").default(true),
   lastSyncAt: timestamp("last_sync_at"),
   createdAt: timestamp("created_at").defaultNow(),
