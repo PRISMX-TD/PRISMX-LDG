@@ -142,6 +142,20 @@ export const billReminders = pgTable("bill_reminders", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Exchange credentials table - for crypto exchange API integration
+export const exchangeCredentials = pgTable("exchange_credentials", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  exchange: varchar("exchange", { length: 50 }).notNull(), // mexc, binance, etc.
+  apiKey: text("api_key").notNull(), // encrypted
+  apiSecret: text("api_secret").notNull(), // encrypted
+  label: varchar("label", { length: 100 }), // user-friendly name
+  isActive: boolean("is_active").default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   wallets: many(wallets),
@@ -151,6 +165,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   savingsGoals: many(savingsGoals),
   recurringTransactions: many(recurringTransactions),
   billReminders: many(billReminders),
+  exchangeCredentials: many(exchangeCredentials),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -192,6 +207,10 @@ export const billRemindersRelations = relations(billReminders, ({ one }) => ({
   wallet: one(wallets, { fields: [billReminders.walletId], references: [wallets.id] }),
 }));
 
+export const exchangeCredentialsRelations = relations(exchangeCredentials, ({ one }) => ({
+  user: one(users, { fields: [exchangeCredentials.userId], references: [users.id] }),
+}));
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -216,6 +235,9 @@ export type RecurringTransaction = typeof recurringTransactions.$inferSelect;
 
 export type InsertBillReminder = typeof billReminders.$inferInsert;
 export type BillReminder = typeof billReminders.$inferSelect;
+
+export type InsertExchangeCredential = typeof exchangeCredentials.$inferInsert;
+export type ExchangeCredential = typeof exchangeCredentials.$inferSelect;
 
 // Zod schemas for validation
 export const insertWalletSchema = createInsertSchema(wallets).omit({
@@ -251,6 +273,12 @@ export const insertRecurringTransactionSchema = createInsertSchema(recurringTran
 export const insertBillReminderSchema = createInsertSchema(billReminders).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertExchangeCredentialSchema = createInsertSchema(exchangeCredentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Transaction types enum
