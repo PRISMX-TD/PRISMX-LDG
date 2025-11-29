@@ -65,11 +65,18 @@ export default function Wallets() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4].map((i) => (
-            <WalletCardSkeleton key={i} />
-          ))}
-        </div>
+        <>
+          <div className="hidden md:grid gap-4 grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4].map((i) => (
+              <WalletCardSkeleton key={i} />
+            ))}
+          </div>
+          <div className="md:hidden space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <WalletCardSkeleton key={i} />
+            ))}
+          </div>
+        </>
       ) : wallets.length === 0 ? (
         <Card>
           <CardContent className="p-4 md:p-6">
@@ -83,18 +90,32 @@ export default function Wallets() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-3">
-          {wallets.map((wallet) => (
-            <WalletCard
-              key={wallet.id}
-              wallet={wallet}
-              onClick={() => {
-                setSelectedWallet(wallet);
-                setIsModalOpen(true);
-              }}
-            />
-          ))}
-        </div>
+        <>
+          <div className="hidden md:grid gap-4 grid-cols-2 lg:grid-cols-3">
+            {wallets.map((wallet) => (
+              <WalletCard
+                key={wallet.id}
+                wallet={wallet}
+                onClick={() => {
+                  setSelectedWallet(wallet);
+                  setIsModalOpen(true);
+                }}
+              />
+            ))}
+          </div>
+          <div className="md:hidden space-y-2">
+            {wallets.map((wallet) => (
+              <WalletCard
+                key={wallet.id}
+                wallet={wallet}
+                onClick={() => {
+                  setSelectedWallet(wallet);
+                  setIsModalOpen(true);
+                }}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       <WalletModal
