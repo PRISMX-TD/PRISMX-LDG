@@ -13,6 +13,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { encrypt, decrypt, getBalancesWithValues, fetchMexcAccountInfo } from "./mexc";
+import { validatePionexCredentials, getPionexBalancesWithValues } from "./pionex";
 
 const supportedCurrencyCodes = supportedCurrencies.map(c => c.code);
 
@@ -1008,13 +1009,20 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Exchange, API Key, and API Secret are required" });
       }
 
-      if (exchange !== 'mexc') {
-        return res.status(400).json({ message: "Currently only MEXC exchange is supported" });
+      if (exchange !== 'mexc' && exchange !== 'pionex') {
+        return res.status(400).json({ message: "Currently only MEXC and Pionex exchanges are supported" });
       }
 
       // Test the API credentials before saving
       try {
-        await fetchMexcAccountInfo(apiKey, apiSecret);
+        if (exchange === 'mexc') {
+          await fetchMexcAccountInfo(apiKey, apiSecret);
+        } else if (exchange === 'pionex') {
+          const isValid = await validatePionexCredentials(apiKey, apiSecret);
+          if (!isValid) {
+            throw new Error('派网API凭证验证失败');
+          }
+        }
       } catch (testError: any) {
         return res.status(400).json({ 
           message: `API验证失败: ${testError.message}. 请检查您的API Key和Secret是否正确。` 
@@ -1042,12 +1050,13 @@ export async function registerRoutes(
       }
 
       // Create new credentials
+      const defaultLabel = exchange === 'pionex' ? '派网账户' : 'MEXC账户';
       const credential = await storage.createExchangeCredential({
         userId,
         exchange,
         apiKey: encrypt(apiKey),
         apiSecret: encrypt(apiSecret),
-        label: label || 'MEXC账户',
+        label: label || defaultLabel,
         isActive: true,
         lastSyncAt: new Date(),
       });
@@ -1109,6 +1118,52 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating manual balance:", error);
       res.status(500).json({ message: "更新余额失败" });
+    }
+  });
+
+  // Pionex account balance endpoint
+  app.get('/api/pionex/balances', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const credential = await storage.getExchangeCredentialByExchange(userId, 'pionex');
+      if (!credential) {
+        return res.status(404).json({ message: "请先配置派网API凭证" });
+      }
+
+      if (!credential.isActive) {
+        return res.status(400).json({ message: "派网API凭证已禁用" });
+      }
+
+      const apiKey = decrypt(credential.apiKey);
+      const apiSecret = decrypt(credential.apiSecret);
+
+      const balances = await getPionexBalancesWithValues(apiKey, apiSecret);
+
+      // Update last sync time
+      await storage.updateExchangeCredential(credential.id, userId, {
+        lastSyncAt: new Date(),
+      });
+
+      // Calculate total value in USDT (from API)
+      const apiTotalValue = balances.reduce((sum, b) => {
+        return sum + parseFloat(b.usdtValue || '0');
+      }, 0);
+
+      // Add manual balance for accounts API can't access (bots, earn)
+      const manualBalance = parseFloat(credential.manualBalance || '0');
+      const totalUsdtValue = apiTotalValue + manualBalance;
+
+      res.json({
+        balances,
+        apiTotalValue: apiTotalValue.toFixed(2),
+        manualBalance: manualBalance.toFixed(2),
+        totalUsdtValue: totalUsdtValue.toFixed(2),
+        lastSyncAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error fetching Pionex balances:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch Pionex balances" });
     }
   });
 
