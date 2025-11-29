@@ -20,8 +20,8 @@ export default function Wallets() {
   });
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="hidden md:flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Wallet className="w-6 h-6" />
           钱包管理
@@ -38,6 +38,19 @@ export default function Wallets() {
         </Button>
       </div>
 
+      <div className="flex md:hidden items-center justify-end">
+        <Button
+          onClick={() => {
+            setSelectedWallet(null);
+            setIsModalOpen(true);
+          }}
+          data-testid="button-add-wallet-mobile"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          添加钱包
+        </Button>
+      </div>
+
       <TotalAssetsCard
         wallets={wallets}
         defaultCurrency={user?.defaultCurrency || "MYR"}
@@ -45,14 +58,14 @@ export default function Wallets() {
       />
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4].map((i) => (
             <WalletCardSkeleton key={i} />
           ))}
         </div>
       ) : wallets.length === 0 ? (
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <EmptyState
               icon={Wallet}
               title="还没有钱包"
@@ -63,7 +76,7 @@ export default function Wallets() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-3">
           {wallets.map((wallet) => (
             <WalletCard
               key={wallet.id}

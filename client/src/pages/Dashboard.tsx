@@ -125,11 +125,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <Header user={user} />
+    <div className="min-h-screen bg-background">
+      <div className="hidden md:block">
+        <Header user={user} />
+      </div>
 
-      <main className="container mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <main className="container mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+        <div className="grid gap-3 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <TotalAssetsCard 
             wallets={wallets} 
             isLoading={isWalletsLoading} 
@@ -188,8 +190,8 @@ export default function Dashboard() {
         </div>
 
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
               <Wallet className="w-5 h-5" />
               我的钱包
             </h2>
@@ -203,12 +205,13 @@ export default function Dashboard() {
               data-testid="button-add-wallet"
             >
               <Plus className="w-4 h-4 mr-1" />
-              添加钱包
+              <span className="hidden sm:inline">添加钱包</span>
+              <span className="sm:hidden">添加</span>
             </Button>
           </div>
 
           {isWalletsLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
                 <WalletCardSkeleton key={i} />
               ))}
@@ -224,7 +227,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-3">
               {wallets.map((wallet) => (
                 <WalletCard
                   key={wallet.id}
@@ -239,14 +242,14 @@ export default function Dashboard() {
           )}
         </section>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-3 md:gap-6 grid-cols-1 md:grid-cols-2">
           <BudgetCard currency={user?.defaultCurrency || "MYR"} categories={categories} />
           <SavingsGoalCard currency={user?.defaultCurrency || "MYR"} />
         </div>
 
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
               <Receipt className="w-5 h-5" />
               最近交易
             </h2>

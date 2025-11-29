@@ -46,8 +46,8 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold flex items-center gap-2">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-3xl">
+      <h1 className="hidden md:flex text-2xl font-bold items-center gap-2">
         <SettingsIcon className="w-6 h-6" />
         设置
       </h1>

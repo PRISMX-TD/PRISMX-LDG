@@ -132,8 +132,8 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="hidden md:flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <BarChart3 className="w-6 h-6" />
           数据分析
@@ -149,49 +149,59 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex md:hidden items-center justify-center gap-2 py-2">
+        <Button variant="ghost" size="icon" onClick={() => setSelectedYear(selectedYear - 1)}>
+          <ChevronLeft className="w-5 h-5" />
+        </Button>
+        <span className="text-lg font-medium min-w-[60px] text-center">{selectedYear}年</span>
+        <Button variant="ghost" size="icon" onClick={() => setSelectedYear(selectedYear + 1)}>
+          <ChevronRight className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground">年度收入</CardTitle>
+            <CardTitle className="text-sm md:text-base text-muted-foreground">年度收入</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono text-income">
+            <p className="text-lg md:text-2xl font-bold font-mono text-income">
               +{currencyInfo.symbol}{yearlyTotals.income.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground">年度支出</CardTitle>
+            <CardTitle className="text-sm md:text-base text-muted-foreground">年度支出</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono text-expense">
+            <p className="text-lg md:text-2xl font-bold font-mono text-expense">
               -{currencyInfo.symbol}{yearlyTotals.expense.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground">年度结余</CardTitle>
+            <CardTitle className="text-sm md:text-base text-muted-foreground">年度结余</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold font-mono ${yearlyTotals.net >= 0 ? "text-income" : "text-expense"}`}>
+            <p className={`text-lg md:text-2xl font-bold font-mono ${yearlyTotals.net >= 0 ? "text-income" : "text-expense"}`}>
               {yearlyTotals.net >= 0 ? "+" : ""}{currencyInfo.symbol}{yearlyTotals.net.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground">环比变化</CardTitle>
+            <CardTitle className="text-sm md:text-base text-muted-foreground">环比变化</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               {compareData.change > 0 ? (
-                <TrendingUp className="w-5 h-5 text-expense" />
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-expense" />
               ) : compareData.change < 0 ? (
-                <TrendingDown className="w-5 h-5 text-income" />
+                <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-income" />
               ) : null}
-              <p className={`text-2xl font-bold ${compareData.change > 0 ? "text-expense" : compareData.change < 0 ? "text-income" : ""}`}>
+              <p className={`text-lg md:text-2xl font-bold ${compareData.change > 0 ? "text-expense" : compareData.change < 0 ? "text-income" : ""}`}>
                 {compareData.change > 0 ? "+" : ""}{compareData.change.toFixed(1)}%
               </p>
             </div>
@@ -210,10 +220,10 @@ export default function Analytics() {
         <TabsContent value="trend" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>月度收支趋势</CardTitle>
+              <CardTitle className="text-base md:text-lg">月度收支趋势</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px]">
+              <div className="h-[280px] md:h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -249,13 +259,13 @@ export default function Analytics() {
         </TabsContent>
 
         <TabsContent value="category" className="mt-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>支出分类占比</CardTitle>
+                <CardTitle className="text-base md:text-lg">支出分类占比</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
+                <div className="h-[250px] md:h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -282,7 +292,7 @@ export default function Analytics() {
 
             <Card>
               <CardHeader>
-                <CardTitle>分类排行</CardTitle>
+                <CardTitle className="text-base md:text-lg">分类排行</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -308,10 +318,10 @@ export default function Analytics() {
         <TabsContent value="compare" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>月度收支对比</CardTitle>
+              <CardTitle className="text-base md:text-lg">月度收支对比</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px]">
+              <div className="h-[280px] md:h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

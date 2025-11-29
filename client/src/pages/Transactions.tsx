@@ -99,11 +99,13 @@ export default function Transactions() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <Header user={user} />
+    <div className="min-h-screen bg-background">
+      <div className="hidden md:block">
+        <Header user={user} />
+      </div>
 
-      <main className="container mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="flex items-center gap-4">
+      <main className="container mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+        <div className="hidden md:flex items-center gap-4">
           <Link href="/">
             <Button variant="ghost" size="sm" data-testid="button-back-home">
               <ArrowLeft className="w-4 h-4 mr-1" />
@@ -116,19 +118,19 @@ export default function Transactions() {
           </h1>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-3 md:gap-6 grid-cols-2 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
+              <CardTitle className="text-sm md:text-base font-medium flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-income" />
                 收入
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isStatsLoading ? (
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-7 w-20" />
               ) : (
-                <p className="text-2xl font-bold font-mono text-income">
+                <p className="text-lg md:text-2xl font-bold font-mono text-income">
                   +{currencyInfo.symbol}{(stats?.totalIncome || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
                 </p>
               )}
@@ -137,23 +139,23 @@ export default function Transactions() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
+              <CardTitle className="text-sm md:text-base font-medium flex items-center gap-2">
                 <TrendingDown className="w-4 h-4 text-expense" />
                 支出
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isStatsLoading ? (
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-7 w-20" />
               ) : (
-                <p className="text-2xl font-bold font-mono text-expense">
+                <p className="text-lg md:text-2xl font-bold font-mono text-expense">
                   -{currencyInfo.symbol}{(stats?.totalExpense || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
                 </p>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="col-span-2 md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-medium">净收入</CardTitle>
             </CardHeader>
@@ -162,7 +164,7 @@ export default function Transactions() {
                 <Skeleton className="h-8 w-24" />
               ) : (
                 <p
-                  className={`text-2xl font-bold font-mono ${
+                  className={`text-xl md:text-2xl font-bold font-mono ${
                     (stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "text-income" : "text-expense"
                   }`}
                 >
@@ -177,7 +179,7 @@ export default function Transactions() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
             <TransactionFilters
               categories={categories}
