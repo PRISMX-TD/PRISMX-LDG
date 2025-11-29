@@ -12,6 +12,7 @@ import {
   insertCategorySchema,
 } from "@shared/schema";
 import { z } from "zod";
+import { encrypt, decrypt, getBalancesWithValues, fetchMexcAccountInfo } from "./mexc";
 
 const supportedCurrencyCodes = supportedCurrencies.map(c => c.code);
 
@@ -970,6 +971,153 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting bill reminder:", error);
       res.status(500).json({ message: "Failed to delete bill reminder" });
+    }
+  });
+
+  // Exchange credentials routes (MEXC API integration)
+  app.get('/api/exchange-credentials', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const credentials = await storage.getExchangeCredentials(userId);
+      
+      // Return credentials without exposing full API keys
+      const sanitized = credentials.map(c => ({
+        id: c.id,
+        exchange: c.exchange,
+        label: c.label,
+        isActive: c.isActive,
+        lastSyncAt: c.lastSyncAt,
+        createdAt: c.createdAt,
+        apiKeyPreview: c.apiKey ? `${decrypt(c.apiKey).substring(0, 8)}...` : '',
+      }));
+      
+      res.json(sanitized);
+    } catch (error) {
+      console.error("Error fetching exchange credentials:", error);
+      res.status(500).json({ message: "Failed to fetch exchange credentials" });
+    }
+  });
+
+  app.post('/api/exchange-credentials', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { exchange, apiKey, apiSecret, label } = req.body;
+      
+      if (!exchange || !apiKey || !apiSecret) {
+        return res.status(400).json({ message: "Exchange, API Key, and API Secret are required" });
+      }
+
+      if (exchange !== 'mexc') {
+        return res.status(400).json({ message: "Currently only MEXC exchange is supported" });
+      }
+
+      // Test the API credentials before saving
+      try {
+        await fetchMexcAccountInfo(apiKey, apiSecret);
+      } catch (testError: any) {
+        return res.status(400).json({ 
+          message: `API验证失败: ${testError.message}. 请检查您的API Key和Secret是否正确。` 
+        });
+      }
+
+      // Check if credentials for this exchange already exist
+      const existing = await storage.getExchangeCredentialByExchange(userId, exchange);
+      if (existing) {
+        // Update existing credentials
+        const updated = await storage.updateExchangeCredential(existing.id, userId, {
+          apiKey: encrypt(apiKey),
+          apiSecret: encrypt(apiSecret),
+          label: label || existing.label,
+          isActive: true,
+          lastSyncAt: new Date(),
+        });
+        return res.json({
+          id: updated?.id,
+          exchange: updated?.exchange,
+          label: updated?.label,
+          isActive: updated?.isActive,
+          message: "API凭证已更新",
+        });
+      }
+
+      // Create new credentials
+      const credential = await storage.createExchangeCredential({
+        userId,
+        exchange,
+        apiKey: encrypt(apiKey),
+        apiSecret: encrypt(apiSecret),
+        label: label || 'MEXC账户',
+        isActive: true,
+        lastSyncAt: new Date(),
+      });
+
+      res.status(201).json({
+        id: credential.id,
+        exchange: credential.exchange,
+        label: credential.label,
+        isActive: credential.isActive,
+        message: "API凭证已保存",
+      });
+    } catch (error) {
+      console.error("Error saving exchange credentials:", error);
+      res.status(500).json({ message: "Failed to save exchange credentials" });
+    }
+  });
+
+  app.delete('/api/exchange-credentials/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const deleted = await storage.deleteExchangeCredential(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Exchange credentials not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting exchange credentials:", error);
+      res.status(500).json({ message: "Failed to delete exchange credentials" });
+    }
+  });
+
+  // MEXC account balance endpoint
+  app.get('/api/mexc/balances', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const credential = await storage.getExchangeCredentialByExchange(userId, 'mexc');
+      if (!credential) {
+        return res.status(404).json({ message: "请先配置MEXC API凭证" });
+      }
+
+      if (!credential.isActive) {
+        return res.status(400).json({ message: "MEXC API凭证已禁用" });
+      }
+
+      const apiKey = decrypt(credential.apiKey);
+      const apiSecret = decrypt(credential.apiSecret);
+
+      const balances = await getBalancesWithValues(apiKey, apiSecret);
+
+      // Update last sync time
+      await storage.updateExchangeCredential(credential.id, userId, {
+        lastSyncAt: new Date(),
+      });
+
+      // Calculate total value in USDT
+      const totalUsdtValue = balances.reduce((sum, b) => {
+        return sum + parseFloat(b.usdtValue || '0');
+      }, 0);
+
+      res.json({
+        balances,
+        totalUsdtValue: totalUsdtValue.toFixed(2),
+        lastSyncAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error fetching MEXC balances:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch MEXC balances" });
     }
   });
 

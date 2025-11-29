@@ -7,6 +7,7 @@ import {
   savingsGoals,
   recurringTransactions,
   billReminders,
+  exchangeCredentials,
   type User,
   type UpsertUser,
   type Wallet,
@@ -23,6 +24,8 @@ import {
   type InsertRecurringTransaction,
   type BillReminder,
   type InsertBillReminder,
+  type ExchangeCredential,
+  type InsertExchangeCredential,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, gte, lte, between } from "drizzle-orm";
@@ -110,6 +113,14 @@ export interface IStorage {
   createBillReminder(reminder: InsertBillReminder): Promise<BillReminder>;
   updateBillReminder(id: number, userId: string, data: Partial<InsertBillReminder>): Promise<BillReminder | undefined>;
   deleteBillReminder(id: number, userId: string): Promise<boolean>;
+
+  // Exchange credentials operations
+  getExchangeCredentials(userId: string): Promise<ExchangeCredential[]>;
+  getExchangeCredential(id: number, userId: string): Promise<ExchangeCredential | undefined>;
+  getExchangeCredentialByExchange(userId: string, exchange: string): Promise<ExchangeCredential | undefined>;
+  createExchangeCredential(credential: InsertExchangeCredential): Promise<ExchangeCredential>;
+  updateExchangeCredential(id: number, userId: string, data: Partial<InsertExchangeCredential>): Promise<ExchangeCredential | undefined>;
+  deleteExchangeCredential(id: number, userId: string): Promise<boolean>;
 
   // Initialization
   initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
@@ -562,6 +573,42 @@ export class DatabaseStorage implements IStorage {
   async deleteBillReminder(id: number, userId: string): Promise<boolean> {
     const result = await db.delete(billReminders)
       .where(and(eq(billReminders.id, id), eq(billReminders.userId, userId))).returning();
+    return result.length > 0;
+  }
+
+  // Exchange credentials operations
+  async getExchangeCredentials(userId: string): Promise<ExchangeCredential[]> {
+    return db.select().from(exchangeCredentials).where(eq(exchangeCredentials.userId, userId));
+  }
+
+  async getExchangeCredential(id: number, userId: string): Promise<ExchangeCredential | undefined> {
+    const [credential] = await db.select().from(exchangeCredentials)
+      .where(and(eq(exchangeCredentials.id, id), eq(exchangeCredentials.userId, userId)));
+    return credential;
+  }
+
+  async getExchangeCredentialByExchange(userId: string, exchange: string): Promise<ExchangeCredential | undefined> {
+    const [credential] = await db.select().from(exchangeCredentials)
+      .where(and(eq(exchangeCredentials.userId, userId), eq(exchangeCredentials.exchange, exchange)));
+    return credential;
+  }
+
+  async createExchangeCredential(credential: InsertExchangeCredential): Promise<ExchangeCredential> {
+    const [newCredential] = await db.insert(exchangeCredentials).values(credential).returning();
+    return newCredential;
+  }
+
+  async updateExchangeCredential(id: number, userId: string, data: Partial<InsertExchangeCredential>): Promise<ExchangeCredential | undefined> {
+    const [updated] = await db.update(exchangeCredentials)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(exchangeCredentials.id, id), eq(exchangeCredentials.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteExchangeCredential(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(exchangeCredentials)
+      .where(and(eq(exchangeCredentials.id, id), eq(exchangeCredentials.userId, userId))).returning();
     return result.length > 0;
   }
 
