@@ -29,6 +29,7 @@ import {
   Settings,
   LogOut,
   Target,
+  ArrowUpDown,
 } from "lucide-react";
 import type { User, BillReminder } from "@shared/schema";
 
@@ -65,6 +66,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
     { href: "/", icon: LayoutDashboard, label: "仪表盘" },
     { href: "/transactions", icon: Receipt, label: "交易记录" },
     { href: "/wallets", icon: Wallet, label: "钱包管理" },
+    { href: "/exchange", icon: ArrowUpDown, label: "交易所" },
     { href: "/categories", icon: Tags, label: "分类管理" },
   ];
 

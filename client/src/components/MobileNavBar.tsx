@@ -26,6 +26,7 @@ import {
   FileText,
   Settings,
   LogOut,
+  ArrowUpDown,
 } from "lucide-react";
 import type { User, BillReminder } from "@shared/schema";
 
@@ -66,6 +67,7 @@ export function MobileNavBar({ user }: MobileNavBarProps) {
   ];
 
   const moreMenuItems = [
+    { href: "/exchange", icon: ArrowUpDown, label: "交易所" },
     { href: "/categories", icon: Tags, label: "分类管理" },
     { href: "/budgets", icon: TrendingUp, label: "预算管理" },
     { href: "/savings", icon: PiggyBank, label: "储蓄目标" },

@@ -24,6 +24,7 @@ import Reminders from "@/pages/Reminders";
 import Analytics from "@/pages/Analytics";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import Exchange from "@/pages/Exchange";
 
 function AuthenticatedLayout() {
   const { user, isLoading } = useAuth();
@@ -64,6 +65,7 @@ function AuthenticatedLayout() {
                   <Route path="/transactions" component={Transactions} />
                   <Route path="/categories" component={Categories} />
                   <Route path="/wallets" component={Wallets} />
+                  <Route path="/exchange" component={Exchange} />
                   <Route path="/budgets" component={Budgets} />
                   <Route path="/savings" component={Savings} />
                   <Route path="/recurring" component={Recurring} />
@@ -88,6 +90,7 @@ function AuthenticatedLayout() {
             <Route path="/transactions" component={Transactions} />
             <Route path="/categories" component={Categories} />
             <Route path="/wallets" component={Wallets} />
+            <Route path="/exchange" component={Exchange} />
             <Route path="/budgets" component={Budgets} />
             <Route path="/savings" component={Savings} />
             <Route path="/recurring" component={Recurring} />
