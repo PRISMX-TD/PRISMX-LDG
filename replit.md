@@ -74,7 +74,11 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 10. **财务报表**: 月度/年度财务报表，支持CSV导出
 11. **仪表盘**: 显示总资产摘要和最近交易历史
 12. **数据隔离**: 严格的用户数据隔离确保安全
-13. **MEXC交易所集成**: 连接MEXC加密货币交易所API，实时显示账户余额
+13. **交易所集成**: 连接MEXC和派网(Pionex)加密货币交易所API，实时显示账户余额
+    - MEXC: 支持现货和合约账户余额查询
+    - Pionex: 支持交易账户余额查询
+    - 手动余额录入: 支持录入API无法获取的账户余额（理财、机器人等）
+    - 总资产汇总: 自动计算所有交易所的总资产估值
 
 ## 导航结构 (侧边栏)
 - 仪表盘 (/)
@@ -154,8 +158,10 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 ### 交易所集成
 - `GET /api/exchange-credentials` - 获取用户交易所API凭证列表
 - `POST /api/exchange-credentials` - 添加新的交易所API凭证 (验证后加密存储)
+- `PATCH /api/exchange-credentials/:id/manual-balance` - 更新手动录入的余额
 - `DELETE /api/exchange-credentials/:id` - 删除交易所API凭证
 - `GET /api/mexc/balances` - 获取MEXC交易所账户余额
+- `GET /api/pionex/balances` - 获取派网交易所账户余额
 
 ## 支持的货币
 - MYR (马来西亚林吉特) - RM
