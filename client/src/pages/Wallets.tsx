@@ -38,24 +38,31 @@ export default function Wallets() {
         </Button>
       </div>
 
-      <div className="flex md:hidden items-center justify-end">
-        <Button
-          onClick={() => {
-            setSelectedWallet(null);
-            setIsModalOpen(true);
-          }}
-          data-testid="button-add-wallet-mobile"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          添加钱包
-        </Button>
-      </div>
-
       <TotalAssetsCard
         wallets={wallets}
         defaultCurrency={user?.defaultCurrency || "MYR"}
         isLoading={isLoading}
       />
+
+      <div className="flex md:hidden items-center justify-between">
+        <h2 className="text-base font-semibold flex items-center gap-2">
+          <Wallet className="w-4 h-4" />
+          我的钱包
+        </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSelectedWallet(null);
+            setIsModalOpen(true);
+          }}
+          className="text-sm"
+          data-testid="button-add-wallet-inline"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          添加
+        </Button>
+      </div>
 
       {isLoading ? (
         <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-3">
