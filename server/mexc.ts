@@ -1,11 +1,18 @@
 import crypto from 'crypto';
 
-const ENCRYPTION_KEY = process.env.SESSION_SECRET || 'default-encryption-key-32-chars!';
 const IV_LENGTH = 16;
 const ALGORITHM = 'aes-256-cbc';
 
+function getEncryptionKey(): string {
+  const key = process.env.SESSION_SECRET;
+  if (!key) {
+    throw new Error('SESSION_SECRET environment variable is required for credential encryption');
+  }
+  return key;
+}
+
 function getKey(): Buffer {
-  const hash = crypto.createHash('sha256').update(ENCRYPTION_KEY).digest();
+  const hash = crypto.createHash('sha256').update(getEncryptionKey()).digest();
   return hash;
 }
 

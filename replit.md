@@ -74,11 +74,13 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 10. **财务报表**: 月度/年度财务报表，支持CSV导出
 11. **仪表盘**: 显示总资产摘要和最近交易历史
 12. **数据隔离**: 严格的用户数据隔离确保安全
+13. **MEXC交易所集成**: 连接MEXC加密货币交易所API，实时显示账户余额
 
 ## 导航结构 (侧边栏)
 - 仪表盘 (/)
 - 交易记录 (/transactions)
 - 钱包管理 (/wallets)
+- 交易所 (/exchange)
 - 分类管理 (/categories)
 - 预算管理 (/budgets)
 - 储蓄目标 (/savings)
@@ -98,6 +100,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - **savings_goals**: 储蓄目标表 (id, userId, name, targetAmount, currentAmount, currency, isCompleted)
 - **recurring_transactions**: 定期交易表 (id, userId, type, amount, currency, walletId, categoryId, frequency, startDate, description, isActive)
 - **bill_reminders**: 账单提醒表 (id, userId, name, amount, dueDate, frequency, categoryId, walletId, isPaid, notes)
+- **exchange_credentials**: 交易所API凭证表 (id, userId, exchange, apiKey, apiSecret, label, isActive, lastSyncAt)
 
 ## API路由
 ### 用户
@@ -147,6 +150,12 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - `POST /api/bill-reminders` - 创建账单提醒
 - `PATCH /api/bill-reminders/:id` - 更新账单提醒
 - `DELETE /api/bill-reminders/:id` - 删除账单提醒
+
+### 交易所集成
+- `GET /api/exchange-credentials` - 获取用户交易所API凭证列表
+- `POST /api/exchange-credentials` - 添加新的交易所API凭证 (验证后加密存储)
+- `DELETE /api/exchange-credentials/:id` - 删除交易所API凭证
+- `GET /api/mexc/balances` - 获取MEXC交易所账户余额
 
 ## 支持的货币
 - MYR (马来西亚林吉特) - RM
