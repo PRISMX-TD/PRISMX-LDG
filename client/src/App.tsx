@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SidebarProvider, SidebarTrigger, SidebarInset, SidebarRail } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { MobileNavBar } from "@/components/MobileNavBar";
+import { MobileHeader } from "@/components/MobileHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -44,34 +46,61 @@ function AuthenticatedLayout() {
   } as React.CSSProperties;
 
   return (
-    <SidebarProvider style={sidebarStyle}>
-      <div className="flex h-screen w-full overflow-hidden">
-        <AppSidebar user={user} />
-        <SidebarRail />
-        <SidebarInset className="flex flex-col flex-1 min-w-0">
-          <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-            <SidebarTrigger data-testid="button-sidebar-toggle" className="-ml-1" />
-            <ThemeToggle />
-          </header>
-          <main className="flex-1 overflow-auto">
-            <Switch>
-              <Route path="/" component={Dashboard} />
-              <Route path="/transactions" component={Transactions} />
-              <Route path="/categories" component={Categories} />
-              <Route path="/wallets" component={Wallets} />
-              <Route path="/budgets" component={Budgets} />
-              <Route path="/savings" component={Savings} />
-              <Route path="/recurring" component={Recurring} />
-              <Route path="/reminders" component={Reminders} />
-              <Route path="/analytics" component={Analytics} />
-              <Route path="/reports" component={Reports} />
-              <Route path="/settings" component={Settings} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-        </SidebarInset>
+    <>
+      {/* Desktop Layout */}
+      <div className="hidden md:block h-screen">
+        <SidebarProvider style={sidebarStyle}>
+          <div className="flex h-screen w-full overflow-hidden">
+            <AppSidebar user={user} />
+            <SidebarRail />
+            <SidebarInset className="flex flex-col flex-1 min-w-0">
+              <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+                <SidebarTrigger data-testid="button-sidebar-toggle" className="-ml-1" />
+                <ThemeToggle />
+              </header>
+              <main className="flex-1 overflow-auto">
+                <Switch>
+                  <Route path="/" component={Dashboard} />
+                  <Route path="/transactions" component={Transactions} />
+                  <Route path="/categories" component={Categories} />
+                  <Route path="/wallets" component={Wallets} />
+                  <Route path="/budgets" component={Budgets} />
+                  <Route path="/savings" component={Savings} />
+                  <Route path="/recurring" component={Recurring} />
+                  <Route path="/reminders" component={Reminders} />
+                  <Route path="/analytics" component={Analytics} />
+                  <Route path="/reports" component={Reports} />
+                  <Route path="/settings" component={Settings} />
+                  <Route component={NotFound} />
+                </Switch>
+              </main>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
       </div>
-    </SidebarProvider>
+
+      {/* Mobile Layout */}
+      <div className="md:hidden flex flex-col min-h-screen">
+        <MobileHeader user={user} />
+        <main className="flex-1 overflow-auto pb-20">
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/transactions" component={Transactions} />
+            <Route path="/categories" component={Categories} />
+            <Route path="/wallets" component={Wallets} />
+            <Route path="/budgets" component={Budgets} />
+            <Route path="/savings" component={Savings} />
+            <Route path="/recurring" component={Recurring} />
+            <Route path="/reminders" component={Reminders} />
+            <Route path="/analytics" component={Analytics} />
+            <Route path="/reports" component={Reports} />
+            <Route path="/settings" component={Settings} />
+            <Route component={NotFound} />
+          </Switch>
+        </main>
+        <MobileNavBar user={user} />
+      </div>
+    </>
   );
 }
 
