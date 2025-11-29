@@ -107,28 +107,121 @@ export async function fetchMexcTickers(): Promise<Map<string, string>> {
 export interface BalanceWithValue extends MexcBalance {
   usdtValue?: string;
   price?: string;
+  accountType?: string;
+}
+
+export interface FuturesAsset {
+  currency: string;
+  positionMargin: number;
+  availableBalance: number;
+  cashBalance: number;
+  frozenBalance: number;
+  equity: number;
+  unrealized: number;
+  bonus: number;
+}
+
+export interface FuturesAccountResponse {
+  success: boolean;
+  code: number;
+  data: FuturesAsset[];
+}
+
+function createFuturesSignature(apiKey: string, timestamp: string, paramString: string, apiSecret: string): string {
+  const signString = apiKey + timestamp + paramString;
+  return crypto
+    .createHmac('sha256', apiSecret)
+    .update(signString)
+    .digest('hex');
+}
+
+export async function fetchMexcFuturesAssets(apiKey: string, apiSecret: string): Promise<FuturesAsset[]> {
+  const timestamp = Date.now().toString();
+  const paramString = '';
+  const signature = createFuturesSignature(apiKey, timestamp, paramString, apiSecret);
+  
+  const url = 'https://contract.mexc.com/api/v1/private/account/assets';
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'ApiKey': apiKey,
+      'Request-Time': timestamp,
+      'Signature': signature,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ msg: 'Unknown error' }));
+    console.log('Futures API error:', error);
+    return [];
+  }
+
+  const result: FuturesAccountResponse = await response.json();
+  
+  if (!result.success || !result.data) {
+    console.log('Futures API unsuccessful:', result);
+    return [];
+  }
+
+  return result.data;
 }
 
 export async function getBalancesWithValues(apiKey: string, apiSecret: string): Promise<BalanceWithValue[]> {
-  const [accountInfo, priceMap] = await Promise.all([
+  const [accountInfo, futuresAssets, priceMap] = await Promise.all([
     fetchMexcAccountInfo(apiKey, apiSecret),
+    fetchMexcFuturesAssets(apiKey, apiSecret).catch(() => []),
     fetchMexcTickers(),
   ]);
 
   const balances: BalanceWithValue[] = [];
+  const processedAssets = new Set<string>();
 
   for (const balance of accountInfo.balances) {
     const total = parseFloat(balance.free) + parseFloat(balance.locked);
     
     if (total <= 0) continue;
 
-    const enhanced: BalanceWithValue = { ...balance };
+    const enhanced: BalanceWithValue = { 
+      ...balance,
+      accountType: '现货'
+    };
 
     if (balance.asset === 'USDT') {
       enhanced.price = '1';
       enhanced.usdtValue = total.toFixed(2);
     } else {
       const symbol = `${balance.asset}USDT`;
+      const price = priceMap.get(symbol);
+      
+      if (price) {
+        enhanced.price = price;
+        enhanced.usdtValue = (total * parseFloat(price)).toFixed(2);
+      }
+    }
+
+    balances.push(enhanced);
+    processedAssets.add(`spot-${balance.asset}`);
+  }
+
+  for (const asset of futuresAssets) {
+    const total = asset.equity || asset.availableBalance || 0;
+    
+    if (total <= 0) continue;
+
+    const enhanced: BalanceWithValue = {
+      asset: asset.currency,
+      free: asset.availableBalance.toString(),
+      locked: asset.frozenBalance.toString(),
+      accountType: '合约'
+    };
+
+    if (asset.currency === 'USDT') {
+      enhanced.price = '1';
+      enhanced.usdtValue = total.toFixed(2);
+    } else {
+      const symbol = `${asset.currency}USDT`;
       const price = priceMap.get(symbol);
       
       if (price) {

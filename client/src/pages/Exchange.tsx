@@ -58,6 +58,7 @@ interface MexcBalance {
   locked: string;
   usdtValue?: string;
   price?: string;
+  accountType?: string;
 }
 
 interface MexcBalancesResponse {
@@ -422,9 +423,9 @@ export default function Exchange() {
                 </div>
               ) : balances?.balances && balances.balances.length > 0 ? (
                 <div className="space-y-3">
-                  {balances.balances.map((balance) => (
+                  {balances.balances.map((balance, index) => (
                     <div 
-                      key={balance.asset} 
+                      key={`${balance.accountType || 'spot'}-${balance.asset}-${index}`} 
                       className="flex items-center justify-between py-2 border-b last:border-0"
                       data-testid={`row-balance-${balance.asset}`}
                     >
@@ -433,7 +434,14 @@ export default function Exchange() {
                           <span className="text-xs font-bold">{balance.asset.substring(0, 2)}</span>
                         </div>
                         <div>
-                          <p className="font-medium">{balance.asset}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{balance.asset}</p>
+                            {balance.accountType && (
+                              <Badge variant="outline" className="text-xs py-0 px-1">
+                                {balance.accountType}
+                              </Badge>
+                            )}
+                          </div>
                           {balance.price && balance.asset !== 'USDT' && (
                             <p className="text-xs text-muted-foreground">
                               ${formatCurrency(balance.price, 6)}
