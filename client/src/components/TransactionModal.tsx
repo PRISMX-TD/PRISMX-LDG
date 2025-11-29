@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,7 +37,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Loader2, ArrowRightLeft } from "lucide-react";
+import { CalendarIcon, Loader2, ArrowRightLeft, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import type { Wallet, Category, TransactionType } from "@shared/schema";
@@ -59,6 +59,7 @@ const transactionSchema = z.object({
   ),
   currency: z.string().min(1, "请选择币种"),
   exchangeRate: z.string().optional(),
+  convertedAmount: z.string().optional(),
   walletId: z.string().min(1, "请选择钱包"),
   toWalletId: z.string().optional(),
   toWalletAmount: z.string().optional(),
@@ -80,6 +81,9 @@ export function TransactionModal({
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TransactionType>("expense");
 
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
+
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
@@ -87,6 +91,7 @@ export function TransactionModal({
       amount: "",
       currency: defaultCurrency,
       exchangeRate: "1",
+      convertedAmount: "",
       walletId: "",
       toWalletId: "",
       toWalletAmount: "",
@@ -101,12 +106,45 @@ export function TransactionModal({
   const watchToWalletId = form.watch("toWalletId");
   const watchAmount = form.watch("amount");
   const watchExchangeRate = form.watch("exchangeRate");
+  const watchConvertedAmount = form.watch("convertedAmount");
 
   const selectedWallet = wallets.find((w) => String(w.id) === watchWalletId);
   const selectedToWallet = wallets.find((w) => String(w.id) === watchToWalletId);
 
   const needsCurrencyConversion = selectedWallet && watchCurrency !== selectedWallet.currency;
   const needsTransferConversion = activeTab === "transfer" && selectedWallet && selectedToWallet && selectedWallet.currency !== selectedToWallet.currency;
+
+  const fetchExchangeRate = useCallback(async (from: string, to: string) => {
+    if (from === to) {
+      form.setValue("exchangeRate", "1");
+      return 1;
+    }
+    
+    setIsLoadingRate(true);
+    setRateError(null);
+    
+    try {
+      const response = await fetch(`/api/exchange-rate?from=${from}&to=${to}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        setRateError(data.message || "无法获取汇率");
+        return null;
+      }
+      
+      const data = await response.json();
+      const rate = data.rate;
+      form.setValue("exchangeRate", rate.toFixed(4));
+      return rate;
+    } catch (error) {
+      setRateError("无法获取汇率，请手动输入");
+      return null;
+    } finally {
+      setIsLoadingRate(false);
+    }
+  }, [form]);
 
   useEffect(() => {
     form.setValue("type", activeTab);
@@ -121,14 +159,45 @@ export function TransactionModal({
       form.setValue("walletId", String(defaultWallet.id));
       form.setValue("currency", defaultCurrency);
       form.setValue("exchangeRate", "1");
+      form.setValue("convertedAmount", "");
+      setRateError(null);
     }
   }, [open, wallets, form, defaultCurrency]);
 
   useEffect(() => {
     if (selectedWallet && watchCurrency === selectedWallet.currency) {
       form.setValue("exchangeRate", "1");
+      form.setValue("convertedAmount", "");
+      setRateError(null);
+    } else if (selectedWallet && watchCurrency && watchCurrency !== selectedWallet.currency) {
+      fetchExchangeRate(watchCurrency, selectedWallet.currency);
     }
-  }, [watchCurrency, selectedWallet, form]);
+  }, [watchCurrency, selectedWallet, form, fetchExchangeRate]);
+
+  useEffect(() => {
+    if (needsCurrencyConversion && watchAmount && watchExchangeRate) {
+      const amount = parseFloat(watchAmount);
+      const rate = parseFloat(watchExchangeRate);
+      if (!isNaN(amount) && !isNaN(rate) && rate > 0) {
+        const converted = (amount * rate).toFixed(2);
+        if (watchConvertedAmount !== converted) {
+          form.setValue("convertedAmount", converted);
+        }
+      }
+    }
+  }, [watchAmount, watchExchangeRate, needsCurrencyConversion, form, watchConvertedAmount]);
+
+  const handleConvertedAmountChange = (value: string) => {
+    form.setValue("convertedAmount", value);
+    if (watchAmount && value) {
+      const amount = parseFloat(watchAmount);
+      const converted = parseFloat(value);
+      if (!isNaN(amount) && !isNaN(converted) && amount > 0) {
+        const newRate = (converted / amount).toFixed(4);
+        form.setValue("exchangeRate", newRate);
+      }
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
@@ -234,10 +303,6 @@ export function TransactionModal({
   const currencyInfo = getCurrencyInfo(watchCurrency);
   const walletCurrencyInfo = selectedWallet ? getCurrencyInfo(selectedWallet.currency) : null;
 
-  const calculatedWalletAmount = needsCurrencyConversion && watchAmount && watchExchangeRate
-    ? (parseFloat(watchAmount) * parseFloat(watchExchangeRate || "1")).toFixed(2)
-    : null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" data-testid="modal-transaction" aria-describedby={undefined}>
@@ -326,17 +391,34 @@ export function TransactionModal({
             </div>
 
             {needsCurrencyConversion && (
-              <div className="p-3 bg-muted rounded-lg space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ArrowRightLeft className="h-4 w-4" />
-                  <span>需要货币转换 ({watchCurrency} → {selectedWallet?.currency})</span>
+              <div className="p-3 bg-muted rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <ArrowRightLeft className="h-4 w-4" />
+                    <span>需要货币转换 ({watchCurrency} → {selectedWallet?.currency})</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => selectedWallet && fetchExchangeRate(watchCurrency, selectedWallet.currency)}
+                    disabled={isLoadingRate}
+                    className="h-7 px-2"
+                    data-testid="button-refresh-rate"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isLoadingRate ? 'animate-spin' : ''}`} />
+                  </Button>
                 </div>
+
                 <FormField
                   control={form.control}
                   name="exchangeRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm">汇率 (1 {watchCurrency} = ? {selectedWallet?.currency})</FormLabel>
+                      <FormLabel className="text-sm">
+                        汇率 (1 {watchCurrency} = ? {selectedWallet?.currency})
+                        {isLoadingRate && <Loader2 className="inline ml-2 h-3 w-3 animate-spin" />}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -348,15 +430,39 @@ export function TransactionModal({
                           data-testid="input-exchange-rate"
                         />
                       </FormControl>
+                      {rateError && (
+                        <p className="text-xs text-yellow-600 dark:text-yellow-500">{rateError}</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {calculatedWalletAmount && (
-                  <div className="text-sm text-muted-foreground">
-                    将记录: {walletCurrencyInfo?.symbol}{calculatedWalletAmount} {selectedWallet?.currency}
-                  </div>
-                )}
+
+                <FormItem>
+                  <FormLabel className="text-sm">
+                    转换后金额 ({selectedWallet?.currency})
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        {walletCurrencyInfo?.symbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={watchConvertedAmount || ""}
+                        onChange={(e) => handleConvertedAmountChange(e.target.value)}
+                        placeholder="0.00"
+                        className="pl-10 font-mono"
+                        data-testid="input-converted-amount"
+                      />
+                    </div>
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    此金额将记入钱包，可手动修改
+                  </p>
+                </FormItem>
               </div>
             )}
 

@@ -45,7 +45,7 @@ export async function registerRoutes(
       }
       
       // Validate against supported currencies
-      if (!supportedCurrencyCodes.includes(currency)) {
+      if (!supportedCurrencyCodes.includes(currency as any)) {
         return res.status(400).json({ message: "Unsupported currency" });
       }
       
@@ -57,6 +57,51 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating user currency:", error);
       res.status(500).json({ message: "Failed to update currency" });
+    }
+  });
+
+  // Exchange rate API
+  app.get('/api/exchange-rate', isAuthenticated, async (req: any, res) => {
+    try {
+      const { from, to } = req.query;
+      
+      if (!from || !to || typeof from !== 'string' || typeof to !== 'string') {
+        return res.status(400).json({ message: "Both 'from' and 'to' currency codes are required" });
+      }
+
+      const fromCurrency = from.toUpperCase();
+      const toCurrency = to.toUpperCase();
+
+      if (!supportedCurrencyCodes.includes(fromCurrency as any) || !supportedCurrencyCodes.includes(toCurrency as any)) {
+        return res.status(400).json({ message: "Unsupported currency code" });
+      }
+
+      if (fromCurrency === toCurrency) {
+        return res.json({ rate: 1, from: fromCurrency, to: toCurrency });
+      }
+
+      // Use Frankfurter API (free, no API key required)
+      const response = await fetch(
+        `https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`
+      );
+
+      if (!response.ok) {
+        // Fallback: try with a different API or return error
+        console.error("Frankfurter API error:", response.status);
+        return res.status(503).json({ message: "无法获取汇率，请手动输入" });
+      }
+
+      const data = await response.json();
+      const rate = data.rates?.[toCurrency];
+
+      if (!rate) {
+        return res.status(503).json({ message: "无法获取该币种汇率，请手动输入" });
+      }
+
+      res.json({ rate, from: fromCurrency, to: toCurrency });
+    } catch (error) {
+      console.error("Error fetching exchange rate:", error);
+      res.status(503).json({ message: "无法获取汇率，请手动输入" });
     }
   });
 
