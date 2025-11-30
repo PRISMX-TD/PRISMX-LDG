@@ -242,41 +242,159 @@
   }
 }
 
-/* Purple Aurora Gradient Background Effect - Global */
+/* Dynamic Purple Aurora Background Effect - Full Screen */
 body {
+  background: hsl(240, 10%, 3.9%);
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
   background: 
     radial-gradient(
-      ellipse 120% 80% at 50% -10%,
-      hsla(263, 70%, 45%, 0.4) 0%,
-      hsla(263, 70%, 40%, 0.25) 25%,
-      hsla(280, 65%, 35%, 0.15) 45%,
+      ellipse 150% 100% at 50% -20%,
+      hsla(263, 80%, 50%, 0.35) 0%,
+      hsla(263, 70%, 45%, 0.2) 30%,
+      hsla(280, 65%, 40%, 0.1) 50%,
       transparent 70%
     ),
     radial-gradient(
-      ellipse 80% 50% at 80% 20%,
-      hsla(280, 60%, 40%, 0.15) 0%,
+      ellipse 100% 80% at 90% 30%,
+      hsla(280, 70%, 50%, 0.25) 0%,
+      hsla(290, 60%, 45%, 0.12) 30%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 90% 70% at 10% 40%,
+      hsla(250, 80%, 55%, 0.2) 0%,
+      hsla(263, 70%, 50%, 0.08) 40%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 80% 60% at 70% 80%,
+      hsla(263, 70%, 55%, 0.15) 0%,
+      transparent 50%
+    );
+  animation: aurora-pulse 15s ease-in-out infinite, aurora-shift 25s ease-in-out infinite;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  background: 
+    radial-gradient(
+      ellipse 120% 90% at 30% 10%,
+      hsla(290, 75%, 55%, 0.18) 0%,
       transparent 50%
     ),
     radial-gradient(
-      ellipse 60% 40% at 20% 30%,
-      hsla(263, 70%, 50%, 0.1) 0%,
-      transparent 50%
-    ),
-    hsl(240, 10%, 3.9%);
-  background-attachment: fixed;
+      ellipse 100% 70% at 80% 60%,
+      hsla(250, 80%, 60%, 0.12) 0%,
+      transparent 45%
+    );
+  animation: aurora-pulse-alt 18s ease-in-out infinite reverse, aurora-shift-alt 30s ease-in-out infinite reverse;
+  opacity: 0.8;
 }
 
-/* Frosted Glass Card Effect */
-.glass-card {
-  background: hsla(240, 6%, 10%, 0.6) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid hsla(263, 30%, 40%, 0.2) !important;
+@keyframes aurora-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  25% {
+    opacity: 0.85;
+    transform: scale(1.05) translateY(-2%);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) translateY(-5%);
+  }
+  75% {
+    opacity: 0.9;
+    transform: scale(1.02) translateY(-2%);
+  }
 }
 
-.glass-card:hover {
-  border-color: hsla(263, 70%, 50%, 0.35) !important;
-  background: hsla(240, 6%, 12%, 0.7) !important;
+@keyframes aurora-pulse-alt {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1) translateX(0);
+  }
+  33% {
+    opacity: 0.6;
+    transform: scale(1.08) translateX(3%);
+  }
+  66% {
+    opacity: 0.9;
+    transform: scale(0.95) translateX(-3%);
+  }
+}
+
+@keyframes aurora-shift {
+  0%, 100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(15deg);
+  }
+}
+
+@keyframes aurora-shift-alt {
+  0%, 100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(-10deg);
+  }
+}
+
+/* Make sure main content is above aurora */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Enhanced Frosted Glass Card Effect - High Specificity */
+.glass-card,
+.shadcn-card.glass-card,
+div.glass-card {
+  background: hsla(240, 8%, 12%, 0.65) !important;
+  backdrop-filter: blur(24px) saturate(200%) brightness(1.05) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(200%) brightness(1.05) !important;
+  border: 1px solid hsla(263, 50%, 55%, 0.3) !important;
+  box-shadow: 
+    0 4px 24px -4px hsla(263, 70%, 30%, 0.35),
+    inset 0 1px 0 0 hsla(263, 50%, 70%, 0.12) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover,
+.shadcn-card.glass-card:hover,
+div.glass-card:hover {
+  border-color: hsla(263, 70%, 60%, 0.5) !important;
+  background: hsla(240, 8%, 14%, 0.75) !important;
+  box-shadow: 
+    0 8px 32px -4px hsla(263, 70%, 45%, 0.4),
+    0 0 24px hsla(263, 70%, 50%, 0.15),
+    inset 0 1px 0 0 hsla(263, 50%, 70%, 0.15) !important;
 }
 
 /* Purple Glow Effect for Cards */
@@ -298,18 +416,31 @@ body {
   background-clip: text;
 }
 
-/* Stats card with glass effect */
+/* Stats card with enhanced glass effect */
 .stats-card {
-  background: hsla(240, 6%, 10%, 0.5) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid hsla(263, 30%, 35%, 0.25) !important;
+  background: hsla(240, 8%, 12%, 0.7) !important;
+  backdrop-filter: blur(28px) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(1.08);
+  border: 1px solid hsla(263, 45%, 55%, 0.2) !important;
+  box-shadow: 
+    0 4px 20px -4px hsla(263, 70%, 30%, 0.25),
+    inset 0 1px 0 0 hsla(263, 50%, 70%, 0.06);
   transition: all 0.3s ease;
 }
 
 .stats-card:hover {
-  border-color: hsla(263, 70%, 50%, 0.4) !important;
-  box-shadow: 0 0 30px hsla(263, 70%, 50%, 0.15);
+  border-color: hsla(263, 70%, 55%, 0.4) !important;
+  background: hsla(240, 8%, 14%, 0.8) !important;
+  box-shadow: 
+    0 8px 36px -4px hsla(263, 70%, 40%, 0.3),
+    inset 0 1px 0 0 hsla(263, 50%, 70%, 0.1);
+}
+
+/* Glass effect for sidebar */
+[data-slot="sidebar"] {
+  background: hsla(240, 10%, 5%, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 /**
