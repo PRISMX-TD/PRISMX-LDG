@@ -1,18 +1,41 @@
 # PRISMX Ledger - Design Guidelines
 
 ## Design Approach
-**System-Based with Fintech Customization**: Drawing from Material Design principles adapted for financial applications, inspired by Mint and PocketGuard's clean, trust-building interfaces.
+**Dark Theme Fintech Application**: Modern, premium dark theme inspired by high-end fintech and cryptocurrency applications. Features purple as the primary accent color with subtle gradient effects for a sophisticated look.
 
 ## Core Design Principles
-1. **Clarity First**: Financial data must be immediately scannable and unambiguous
-2. **Trust Through Restraint**: Professional, secure aesthetic without unnecessary decoration
-3. **Action-Oriented**: Easy access to primary tasks (record transactions)
-4. **Data Hierarchy**: Clear visual distinction between totals, categories, and individual transactions
+1. **Dark-First Design**: Deep blacks and dark grays provide a premium feel and reduce eye strain
+2. **Purple Accent System**: Vibrant purple (#8B5CF6) as primary color for actions and highlights
+3. **Subtle Glow Effects**: Purple aurora/gradient effects add depth and modernity
+4. **High Contrast Data**: Financial data stands out clearly against dark backgrounds
+5. **Minimal Borders**: Use subtle borders or background differences to define areas
+
+## Color System
+
+### Primary Colors
+- **Background**: hsl(240 10% 3.9%) - Near black
+- **Card Background**: hsl(240 6% 10%) - Dark gray
+- **Primary (Purple)**: hsl(263 70% 50%) - Vibrant purple #8B5CF6
+- **Primary Foreground**: White
+
+### Semantic Colors
+- **Success/Income**: hsl(160 84% 39%) - Green
+- **Destructive/Expense**: hsl(0 84% 60%) - Red
+- **Transfer**: Purple (same as primary)
+- **Muted**: hsl(240 5% 64.9%) - Gray text
+
+### Chart Colors
+- Chart 1: Blue (hsl(221 83% 53%))
+- Chart 2: Purple (hsl(263 70% 50%))
+- Chart 3: Magenta (hsl(280 65% 60%))
+- Chart 4: Cyan (hsl(200 80% 50%))
+- Chart 5: Pink (hsl(340 75% 55%))
 
 ## Typography System
 **Font Families**: 
 - Primary: Inter (via Google Fonts CDN)
 - Fallback: -apple-system, SF Pro, system-ui
+- Monospace: Menlo (for numbers)
 
 **Hierarchy**:
 - H1 (页面标题): 32px, font-semibold (600)
@@ -30,89 +53,79 @@
 - Section padding: py-8 mobile, py-12 desktop
 - Card padding: p-6
 - Card gaps in grid: gap-6
+- Border radius: rounded-xl (larger) for modern feel
 
 **Grid System**:
 - Dashboard: 3-column grid on desktop (lg:grid-cols-3), 1-column mobile
-- Transaction list: Single column with row-based cards
+- Stats cards: 2-column on tablet (md:grid-cols-2), 4-column desktop (lg:grid-cols-4)
 - Wallet cards: 2-column on tablet (md:grid-cols-2), 3-column desktop (lg:grid-cols-3)
 
 ## Component Library
 
-### Navigation Bar
-- Fixed top bar with white background, subtle shadow
-- Logo left, user menu right
-- Height: h-16, px-6 horizontal padding
+### Special Effects
 
-### Dashboard Cards
-- White background (#FFFFFF), rounded-xl borders
-- Shadow: shadow-md, hover:shadow-lg transition
-- Padding: p-6, gap-4 internal spacing
-- Total assets card: Prominent display with large number (text-4xl) in primary color
+#### Aurora Background
+Use `.aurora-bg` class for pages that need the purple gradient glow effect at the top:
+- Creates a subtle purple radial gradient
+- Positioned at top of container
+- Provides depth and visual interest
+
+#### Purple Glow
+- `.purple-glow` - Larger glow for prominent elements
+- `.purple-glow-sm` - Subtle glow for smaller elements
+
+#### Gradient Text
+`.gradient-text` - Purple to blue gradient text effect for headings
+
+### Cards
+- Dark background (bg-card)
+- Subtle border (border-card-border)
+- Large border radius (rounded-xl)
+- Stats cards use `.stats-card` class for special gradient background
+
+### Total Assets Card
+- Uses `bg-primary` with `text-primary-foreground`
+- Large numeric display (text-4xl, font-mono)
+- Purple background with white text
 
 ### Transaction Cards
-- Income: Left border (border-l-4) in green (#10B981)
-- Expense: Left border in red (#EF4444)
-- Transfer: Left border in blue (#2563EB)
-- Layout: Flex row with icon, description/category (flex-grow), amount (right-aligned)
+- Dark card background
+- Income: Left accent in green
+- Expense: Left accent in red
+- Transfer: Left accent in purple
 
-### Floating Action Button (FAB)
-- Position: fixed bottom-8 right-8
-- Size: w-16 h-16, rounded-full
-- Background: Primary blue (#2563EB) with shadow-lg
-- Icon: Plus sign, white color
-- z-index: z-50
+### Buttons
+- Primary: Purple background, white text
+- Ghost: Transparent, subtle hover
+- Outline: Border only, hover fills
 
-### Modal Overlays
-- Full screen backdrop (bg-black/50)
-- Centered modal: max-w-2xl, white background, rounded-2xl
-- Header with tabs for transaction types (支出/收入/转账)
-- Active tab: border-b-2 in primary color
-- Form fields: gap-6 vertical spacing
-
-### Form Components
-- Input fields: h-12, px-4, rounded-lg, border-2, focus:border-primary
-- Dropdowns: Custom styled select with chevron icon
-- Amount input: Large text (text-2xl), right-aligned, font-mono
-- Date picker: Icon prefix, calendar integration
-- Submit button: w-full, h-12, rounded-lg, primary background
-
-### Wallet Cards
-- Icon + name in header
-- Balance: Large (text-3xl), font-semibold, right-aligned
-- Card type indicator: Small badge in top-right
-- Grid layout: Responsive 1/2/3 columns
-
-## Icons
-**Library**: Heroicons (via CDN)
-- Wallet: wallet icon
-- Income: arrow-trending-up icon  
-- Expense: arrow-trending-down icon
-- Transfer: arrow-path icon
-- Add: plus icon
-- Category icons: Various outline icons per category type
+### Navigation
+- Sidebar: Dark background matching overall theme
+- Active item: Purple accent background
+- Icons: Consistent 20px size
 
 ## Interactions & States
-**Minimal Animations**:
-- Card hover: Subtle shadow elevation (300ms ease)
+**Animations**:
+- Card hover: Subtle elevation (use hover-elevate utility)
 - Button active: Scale down slightly (scale-95)
 - Modal: Fade in backdrop, slide up content (200ms)
-- No scroll-triggered or complex animations
+- Transitions: 150-200ms duration
 
 **Focus States**: 
-- Blue outline ring (ring-2 ring-primary ring-offset-2)
+- Purple outline ring (ring-2 ring-primary ring-offset-2)
 - Clear keyboard navigation support
 
 ## Responsive Behavior
 **Breakpoints**:
-- Mobile (base): Single column, stacked layout, FAB bottom-6 right-6
+- Mobile (base): Single column, stacked layout
 - Tablet (md: 768px): 2-column grids, expanded navigation
-- Desktop (lg: 1024px): 3-column grids, full dashboard layout
+- Desktop (lg: 1024px): 3-4 column grids, full dashboard layout
 
 **Mobile Adaptations**:
-- Navigation: Hamburger menu if needed
-- Modal: Full screen on mobile (inset-0)
-- Transaction cards: Simplified with icons only for categories
-- FAB: Slightly smaller (w-14 h-14) on mobile
+- Bottom navigation bar
+- Full-width cards
+- Simplified layouts
+- Touch-friendly targets (min 44px)
 
 ## Accessibility
 - All interactive elements: Minimum 44x44px touch targets
@@ -121,5 +134,5 @@
 - Focus indicators: Visible on all interactive elements
 - Chinese language: lang="zh-CN" attribute
 
-## No Hero Image
-This is a dashboard application - authentication pages use centered card layouts without hero imagery. Focus is on functional interface immediately upon login.
+## Dark Mode
+The application defaults to dark mode. Light mode support is maintained but dark mode is the primary design target. All components use CSS variables that adapt to both modes.

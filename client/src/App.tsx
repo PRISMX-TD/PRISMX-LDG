@@ -133,7 +133,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="prismx-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="prismx-theme">
         <TooltipProvider>
           <Toaster />
           <Router />
