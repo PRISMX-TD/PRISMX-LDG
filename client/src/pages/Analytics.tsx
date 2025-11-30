@@ -343,7 +343,10 @@ export default function Analytics() {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        color: 'hsl(var(--foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
                       formatter={(value: number, name: string) => [
                         `${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`,
                         name === "income" ? "收入" : "支出"
@@ -400,7 +403,10 @@ export default function Analytics() {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        color: 'hsl(var(--foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -445,7 +451,10 @@ export default function Analytics() {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        color: 'hsl(var(--foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
                       formatter={(value: number) => [`${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`, "收入"]}
                     />
                     <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -482,7 +491,10 @@ export default function Analytics() {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        color: 'hsl(var(--foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -527,7 +539,10 @@ export default function Analytics() {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        color: 'hsl(var(--foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
                       formatter={(value: number) => [`${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`, "支出"]}
                     />
                     <Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} />
@@ -602,7 +617,10 @@ export default function Analytics() {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        color: 'hsl(var(--foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
                       formatter={(value: number) => [`${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`, "结余"]}
                     />
                     <Area
@@ -645,7 +663,10 @@ export default function Analytics() {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
+                        color: 'hsl(var(--foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
