@@ -3,12 +3,10 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/ThemeProvider";
 import { SidebarProvider, SidebarTrigger, SidebarInset, SidebarRail } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNavBar } from "@/components/MobileNavBar";
 import { MobileHeader } from "@/components/MobileHeader";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
@@ -54,10 +52,9 @@ function AuthenticatedLayout() {
           <div className="flex h-screen w-full overflow-hidden">
             <AppSidebar user={user} />
             <SidebarRail />
-            <SidebarInset className="flex flex-col flex-1 min-w-0">
-              <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+            <SidebarInset className="flex flex-col flex-1 min-w-0 bg-transparent">
+              <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-4 border-b border-primary/10 bg-background/40 backdrop-blur-xl px-4">
                 <SidebarTrigger data-testid="button-sidebar-toggle" className="-ml-1" />
-                <ThemeToggle />
               </header>
               <main className="flex-1 overflow-auto">
                 <Switch>
@@ -133,12 +130,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="prismx-theme">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

@@ -27,8 +27,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 │   │   │   ├── TotalAssetsCard.tsx
 │   │   │   ├── ExpenseChart.tsx
 │   │   │   ├── EmptyState.tsx
-│   │   │   ├── ThemeProvider.tsx
-│   │   │   └── ThemeToggle.tsx
+│   │   │   └── ThemeProvider.tsx
 │   │   ├── hooks/          # React Hooks
 │   │   │   ├── useAuth.ts
 │   │   │   └── use-toast.ts
@@ -182,16 +181,19 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - 4个收入分类: 工资、奖金、投资、其他
 
 ## 设计规范
-- 主题色: Primary #8B5CF6 (紫色) - 深色主题为默认
+- 主题色: Primary #8B5CF6 (紫色)
 - 收入色: #10B981 (成功绿)
 - 支出色: #EF4444 (警告红)
 - 转账色: #8B5CF6 (紫色)
 - 背景色: hsl(240 10% 3.9%) (深黑色)
-- 卡片色: hsl(240 6% 10%) (深灰色)
+- 卡片色: hsl(240 6% 8%) (深灰色)
+- 边框色: 紫色调 (hsl 263 25% 22%)
 - 字体: Inter
-- 默认深色主题，支持深色/浅色主题切换
+- **仅深色主题** (无主题切换功能)
 - 使用Shadcn侧边栏组件实现可折叠导航
 - 紫色渐变光效 (aurora-bg) 增加视觉层次感
+- 毛玻璃卡片效果 (glass-card) 使用 backdrop-blur
+- 紫色辉光阴影 (purple-glow) 提升视觉层次
 
 ## 开发命令
 - `npm run dev` - 启动开发服务器

@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Wallet, LogOut, Globe, Tags } from "lucide-react";
 import { Link } from "wouter";
 import type { User } from "@shared/schema";
@@ -82,8 +81,6 @@ export function Header({ user }: HeaderProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

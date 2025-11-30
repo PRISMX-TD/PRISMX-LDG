@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,15 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings as SettingsIcon, Globe, User, Palette, Shield, Loader2 } from "lucide-react";
-import { supportedCurrencies, getCurrencyInfo } from "@shared/schema";
-import { useTheme } from "@/components/ThemeProvider";
+import { Settings as SettingsIcon, Globe, User, Shield, Loader2 } from "lucide-react";
+import { supportedCurrencies } from "@shared/schema";
 
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { theme, setTheme } = useTheme();
 
   const displayName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
@@ -120,51 +117,6 @@ export default function Settings() {
               <span className="text-sm">正在更新...</span>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="w-5 h-5" />
-            外观设置
-          </CardTitle>
-          <CardDescription>选择您喜欢的界面主题</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={theme}
-            onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
-            className="grid gap-3 sm:grid-cols-3"
-          >
-            <div
-              className="flex items-center space-x-3 rounded-lg border p-3 hover-elevate cursor-pointer"
-              onClick={() => setTheme("light")}
-            >
-              <RadioGroupItem value="light" id="theme-light" />
-              <Label htmlFor="theme-light" className="cursor-pointer flex-1">
-                浅色模式
-              </Label>
-            </div>
-            <div
-              className="flex items-center space-x-3 rounded-lg border p-3 hover-elevate cursor-pointer"
-              onClick={() => setTheme("dark")}
-            >
-              <RadioGroupItem value="dark" id="theme-dark" />
-              <Label htmlFor="theme-dark" className="cursor-pointer flex-1">
-                深色模式
-              </Label>
-            </div>
-            <div
-              className="flex items-center space-x-3 rounded-lg border p-3 hover-elevate cursor-pointer"
-              onClick={() => setTheme("system")}
-            >
-              <RadioGroupItem value="system" id="theme-system" />
-              <Label htmlFor="theme-system" className="cursor-pointer flex-1">
-                跟随系统
-              </Label>
-            </div>
-          </RadioGroup>
         </CardContent>
       </Card>
 

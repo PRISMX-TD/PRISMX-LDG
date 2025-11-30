@@ -44,7 +44,7 @@ export function TotalAssetsCard({ wallets, isLoading, defaultCurrency = "MYR" }:
   }
 
   return (
-    <Card className="bg-primary text-primary-foreground overflow-visible">
+    <Card className="bg-gradient-to-br from-primary via-primary/90 to-purple-600 text-primary-foreground overflow-visible shadow-xl shadow-primary/30">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium flex items-center gap-2 opacity-90">
           <Wallet className="w-5 h-5" />

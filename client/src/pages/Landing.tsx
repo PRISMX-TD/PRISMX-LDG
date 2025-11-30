@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Target } from "lucide-react";
 import {
   Wallet,
@@ -58,12 +57,9 @@ export default function Landing() {
               <span className="text-xs text-muted-foreground -mt-1">Ledger</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-login">
-              <a href="/api/login">登录</a>
-            </Button>
-          </div>
+          <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-login">
+            <a href="/api/login">登录</a>
+          </Button>
         </div>
       </header>
 

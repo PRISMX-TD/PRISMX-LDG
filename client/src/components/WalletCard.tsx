@@ -40,7 +40,7 @@ export function WalletCard({ wallet, onClick }: WalletCardProps) {
         onClick={onClick}
         data-testid={`card-wallet-${wallet.id}`}
       >
-        <Card className="hover-elevate cursor-pointer transition-all duration-200">
+        <Card className="glass-card hover:purple-glow-sm cursor-pointer transition-all duration-300">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function WalletCard({ wallet, onClick }: WalletCardProps) {
       </div>
 
       <div
-        className="md:hidden flex items-center justify-between p-3 bg-card rounded-lg hover-elevate cursor-pointer transition-all duration-200"
+        className="md:hidden flex items-center justify-between p-3 glass-card rounded-lg cursor-pointer transition-all duration-300"
         onClick={onClick}
         data-testid={`card-wallet-mobile-${wallet.id}`}
       >

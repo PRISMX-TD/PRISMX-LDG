@@ -125,7 +125,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <div className="hidden md:block">
         <Header user={user} />
       </div>
@@ -138,7 +138,7 @@ export default function Dashboard() {
             defaultCurrency={user?.defaultCurrency || "MYR"}
           />
 
-          <Card>
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-income" />
@@ -163,7 +163,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <TrendingDown className="w-4 h-4 text-expense" />
@@ -224,7 +224,7 @@ export default function Dashboard() {
               </div>
             </>
           ) : wallets.length === 0 ? (
-            <Card>
+            <Card className="glass-card">
               <CardContent className="p-0">
                 <EmptyState
                   icon={Wallet}
@@ -282,7 +282,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <Card>
+          <Card className="glass-card">
             <CardContent className="p-4">
               {isTransactionsLoading ? (
                 <div className="space-y-3">
