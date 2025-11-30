@@ -135,11 +135,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     <Link href={item.href} data-testid={`nav-${item.href.slice(1)}`}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.label}</span>
-                      {item.badge && item.badge > 0 && (
+                      {item.badge !== undefined && item.badge > 0 ? (
                         <Badge variant="destructive" className="ml-auto text-xs">
                           {item.badge}
                         </Badge>
-                      )}
+                      ) : null}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

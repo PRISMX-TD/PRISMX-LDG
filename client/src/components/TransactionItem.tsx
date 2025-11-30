@@ -97,11 +97,11 @@ export function TransactionItem({
 
   return (
     <div
-      className={`flex items-center gap-4 p-4 rounded-lg border-l-4 bg-card hover-elevate ${getBorderColor()}`}
+      className={`flex items-center gap-3 py-3 px-3 rounded-lg border-l-3 bg-card/50 hover-elevate ${getBorderColor()}`}
       data-testid={`item-transaction-${transaction.id}`}
     >
       <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
           isExpense
             ? "bg-expense/10"
             : isIncome
@@ -109,17 +109,17 @@ export function TransactionItem({
             : "bg-transfer/10"
         }`}
       >
-        <CategoryIcon className={`w-5 h-5 ${getTypeColor()}`} />
+        <CategoryIcon className={`w-4 h-4 ${getTypeColor()}`} />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium truncate" data-testid={`text-description-${transaction.id}`}>
+        <p className="font-medium text-sm truncate" data-testid={`text-description-${transaction.id}`}>
           {getDescription()}
         </p>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{wallet?.name || "未知钱包"}</span>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="truncate max-w-[80px]">{wallet?.name || "未知"}</span>
           <span>·</span>
-          <span>
+          <span className="whitespace-nowrap">
             {format(new Date(transaction.date), "M月d日 HH:mm", {
               locale: zhCN,
             })}
@@ -127,9 +127,9 @@ export function TransactionItem({
         </div>
       </div>
 
-      <div className="text-right">
+      <div className="text-right flex-shrink-0">
         <p
-          className={`font-semibold font-mono ${getTypeColor()}`}
+          className={`font-semibold font-mono text-sm ${getTypeColor()}`}
           data-testid={`text-amount-${transaction.id}`}
         >
           {getAmountPrefix()}{getCurrencyInfo(wallet?.currency || "MYR").symbol}
@@ -138,17 +138,16 @@ export function TransactionItem({
             maximumFractionDigits: 2,
           })}
         </p>
-        {transaction.currency && transaction.currency !== (wallet?.currency || "MYR") && transaction.originalAmount && (
+        {transaction.currency && transaction.currency !== (wallet?.currency || "MYR") && transaction.originalAmount ? (
           <p className="text-xs text-muted-foreground">
             原: {getCurrencyInfo(transaction.currency).symbol}{parseFloat(transaction.originalAmount).toLocaleString("zh-CN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </p>
-        )}
-        {category && !isTransfer && !transaction.originalAmount && (
+        ) : category && !isTransfer ? (
           <p className="text-xs text-muted-foreground">{category.name}</p>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -156,15 +155,15 @@ export function TransactionItem({
 
 export function TransactionItemSkeleton() {
   return (
-    <div className="flex items-center gap-4 p-4 rounded-lg border-l-4 border-l-muted bg-card animate-pulse">
-      <div className="w-10 h-10 rounded-full bg-muted" />
-      <div className="flex-1">
-        <div className="h-4 w-32 bg-muted rounded mb-2" />
-        <div className="h-3 w-24 bg-muted rounded" />
+    <div className="flex items-center gap-3 py-3 px-3 rounded-lg border-l-3 border-l-muted bg-card/50 animate-pulse">
+      <div className="w-9 h-9 rounded-full bg-muted flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="h-4 w-24 bg-muted rounded mb-1.5" />
+        <div className="h-3 w-32 bg-muted rounded" />
       </div>
-      <div className="text-right">
-        <div className="h-5 w-20 bg-muted rounded mb-1" />
-        <div className="h-3 w-12 bg-muted rounded ml-auto" />
+      <div className="text-right flex-shrink-0">
+        <div className="h-4 w-20 bg-muted rounded mb-1" />
+        <div className="h-3 w-10 bg-muted rounded ml-auto" />
       </div>
     </div>
   );

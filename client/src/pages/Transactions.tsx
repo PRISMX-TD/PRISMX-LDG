@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Receipt, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format } from "date-fns";
 import type { Wallet, Category, Transaction } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
 
@@ -32,13 +32,7 @@ interface TransactionStats {
 export default function Transactions() {
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filters, setFilters] = useState<TransactionFilterValues>(() => {
-    const now = new Date();
-    return {
-      startDate: startOfMonth(now),
-      endDate: endOfMonth(now),
-    };
-  });
+  const [filters, setFilters] = useState<TransactionFilterValues>({});
 
   const { data: wallets = [] } = useQuery<Wallet[]>({
     queryKey: ["/api/wallets"],

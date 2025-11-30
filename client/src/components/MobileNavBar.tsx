@@ -153,14 +153,14 @@ export function MobileNavBar({ user }: MobileNavBarProps) {
                   >
                     <div className="relative">
                       <item.icon className="w-6 h-6" />
-                      {item.badge && item.badge > 0 && (
+                      {item.badge !== undefined && item.badge > 0 ? (
                         <Badge
                           variant="destructive"
                           className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
                         >
                           {item.badge}
                         </Badge>
-                      )}
+                      ) : null}
                     </div>
                     <span className="text-xs text-center">{item.label}</span>
                   </Link>
