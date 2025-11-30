@@ -138,7 +138,7 @@ export async function registerRoutes(
   app.post('/api/wallets', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { name, type, currency, color, icon, exchangeRateToDefault } = req.body;
+      const { name, type, currency, color, icon, exchangeRateToDefault, isFlexible } = req.body;
       
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return res.status(400).json({ message: "Name is required" });
@@ -168,6 +168,7 @@ export async function registerRoutes(
         balance: "0",
         isDefault: false,
         exchangeRateToDefault: rateToDefault,
+        isFlexible: isFlexible !== false,
       });
       res.status(201).json(wallet);
     } catch (error) {
@@ -181,7 +182,7 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
-      const { name, type, currency, color, icon, isDefault, exchangeRateToDefault } = req.body;
+      const { name, type, currency, color, icon, isDefault, exchangeRateToDefault, isFlexible } = req.body;
       
       const existingWallet = await storage.getWallet(id, userId);
       if (!existingWallet) {
@@ -231,6 +232,11 @@ export async function registerRoutes(
       }
       
       if (icon !== undefined) updateData.icon = icon;
+      
+      // Handle isFlexible flag
+      if (isFlexible !== undefined) {
+        updateData.isFlexible = isFlexible === true;
+      }
       
       // Validate and handle exchange rate if provided
       if (exchangeRateToDefault !== undefined) {
@@ -972,6 +978,65 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting bill reminder:", error);
       res.status(500).json({ message: "Failed to delete bill reminder" });
+    }
+  });
+
+  // Dashboard preferences routes
+  app.get('/api/dashboard-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const preferences = await storage.getDashboardPreferences(userId);
+      
+      // Return defaults if no preferences exist
+      if (!preferences) {
+        return res.json({
+          showTotalAssets: true,
+          showMonthlyIncome: true,
+          showMonthlyExpense: true,
+          showWallets: true,
+          showBudgets: true,
+          showSavingsGoals: true,
+          showRecentTransactions: true,
+          showFlexibleFunds: false,
+        });
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching dashboard preferences:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard preferences" });
+    }
+  });
+
+  app.patch('/api/dashboard-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const {
+        showTotalAssets,
+        showMonthlyIncome,
+        showMonthlyExpense,
+        showWallets,
+        showBudgets,
+        showSavingsGoals,
+        showRecentTransactions,
+        showFlexibleFunds,
+      } = req.body;
+      
+      const updateData: any = {};
+      if (showTotalAssets !== undefined) updateData.showTotalAssets = showTotalAssets;
+      if (showMonthlyIncome !== undefined) updateData.showMonthlyIncome = showMonthlyIncome;
+      if (showMonthlyExpense !== undefined) updateData.showMonthlyExpense = showMonthlyExpense;
+      if (showWallets !== undefined) updateData.showWallets = showWallets;
+      if (showBudgets !== undefined) updateData.showBudgets = showBudgets;
+      if (showSavingsGoals !== undefined) updateData.showSavingsGoals = showSavingsGoals;
+      if (showRecentTransactions !== undefined) updateData.showRecentTransactions = showRecentTransactions;
+      if (showFlexibleFunds !== undefined) updateData.showFlexibleFunds = showFlexibleFunds;
+      
+      const preferences = await storage.upsertDashboardPreferences(userId, updateData);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating dashboard preferences:", error);
+      res.status(500).json({ message: "Failed to update dashboard preferences" });
     }
   });
 

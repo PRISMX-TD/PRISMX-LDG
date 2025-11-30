@@ -49,6 +49,7 @@ export const wallets = pgTable("wallets", {
   icon: varchar("icon", { length: 50 }), // icon name for display
   color: varchar("color", { length: 20 }), // hex color for card display
   isDefault: boolean("is_default").default(false),
+  isFlexible: boolean("is_flexible").default(true), // true = flexible funds (可灵活调用), false = long-term/emergency savings
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -142,6 +143,22 @@ export const billReminders = pgTable("bill_reminders", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// User dashboard preferences table
+export const userDashboardPreferences = pgTable("user_dashboard_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  showTotalAssets: boolean("show_total_assets").default(true),
+  showMonthlyIncome: boolean("show_monthly_income").default(true),
+  showMonthlyExpense: boolean("show_monthly_expense").default(true),
+  showWallets: boolean("show_wallets").default(true),
+  showBudgets: boolean("show_budgets").default(true),
+  showSavingsGoals: boolean("show_savings_goals").default(true),
+  showRecentTransactions: boolean("show_recent_transactions").default(true),
+  showFlexibleFunds: boolean("show_flexible_funds").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Exchange credentials table - for crypto exchange API integration
 export const exchangeCredentials = pgTable("exchange_credentials", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -158,7 +175,7 @@ export const exchangeCredentials = pgTable("exchange_credentials", {
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   wallets: many(wallets),
   categories: many(categories),
   transactions: many(transactions),
@@ -167,6 +184,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   recurringTransactions: many(recurringTransactions),
   billReminders: many(billReminders),
   exchangeCredentials: many(exchangeCredentials),
+  dashboardPreferences: one(userDashboardPreferences),
+}));
+
+export const userDashboardPreferencesRelations = relations(userDashboardPreferences, ({ one }) => ({
+  user: one(users, { fields: [userDashboardPreferences.userId], references: [users.id] }),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -240,6 +262,9 @@ export type BillReminder = typeof billReminders.$inferSelect;
 export type InsertExchangeCredential = typeof exchangeCredentials.$inferInsert;
 export type ExchangeCredential = typeof exchangeCredentials.$inferSelect;
 
+export type InsertUserDashboardPreferences = typeof userDashboardPreferences.$inferInsert;
+export type UserDashboardPreferences = typeof userDashboardPreferences.$inferSelect;
+
 // Zod schemas for validation
 export const insertWalletSchema = createInsertSchema(wallets).omit({
   id: true,
@@ -277,6 +302,12 @@ export const insertBillReminderSchema = createInsertSchema(billReminders).omit({
 });
 
 export const insertExchangeCredentialSchema = createInsertSchema(exchangeCredentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserDashboardPreferencesSchema = createInsertSchema(userDashboardPreferences).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

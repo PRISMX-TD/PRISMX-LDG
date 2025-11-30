@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supportedCurrencies, type Wallet } from "@shared/schema";
@@ -59,6 +60,7 @@ interface WalletFormData {
   currency: string;
   color: string;
   exchangeRateToDefault: string;
+  isFlexible: boolean;
 }
 
 interface WalletModalProps {
@@ -80,6 +82,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
       currency: defaultCurrency,
       color: "#3B82F6",
       exchangeRateToDefault: "1",
+      isFlexible: true,
     },
   });
 
@@ -94,6 +97,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
         currency: wallet.currency || defaultCurrency,
         color: wallet.color || "#3B82F6",
         exchangeRateToDefault: wallet.exchangeRateToDefault || "1",
+        isFlexible: wallet.isFlexible !== false,
       });
     } else {
       form.reset({
@@ -102,6 +106,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
         currency: defaultCurrency,
         color: "#3B82F6",
         exchangeRateToDefault: "1",
+        isFlexible: true,
       });
     }
   }, [wallet, defaultCurrency, form]);
@@ -330,6 +335,28 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                       ))}
                     </div>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isFlexible"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm font-medium">可灵活调用资金</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        非长期储蓄或应急储蓄，可随时使用
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-flexible"
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

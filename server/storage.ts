@@ -8,6 +8,7 @@ import {
   recurringTransactions,
   billReminders,
   exchangeCredentials,
+  userDashboardPreferences,
   type User,
   type UpsertUser,
   type Wallet,
@@ -26,6 +27,8 @@ import {
   type InsertBillReminder,
   type ExchangeCredential,
   type InsertExchangeCredential,
+  type UserDashboardPreferences,
+  type InsertUserDashboardPreferences,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, gte, lte, between } from "drizzle-orm";
@@ -121,6 +124,10 @@ export interface IStorage {
   createExchangeCredential(credential: InsertExchangeCredential): Promise<ExchangeCredential>;
   updateExchangeCredential(id: number, userId: string, data: Partial<InsertExchangeCredential>): Promise<ExchangeCredential | undefined>;
   deleteExchangeCredential(id: number, userId: string): Promise<boolean>;
+
+  // Dashboard preferences operations
+  getDashboardPreferences(userId: string): Promise<UserDashboardPreferences | undefined>;
+  upsertDashboardPreferences(userId: string, data: Partial<InsertUserDashboardPreferences>): Promise<UserDashboardPreferences>;
 
   // Initialization
   initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
@@ -610,6 +617,30 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(exchangeCredentials)
       .where(and(eq(exchangeCredentials.id, id), eq(exchangeCredentials.userId, userId))).returning();
     return result.length > 0;
+  }
+
+  // Dashboard preferences operations
+  async getDashboardPreferences(userId: string): Promise<UserDashboardPreferences | undefined> {
+    const [prefs] = await db.select().from(userDashboardPreferences)
+      .where(eq(userDashboardPreferences.userId, userId));
+    return prefs;
+  }
+
+  async upsertDashboardPreferences(userId: string, data: Partial<InsertUserDashboardPreferences>): Promise<UserDashboardPreferences> {
+    const existing = await this.getDashboardPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db.update(userDashboardPreferences)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(userDashboardPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(userDashboardPreferences)
+        .values({ userId, ...data })
+        .returning();
+      return created;
+    }
   }
 
   // Initialize default data for new users with idempotent inserts

@@ -27,6 +27,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 │   │   │   ├── TotalAssetsCard.tsx
 │   │   │   ├── ExpenseChart.tsx
 │   │   │   ├── EmptyState.tsx
+│   │   │   ├── DashboardSettingsModal.tsx  # 仪表盘设置弹窗
 │   │   │   └── ThemeProvider.tsx
 │   │   ├── hooks/          # React Hooks
 │   │   │   ├── useAuth.ts
@@ -63,6 +64,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 ## 核心功能
 1. **用户认证**: 使用Replit Auth支持邮箱/密码和OAuth登录
 2. **多钱包管理**: 支持现金、银行卡、数字钱包等多种支付方式
+   - 可灵活调用资金标记: 区分流动资金和长期储蓄/应急资金
 3. **交易管理**: 支持支出、收入、转账三种交易类型
 4. **多币种支持**: 默认MYR (马来西亚林吉特)，支持跨币种交易和自定义汇率
 5. **预算管理**: 按分类设置月度预算，跟踪支出进度
@@ -72,6 +74,8 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 9. **数据分析**: 可视化图表展示收支趋势和分类占比
 10. **财务报表**: 月度/年度财务报表，支持CSV导出
 11. **仪表盘**: 显示总资产摘要和最近交易历史
+    - 可自定义卡片显示: 通过设置按钮控制各卡片的可见性
+    - 可灵活调用资金卡片: 单独显示流动资金总额
 12. **数据隔离**: 严格的用户数据隔离确保安全
 13. **交易所集成**: 连接MEXC和派网(Pionex)加密货币交易所API，实时显示账户余额
     - MEXC: 支持现货和合约账户余额查询
@@ -96,7 +100,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 ## 数据模型
 - **users**: 用户信息表 (id, email, firstName, lastName, profileImageUrl, defaultCurrency)
 - **sessions**: 会话存储表
-- **wallets**: 钱包表 (id, userId, name, type, currency, balance, exchangeRateToDefault, icon, color, isDefault)
+- **wallets**: 钱包表 (id, userId, name, type, currency, balance, exchangeRateToDefault, icon, color, isDefault, isFlexible)
 - **categories**: 分类表 (id, userId, name, type, icon, color, isDefault)
 - **transactions**: 交易表 (id, userId, type, amount, currency, originalAmount, exchangeRate, walletId, toWalletId, toWalletAmount, toExchangeRate, categoryId, description, date)
 - **budgets**: 预算表 (id, userId, categoryId, amount, month, year)
@@ -104,6 +108,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - **recurring_transactions**: 定期交易表 (id, userId, type, amount, currency, walletId, categoryId, frequency, startDate, description, isActive)
 - **bill_reminders**: 账单提醒表 (id, userId, name, amount, dueDate, frequency, categoryId, walletId, isPaid, notes)
 - **exchange_credentials**: 交易所API凭证表 (id, userId, exchange, apiKey, apiSecret, label, isActive, lastSyncAt)
+- **dashboard_preferences**: 仪表盘偏好设置表 (id, userId, preferences)
 
 ## API路由
 ### 用户
@@ -161,6 +166,10 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - `DELETE /api/exchange-credentials/:id` - 删除交易所API凭证
 - `GET /api/mexc/balances` - 获取MEXC交易所账户余额
 - `GET /api/pionex/balances` - 获取派网交易所账户余额
+
+### 仪表盘偏好
+- `GET /api/dashboard-preferences` - 获取用户仪表盘偏好设置
+- `PATCH /api/dashboard-preferences` - 更新仪表盘偏好设置
 
 ## 支持的货币
 - MYR (马来西亚林吉特) - RM
