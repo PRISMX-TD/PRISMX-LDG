@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Target } from "lucide-react";
 import {
   Wallet,
   TrendingUp,
@@ -46,17 +47,20 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background aurora-bg">
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-primary/10">
         <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-primary-foreground" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+              <Target className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-lg">PRISMX Ledger</span>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg tracking-tight">PRISMX</span>
+              <span className="text-xs text-muted-foreground -mt-1">Ledger</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Button asChild data-testid="button-login">
+            <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-login">
               <a href="/api/login">登录</a>
             </Button>
           </div>
@@ -66,26 +70,30 @@ export default function Landing() {
       <main>
         <section className="pt-32 pb-20 px-4 sm:px-6">
           <div className="container mx-auto max-w-4xl text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              安全可靠的财务管理平台
+            </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              智能记账
-              <span className="text-primary">，掌控财务</span>
+              <span className="gradient-text">智能记账</span>
+              <span className="text-foreground">，掌控财务</span>
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
               PRISMX Ledger 是一款安全、高效的个人财务管理工具。
               多钱包管理、智能分类、实时追踪，让您的财务管理更加轻松。
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="text-base" data-testid="button-get-started">
+              <Button size="lg" asChild className="text-base bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 border-0" data-testid="button-get-started">
                 <a href="/api/login">免费开始使用</a>
               </Button>
-              <Button size="lg" variant="outline" className="text-base" data-testid="button-learn-more">
+              <Button size="lg" variant="outline" className="text-base border-primary/30 hover:bg-primary/10 hover:border-primary/50" data-testid="button-learn-more">
                 <a href="#features">了解更多</a>
               </Button>
             </div>
           </div>
         </section>
 
-        <section className="py-16 px-4 sm:px-6 bg-muted/30" id="features">
+        <section className="py-16 px-4 sm:px-6" id="features">
           <div className="container mx-auto max-w-6xl">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">强大功能</h2>
@@ -97,11 +105,11 @@ export default function Landing() {
               {features.map((feature, index) => (
                 <Card
                   key={index}
-                  className="hover-elevate border-card-border"
+                  className="stats-card hover:purple-glow-sm transition-all duration-300 group"
                   data-testid={`card-feature-${index}`}
                 >
                   <CardContent className="p-6">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4 group-hover:from-primary/30 group-hover:to-primary/10 transition-all duration-300">
                       <feature.icon className="w-6 h-6 text-primary" />
                     </div>
                     <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
@@ -115,18 +123,20 @@ export default function Landing() {
 
         <section className="py-20 px-4 sm:px-6">
           <div className="container mx-auto max-w-4xl text-center">
-            <h2 className="text-3xl font-bold mb-4">开始您的财务管理之旅</h2>
-            <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-              加入 PRISMX Ledger，轻松追踪您的收入支出，掌握资金流向，实现财务自由
-            </p>
-            <Button size="lg" asChild data-testid="button-cta">
-              <a href="/api/login">立即开始</a>
-            </Button>
+            <div className="p-8 sm:p-12 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20">
+              <h2 className="text-3xl font-bold mb-4">开始您的财务管理之旅</h2>
+              <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+                加入 PRISMX Ledger，轻松追踪您的收入支出，掌握资金流向，实现财务自由
+              </p>
+              <Button size="lg" asChild className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30" data-testid="button-cta">
+                <a href="/api/login">立即开始</a>
+              </Button>
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="py-8 px-4 sm:px-6 border-t border-border">
+      <footer className="py-8 px-4 sm:px-6 border-t border-primary/10">
         <div className="container mx-auto max-w-6xl text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} PRISMX Ledger. 保留所有权利。</p>
         </div>

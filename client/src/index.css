@@ -245,25 +245,30 @@
 /* Purple Aurora Gradient Background Effect */
 .aurora-bg {
   position: relative;
-  overflow: hidden;
 }
 
 .aurora-bg::before {
   content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  right: -50%;
-  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60vh;
   background: radial-gradient(
-    ellipse 80% 50% at 50% 0%,
-    hsla(263, 70%, 50%, 0.3) 0%,
-    hsla(263, 70%, 50%, 0.15) 30%,
-    hsla(280, 70%, 40%, 0.08) 50%,
-    transparent 70%
+    ellipse 100% 100% at 50% -20%,
+    hsla(263, 70%, 50%, 0.35) 0%,
+    hsla(263, 70%, 45%, 0.25) 20%,
+    hsla(280, 70%, 40%, 0.15) 40%,
+    hsla(280, 60%, 30%, 0.08) 60%,
+    transparent 80%
   );
   pointer-events: none;
   z-index: 0;
+}
+
+.aurora-bg > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Purple Glow Effect for Cards */
