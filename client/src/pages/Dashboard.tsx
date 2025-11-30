@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Wallet,
   Receipt,
   ChevronRight,
@@ -37,6 +47,7 @@ import type {
   Transaction,
 } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface DashboardPreferences {
   showTotalAssets: boolean;
@@ -62,6 +73,8 @@ export default function Dashboard() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -147,6 +160,38 @@ export default function Dashboard() {
       const rate = parseFloat(w.exchangeRateToDefault || "1");
       return sum + balance * rate;
     }, 0);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/transactions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+      toast({
+        title: "删除成功",
+        description: "交易记录已删除",
+      });
+      setDeletingTransaction(null);
+    },
+    onError: () => {
+      toast({
+        title: "删除失败",
+        description: "请稍后重试",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setDeletingTransaction(transaction);
+  };
+
+  const confirmDelete = () => {
+    if (deletingTransaction) {
+      deleteMutation.mutate(deletingTransaction.id);
+    }
+  };
 
   if (isAuthLoading) {
     return (
@@ -404,6 +449,11 @@ export default function Dashboard() {
                         category={transaction.category}
                         wallet={transaction.wallet}
                         toWallet={transaction.toWallet}
+                        onEdit={(tx) => {
+                          setEditingTransaction(tx);
+                          setIsModalOpen(true);
+                        }}
+                        onDelete={handleDeleteTransaction}
                       />
                     ))}
                   </div>
@@ -414,14 +464,23 @@ export default function Dashboard() {
         )}
       </main>
 
-      <FloatingActionButton onClick={() => setIsModalOpen(true)} />
+      <FloatingActionButton onClick={() => {
+        setEditingTransaction(null);
+        setIsModalOpen(true);
+      }} />
 
       <TransactionModal
         open={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) {
+            setEditingTransaction(null);
+          }
+        }}
         wallets={wallets}
         categories={categories}
         defaultCurrency={user?.defaultCurrency || "MYR"}
+        transaction={editingTransaction}
       />
 
       <WalletModal
@@ -435,6 +494,27 @@ export default function Dashboard() {
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
       />
+
+      <AlertDialog open={!!deletingTransaction} onOpenChange={(open) => !open && setDeletingTransaction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这笔交易记录吗？删除后将无法恢复，钱包余额也会相应调整。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "删除中..." : "删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

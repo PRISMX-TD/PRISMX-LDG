@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { TransactionFilters, TransactionFilterValues } from "@/components/TransactionFilters";
 import { TransactionItem, TransactionItemSkeleton } from "@/components/TransactionItem";
@@ -11,11 +12,21 @@ import { ExpenseChart } from "@/components/ExpenseChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Receipt, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
-import { format } from "date-fns";
 import type { Wallet, Category, Transaction } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface TransactionWithRelations extends Transaction {
   category?: Category | null;
@@ -31,7 +42,10 @@ interface TransactionStats {
 
 export default function Transactions() {
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState<TransactionFilterValues>({});
 
   const { data: wallets = [] } = useQuery<Wallet[]>({
@@ -81,9 +95,58 @@ export default function Transactions() {
     enabled: isAuthenticated && !!filters.startDate && !!filters.endDate,
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/transactions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+      toast({
+        title: "删除成功",
+        description: "交易记录已删除",
+      });
+      setDeletingTransaction(null);
+    },
+    onError: () => {
+      toast({
+        title: "删除失败",
+        description: "请稍后重试",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleExport = () => {
     const exportUrl = `/api/transactions/export${queryParams ? `?${queryParams}` : ""}`;
     window.open(exportUrl, "_blank");
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setDeletingTransaction(transaction);
+  };
+
+  const confirmDelete = () => {
+    if (deletingTransaction) {
+      deleteMutation.mutate(deletingTransaction.id);
+    }
+  };
+
+  const handleCloseModal = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      setEditingTransaction(null);
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingTransaction(null);
+    setIsModalOpen(true);
   };
 
   const currencyInfo = getCurrencyInfo(user?.defaultCurrency || "MYR");
@@ -197,7 +260,7 @@ export default function Transactions() {
                     title="没有找到交易记录"
                     description="调整筛选条件或添加新交易"
                     actionLabel="记一笔"
-                    onAction={() => setIsModalOpen(true)}
+                    onAction={handleAddNew}
                   />
                 ) : (
                   <div className="space-y-3">
@@ -208,6 +271,8 @@ export default function Transactions() {
                         category={transaction.category}
                         wallet={transaction.wallet}
                         toWallet={transaction.toWallet}
+                        onEdit={handleEditTransaction}
+                        onDelete={handleDeleteTransaction}
                       />
                     ))}
                   </div>
@@ -226,15 +291,37 @@ export default function Transactions() {
         </div>
       </main>
 
-      <FloatingActionButton onClick={() => setIsModalOpen(true)} />
+      <FloatingActionButton onClick={handleAddNew} />
 
       <TransactionModal
         open={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        onOpenChange={handleCloseModal}
         wallets={wallets}
         categories={categories}
         defaultCurrency={user?.defaultCurrency || "MYR"}
+        transaction={editingTransaction}
       />
+
+      <AlertDialog open={!!deletingTransaction} onOpenChange={(open) => !open && setDeletingTransaction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这笔交易记录吗？删除后将无法恢复，钱包余额也会相应调整。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "删除中..." : "删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

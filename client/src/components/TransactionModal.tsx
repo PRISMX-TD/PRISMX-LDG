@@ -40,7 +40,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Loader2, ArrowRightLeft, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import type { Wallet, Category, TransactionType } from "@shared/schema";
+import type { Wallet, Category, TransactionType, Transaction } from "@shared/schema";
 import { supportedCurrencies, getCurrencyInfo } from "@shared/schema";
 
 interface TransactionModalProps {
@@ -49,6 +49,7 @@ interface TransactionModalProps {
   wallets: Wallet[];
   categories: Category[];
   defaultCurrency?: string;
+  transaction?: Transaction | null;
 }
 
 const transactionSchema = z.object({
@@ -76,9 +77,11 @@ export function TransactionModal({
   wallets,
   categories,
   defaultCurrency = "MYR",
+  transaction,
 }: TransactionModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isEditing = !!transaction;
   const [activeTab, setActiveTab] = useState<TransactionType>("expense");
 
   const [isLoadingRate, setIsLoadingRate] = useState(false);
@@ -147,32 +150,66 @@ export function TransactionModal({
   }, [form]);
 
   useEffect(() => {
-    form.setValue("type", activeTab);
-    form.setValue("categoryId", "");
-    form.setValue("toWalletId", "");
-    form.setValue("toWalletAmount", "");
-  }, [activeTab, form]);
-
-  useEffect(() => {
-    if (open && wallets.length > 0) {
-      const defaultWallet = wallets.find((w) => w.isDefault) || wallets[0];
-      form.setValue("walletId", String(defaultWallet.id));
-      form.setValue("currency", defaultCurrency);
-      form.setValue("exchangeRate", "1");
-      form.setValue("convertedAmount", "");
+    if (open && transaction) {
+      const txType = transaction.type as TransactionType;
+      setActiveTab(txType);
+      
+      const wallet = wallets.find(w => w.id === transaction.walletId);
+      const walletCurrency = wallet?.currency || defaultCurrency;
+      const hasCrossConversion = transaction.originalAmount && transaction.currency !== walletCurrency;
+      
+      form.reset({
+        type: txType,
+        amount: hasCrossConversion 
+          ? transaction.originalAmount || transaction.amount 
+          : transaction.amount,
+        currency: transaction.currency || walletCurrency,
+        exchangeRate: transaction.exchangeRate || "1",
+        convertedAmount: hasCrossConversion ? transaction.amount : "",
+        walletId: String(transaction.walletId),
+        toWalletId: transaction.toWalletId ? String(transaction.toWalletId) : "",
+        toWalletAmount: transaction.toWalletAmount || "",
+        categoryId: transaction.categoryId ? String(transaction.categoryId) : "",
+        description: transaction.description || "",
+        date: new Date(transaction.date),
+      });
+    } else if (open && !transaction) {
+      setActiveTab("expense");
+      form.reset({
+        type: "expense",
+        amount: "",
+        currency: defaultCurrency,
+        exchangeRate: "1",
+        convertedAmount: "",
+        walletId: wallets.find((w) => w.isDefault)?.id.toString() || wallets[0]?.id.toString() || "",
+        toWalletId: "",
+        toWalletAmount: "",
+        categoryId: "",
+        description: "",
+        date: new Date(),
+      });
       setRateError(null);
     }
-  }, [open, wallets, form, defaultCurrency]);
+  }, [open, transaction, wallets, form, defaultCurrency]);
 
   useEffect(() => {
-    if (selectedWallet && watchCurrency === selectedWallet.currency) {
+    if (!isEditing) {
+      form.setValue("type", activeTab);
+      form.setValue("categoryId", "");
+      form.setValue("toWalletId", "");
+      form.setValue("toWalletAmount", "");
+    }
+  }, [activeTab, form, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing && selectedWallet && watchCurrency === selectedWallet.currency) {
       form.setValue("exchangeRate", "1");
       form.setValue("convertedAmount", "");
       setRateError(null);
-    } else if (selectedWallet && watchCurrency && watchCurrency !== selectedWallet.currency) {
+    } else if (!isEditing && selectedWallet && watchCurrency && watchCurrency !== selectedWallet.currency) {
       fetchExchangeRate(watchCurrency, selectedWallet.currency);
     }
-  }, [watchCurrency, selectedWallet, form, fetchExchangeRate]);
+  }, [watchCurrency, selectedWallet, form, fetchExchangeRate, isEditing]);
 
   useEffect(() => {
     if (needsCurrencyConversion && watchAmount && watchExchangeRate) {
@@ -217,25 +254,27 @@ export function TransactionModal({
         date: data.date.toISOString(),
       };
 
-      // Only include currency conversion data when needed
       if (isCrossCurrency) {
         requestData.currency = data.currency;
         requestData.exchangeRate = parseFloat(data.exchangeRate || "1");
       }
 
-      // Only include toWalletAmount for cross-currency transfers
       if (isTransferCrossCurrency && data.toWalletAmount) {
         requestData.toWalletAmount = parseFloat(data.toWalletAmount);
       }
       
-      await apiRequest("POST", "/api/transactions", requestData);
+      if (isEditing && transaction) {
+        await apiRequest("PATCH", `/api/transactions/${transaction.id}`, requestData);
+      } else {
+        await apiRequest("POST", "/api/transactions", requestData);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
       toast({
-        title: "记录成功",
-        description: "交易已成功添加",
+        title: isEditing ? "更新成功" : "记录成功",
+        description: isEditing ? "交易已成功更新" : "交易已成功添加",
       });
       onOpenChange(false);
       form.reset();
@@ -254,7 +293,7 @@ export function TransactionModal({
         return;
       }
       toast({
-        title: "记录失败",
+        title: isEditing ? "更新失败" : "记录失败",
         description: error.message || "请稍后重试",
         variant: "destructive",
       });
@@ -271,7 +310,6 @@ export function TransactionModal({
       return;
     }
     
-    // For cross-currency transfers, require destination amount
     if (data.type === "transfer") {
       const fromWallet = wallets.find((w) => String(w.id) === data.walletId);
       const toWallet = wallets.find((w) => String(w.id) === data.toWalletId);
@@ -308,13 +346,16 @@ export function TransactionModal({
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" data-testid="modal-transaction" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-semibold">
-            记一笔
+            {isEditing ? "编辑交易" : "记一笔"}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as TransactionType)}
+          onValueChange={(v) => {
+            setActiveTab(v as TransactionType);
+            form.setValue("type", v as TransactionType);
+          }}
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-3" data-testid="tabs-transaction-type">
@@ -665,10 +706,10 @@ export function TransactionModal({
               {mutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  保存中...
+                  {isEditing ? "更新中..." : "保存中..."}
                 </>
               ) : (
-                `记录${typeLabels[activeTab]}`
+                isEditing ? "更新交易" : `记录${typeLabels[activeTab]}`
               )}
             </Button>
           </form>

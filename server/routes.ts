@@ -623,6 +623,218 @@ export async function registerRoutes(
     }
   });
 
+  // Update transaction
+  app.patch('/api/transactions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const transactionId = parseInt(req.params.id);
+      
+      // Get the existing transaction
+      const existingTransaction = await storage.getTransaction(transactionId, userId);
+      if (!existingTransaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // Get currency-related fields from request
+      const inputCurrency = req.body.currency || null;
+      const inputAmount = parseFloat(req.body.amount);
+      const exchangeRate = req.body.exchangeRate ? parseFloat(req.body.exchangeRate) : null;
+      const toWalletAmount = req.body.toWalletAmount ? parseFloat(req.body.toWalletAmount) : null;
+
+      // Validate amount
+      if (isNaN(inputAmount) || inputAmount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+
+      // Validate transaction type
+      if (!['expense', 'income', 'transfer'].includes(req.body.type)) {
+        return res.status(400).json({ message: "Invalid transaction type" });
+      }
+
+      // Verify new wallet ownership
+      const newWallet = await storage.getWallet(req.body.walletId, userId);
+      if (!newWallet) {
+        return res.status(400).json({ message: "Invalid wallet" });
+      }
+
+      // Get old wallet for balance reversal
+      const oldWallet = await storage.getWallet(existingTransaction.walletId, userId);
+      
+      // Reverse the old transaction effect on wallet balances
+      if (oldWallet) {
+        const oldAmount = parseFloat(existingTransaction.amount || "0");
+        const currentBalance = parseFloat(oldWallet.balance || "0");
+        
+        if (existingTransaction.type === 'expense') {
+          // Refund the expense
+          await storage.updateWalletBalance(oldWallet.id, userId, (currentBalance + oldAmount).toString());
+        } else if (existingTransaction.type === 'income') {
+          // Remove the income
+          await storage.updateWalletBalance(oldWallet.id, userId, (currentBalance - oldAmount).toString());
+        } else if (existingTransaction.type === 'transfer' && existingTransaction.toWalletId) {
+          // Reverse transfer: add back to source, remove from destination
+          await storage.updateWalletBalance(oldWallet.id, userId, (currentBalance + oldAmount).toString());
+          
+          const oldToWallet = await storage.getWallet(existingTransaction.toWalletId, userId);
+          if (oldToWallet) {
+            const toAmount = parseFloat(existingTransaction.toWalletAmount || existingTransaction.amount || "0");
+            const toCurrentBalance = parseFloat(oldToWallet.balance || "0");
+            await storage.updateWalletBalance(oldToWallet.id, userId, (toCurrentBalance - toAmount).toString());
+          }
+        }
+      }
+
+      // Re-fetch wallets after reversal to get updated balances
+      const wallet = await storage.getWallet(req.body.walletId, userId);
+      if (!wallet) {
+        return res.status(400).json({ message: "Invalid wallet" });
+      }
+
+      const walletCurrency = wallet.currency || "MYR";
+      const transactionCurrency = inputCurrency || walletCurrency;
+      const isCrossCurrency = transactionCurrency !== walletCurrency;
+
+      // Validate exchange rate when currencies differ
+      if (isCrossCurrency) {
+        if (!exchangeRate || exchangeRate <= 0) {
+          return res.status(400).json({ message: "Exchange rate is required for cross-currency transactions" });
+        }
+      }
+
+      // Calculate wallet amount
+      const effectiveExchangeRate = exchangeRate || 1;
+      const walletAmount = isCrossCurrency 
+        ? inputAmount * effectiveExchangeRate
+        : inputAmount;
+
+      // Build transaction update data
+      const transactionData: any = {
+        type: req.body.type,
+        amount: walletAmount.toFixed(2),
+        currency: isCrossCurrency ? transactionCurrency : walletCurrency,
+        walletId: req.body.walletId,
+        toWalletId: req.body.toWalletId || null,
+        categoryId: req.body.categoryId || null,
+        description: req.body.description || null,
+        date: new Date(req.body.date),
+      };
+
+      // Only store originalAmount and exchangeRate when there's actual conversion
+      if (isCrossCurrency) {
+        transactionData.originalAmount = inputAmount.toFixed(2);
+        transactionData.exchangeRate = effectiveExchangeRate.toFixed(6);
+      } else {
+        transactionData.originalAmount = null;
+        transactionData.exchangeRate = "1";
+      }
+
+      // Apply new transaction effect on wallet balances
+      if (transactionData.type === 'transfer') {
+        if (!transactionData.toWalletId) {
+          return res.status(400).json({ message: "Transfer requires destination wallet" });
+        }
+        if (transactionData.toWalletId === transactionData.walletId) {
+          return res.status(400).json({ message: "Cannot transfer to same wallet" });
+        }
+        
+        const toWallet = await storage.getWallet(transactionData.toWalletId, userId);
+        if (!toWallet) {
+          return res.status(400).json({ message: "Invalid destination wallet" });
+        }
+
+        const toWalletCurrency = toWallet.currency || "MYR";
+        const isToWalletCrossCurrency = walletCurrency !== toWalletCurrency;
+
+        // Update source wallet (decrease)
+        const sourceBalance = parseFloat(wallet.balance || "0") - walletAmount;
+        await storage.updateWalletBalance(wallet.id, userId, sourceBalance.toString());
+
+        // Calculate destination amount
+        let destAmount = walletAmount;
+        
+        if (isToWalletCrossCurrency) {
+          if (toWalletAmount === null || toWalletAmount <= 0) {
+            return res.status(400).json({ message: "Cross-currency transfer requires destination amount" });
+          }
+          destAmount = toWalletAmount;
+          transactionData.toWalletAmount = destAmount.toFixed(2);
+        } else {
+          destAmount = walletAmount;
+          transactionData.toWalletAmount = walletAmount.toFixed(2);
+        }
+
+        // Update destination wallet (increase)
+        const destBalance = parseFloat(toWallet.balance || "0") + destAmount;
+        await storage.updateWalletBalance(toWallet.id, userId, destBalance.toString());
+      } else if (transactionData.type === 'expense') {
+        const currentBalance = parseFloat(wallet.balance || "0");
+        const newBalance = currentBalance - walletAmount;
+        await storage.updateWalletBalance(wallet.id, userId, newBalance.toString());
+      } else if (transactionData.type === 'income') {
+        const currentBalance = parseFloat(wallet.balance || "0");
+        const newBalance = currentBalance + walletAmount;
+        await storage.updateWalletBalance(wallet.id, userId, newBalance.toString());
+      }
+
+      // Update the transaction
+      const updatedTransaction = await storage.updateTransaction(transactionId, userId, transactionData);
+      res.json(updatedTransaction);
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      res.status(500).json({ message: "Failed to update transaction" });
+    }
+  });
+
+  // Delete transaction
+  app.delete('/api/transactions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const transactionId = parseInt(req.params.id);
+      
+      // Get the existing transaction
+      const existingTransaction = await storage.getTransaction(transactionId, userId);
+      if (!existingTransaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // Reverse the transaction effect on wallet balances
+      const wallet = await storage.getWallet(existingTransaction.walletId, userId);
+      if (wallet) {
+        const amount = parseFloat(existingTransaction.amount || "0");
+        const currentBalance = parseFloat(wallet.balance || "0");
+        
+        if (existingTransaction.type === 'expense') {
+          // Refund the expense
+          await storage.updateWalletBalance(wallet.id, userId, (currentBalance + amount).toString());
+        } else if (existingTransaction.type === 'income') {
+          // Remove the income
+          await storage.updateWalletBalance(wallet.id, userId, (currentBalance - amount).toString());
+        } else if (existingTransaction.type === 'transfer' && existingTransaction.toWalletId) {
+          // Reverse transfer: add back to source, remove from destination
+          await storage.updateWalletBalance(wallet.id, userId, (currentBalance + amount).toString());
+          
+          const toWallet = await storage.getWallet(existingTransaction.toWalletId, userId);
+          if (toWallet) {
+            const toAmount = parseFloat(existingTransaction.toWalletAmount || existingTransaction.amount || "0");
+            const toCurrentBalance = parseFloat(toWallet.balance || "0");
+            await storage.updateWalletBalance(toWallet.id, userId, (toCurrentBalance - toAmount).toString());
+          }
+        }
+      }
+
+      // Delete the transaction
+      const deleted = await storage.deleteTransaction(transactionId, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      res.json({ message: "Transaction deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      res.status(500).json({ message: "Failed to delete transaction" });
+    }
+  });
+
   // Budget routes
   app.get('/api/budgets', isAuthenticated, async (req: any, res) => {
     try {

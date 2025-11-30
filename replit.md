@@ -132,6 +132,8 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 ### 交易
 - `GET /api/transactions` - 获取用户交易记录
 - `POST /api/transactions` - 创建新交易
+- `PATCH /api/transactions/:id` - 更新交易 (自动处理钱包余额调整)
+- `DELETE /api/transactions/:id` - 删除交易 (自动恢复钱包余额)
 - `GET /api/transactions/export` - 导出CSV
 
 ### 预算

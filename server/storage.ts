@@ -86,6 +86,8 @@ export interface IStorage {
   getTransactions(userId: string, filters?: TransactionFilters): Promise<any[]>;
   getTransaction(id: number, userId: string): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  updateTransaction(id: number, userId: string, data: Partial<InsertTransaction>): Promise<Transaction | undefined>;
+  deleteTransaction(id: number, userId: string): Promise<boolean>;
   getTransactionStats(userId: string, startDate: Date, endDate: Date): Promise<TransactionStats>;
 
   // Budget operations
@@ -396,6 +398,23 @@ export class DatabaseStorage implements IStorage {
       .values(transaction)
       .returning();
     return newTransaction;
+  }
+
+  async updateTransaction(id: number, userId: string, data: Partial<InsertTransaction>): Promise<Transaction | undefined> {
+    const [updated] = await db
+      .update(transactions)
+      .set(data)
+      .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteTransaction(id: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
+      .returning();
+    return result.length > 0;
   }
 
   async getTransactionStats(userId: string, startDate: Date, endDate: Date): Promise<TransactionStats> {
