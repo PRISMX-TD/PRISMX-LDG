@@ -71,7 +71,7 @@ export function WalletCard({ wallet, onClick, className = "" }: WalletCardProps)
             </p>
             <p
               className={`text-2xl font-semibold font-mono ${
-                balance < 0 ? "text-expense" : ""
+                balance < 0 ? "text-expense" : wallet.isFlexible ? "" : "text-muted-foreground/70"
               }`}
               data-testid={`text-balance-desktop-${wallet.id}`}
             >
@@ -119,7 +119,7 @@ export function WalletCard({ wallet, onClick, className = "" }: WalletCardProps)
         </div>
         <p
           className={`text-sm font-semibold font-mono flex-shrink-0 ${
-            balance < 0 ? "text-expense" : ""
+            balance < 0 ? "text-expense" : wallet.isFlexible ? "" : "text-muted-foreground/70"
           }`}
           data-testid={`text-balance-${wallet.id}`}
         >

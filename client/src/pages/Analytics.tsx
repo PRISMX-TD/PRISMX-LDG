@@ -247,12 +247,12 @@ export default function Analytics() {
     if (selectedSubLedgerId === "main") {
       // Show only main ledger transactions:
       // - Transactions without a sub-ledger
-      // - Transactions with a sub-ledger that has includeInMainLedger = true (or is undefined, defaulting to true)
+      // - Transactions with a sub-ledger that has includeInMainAnalytics = true (or is undefined, defaulting to true)
       return transactions.filter((t) => {
         if (!t.subLedgerId) return true;
         const subLedger = subLedgers.find((s) => s.id === t.subLedgerId);
-        // Explicitly check: if includeInMainLedger is false, exclude; otherwise include
-        if (subLedger && subLedger.includeInMainLedger === false) return false;
+        // Explicitly check: if includeInMainAnalytics is false, exclude; otherwise include
+        if (subLedger && subLedger.includeInMainAnalytics === false) return false;
         return true;
       });
     }

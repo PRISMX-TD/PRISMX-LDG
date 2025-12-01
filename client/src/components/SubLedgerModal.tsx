@@ -11,9 +11,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Palette, BookOpen, Calendar } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Loader2, Palette, BookOpen, CalendarIcon, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { SubLedger } from "@shared/schema";
 
 interface SubLedgerModalProps {
@@ -51,8 +60,10 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
   const [icon, setIcon] = useState("trip");
   const [color, setColor] = useState("#8B5CF6");
   const [includeInMainAnalytics, setIncludeInMainAnalytics] = useState(true);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   useEffect(() => {
     if (subLedger) {
@@ -61,16 +72,16 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
       setIcon(subLedger.icon || "trip");
       setColor(subLedger.color || "#8B5CF6");
       setIncludeInMainAnalytics(subLedger.includeInMainAnalytics ?? true);
-      setStartDate(subLedger.startDate ? new Date(subLedger.startDate).toISOString().split("T")[0] : "");
-      setEndDate(subLedger.endDate ? new Date(subLedger.endDate).toISOString().split("T")[0] : "");
+      setStartDate(subLedger.startDate ? new Date(subLedger.startDate) : undefined);
+      setEndDate(subLedger.endDate ? new Date(subLedger.endDate) : undefined);
     } else {
       setName("");
       setDescription("");
       setIcon("trip");
       setColor("#8B5CF6");
       setIncludeInMainAnalytics(true);
-      setStartDate("");
-      setEndDate("");
+      setStartDate(undefined);
+      setEndDate(undefined);
     }
   }, [subLedger, open]);
 
@@ -112,8 +123,8 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
       icon,
       color,
       includeInMainAnalytics,
-      startDate: startDate || null,
-      endDate: endDate || null,
+      startDate: startDate ? startDate.toISOString() : null,
+      endDate: endDate ? endDate.toISOString() : null,
     };
 
     if (isEditing) {
@@ -127,7 +138,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="w-5 h-5" />
@@ -161,7 +172,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
 
           <div className="space-y-2">
             <Label>类型</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {ICONS.map((item) => (
                 <Button
                   key={item.value}
@@ -169,6 +180,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
                   size="sm"
                   variant={icon === item.value ? "default" : "outline"}
                   onClick={() => setIcon(item.value)}
+                  className="h-7 text-xs px-2"
                   data-testid={`button-icon-${item.value}`}
                 >
                   {item.label}
@@ -182,13 +194,13 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
               <Palette className="w-4 h-4" />
               颜色
             </Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  className={`w-7 h-7 rounded-full transition-all ${
-                    color === c ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-110" : ""
+                  className={`w-6 h-6 rounded-full transition-all ${
+                    color === c ? "ring-2 ring-offset-1 ring-offset-background ring-primary scale-110" : ""
                   }`}
                   style={{ backgroundColor: c }}
                   onClick={() => setColor(c)}
@@ -198,38 +210,97 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="startDate" className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
+              <Label className="flex items-center gap-1 text-sm">
+                <CalendarIcon className="w-3 h-3" />
                 开始日期
               </Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                data-testid="input-subledger-start-date"
-              />
+              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-9 text-xs",
+                      !startDate && "text-muted-foreground"
+                    )}
+                    data-testid="input-subledger-start-date"
+                  >
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                    {startDate ? format(startDate, "yyyy/MM/dd") : "选择日期"}
+                    {startDate && (
+                      <X 
+                        className="ml-auto h-3.5 w-3.5 hover:text-destructive" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStartDate(undefined);
+                        }}
+                      />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      setStartDateOpen(false);
+                    }}
+                    locale={zhCN}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate" className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
+              <Label className="flex items-center gap-1 text-sm">
+                <CalendarIcon className="w-3 h-3" />
                 结束日期
               </Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                data-testid="input-subledger-end-date"
-              />
+              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-9 text-xs",
+                      !endDate && "text-muted-foreground"
+                    )}
+                    data-testid="input-subledger-end-date"
+                  >
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                    {endDate ? format(endDate, "yyyy/MM/dd") : "选择日期"}
+                    {endDate && (
+                      <X 
+                        className="ml-auto h-3.5 w-3.5 hover:text-destructive" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEndDate(undefined);
+                        }}
+                      />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      setEndDate(date);
+                      setEndDateOpen(false);
+                    }}
+                    locale={zhCN}
+                    initialFocus
+                    disabled={(date) => startDate ? date < startDate : false}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
           <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
             <div className="space-y-0.5">
-              <Label htmlFor="includeInMain" className="cursor-pointer">计入总账分析</Label>
+              <Label htmlFor="includeInMain" className="cursor-pointer text-sm">计入总账分析</Label>
               <p className="text-xs text-muted-foreground">
                 关闭后，此子账本的交易不会出现在主数据分析中
               </p>
@@ -242,7 +313,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 sticky bottom-0 bg-card pb-1">
             <Button
               type="button"
               variant="outline"
