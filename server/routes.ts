@@ -1384,8 +1384,21 @@ export async function registerRoutes(
       const { walletOrder, typeOrder, groupByType } = req.body;
       
       const updateData: any = {};
-      if (walletOrder !== undefined) updateData.walletOrder = walletOrder;
-      if (typeOrder !== undefined) updateData.typeOrder = typeOrder;
+      
+      if (walletOrder !== undefined) {
+        const normalizedWalletOrder: Record<string, number[]> = {};
+        for (const [type, ids] of Object.entries(walletOrder)) {
+          if (Array.isArray(ids)) {
+            normalizedWalletOrder[type] = [...new Set((ids as (number | string)[]).map(Number).filter(n => !isNaN(n)))];
+          }
+        }
+        updateData.walletOrder = normalizedWalletOrder;
+      }
+      
+      if (typeOrder !== undefined && Array.isArray(typeOrder)) {
+        updateData.typeOrder = [...new Set(typeOrder.filter((t: string) => typeof t === 'string'))];
+      }
+      
       if (groupByType !== undefined) updateData.groupByType = groupByType;
       
       const preferences = await storage.upsertWalletPreferences(userId, updateData);

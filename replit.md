@@ -67,6 +67,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 1. **用户认证**: 使用Replit Auth支持邮箱/密码和OAuth登录
 2. **多钱包管理**: 支持现金、银行卡、数字钱包等多种支付方式
    - 可灵活调用资金标记: 区分流动资金和长期储蓄/应急资金
+   - 按类型分组显示: 仪表盘中钱包按类型分组，支持拖拽排序
 3. **交易管理**: 支持支出、收入、转账三种交易类型
 4. **多币种支持**: 默认MYR (马来西亚林吉特)，支持跨币种交易和自定义汇率
 5. **预算管理**: 按分类设置月度预算，跟踪支出进度
@@ -79,6 +80,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
     - 可自定义卡片显示: 通过设置按钮控制各卡片的可见性和顺序
     - 支持拖拽排序: 使用HTML5原生拖放API重新排列卡片
     - 可灵活调用资金卡片: 单独显示流动资金总额
+    - 钱包排序设置: 在设置弹窗中可自定义钱包类型顺序和类型内钱包顺序
 12. **数据隔离**: 严格的用户数据隔离确保安全
 13. **交易所集成**: 连接MEXC和派网(Pionex)加密货币交易所API，实时显示账户余额
     - MEXC: 支持现货和合约账户余额查询
@@ -114,6 +116,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - **dashboard_preferences**: 仪表盘偏好设置表 (id, userId, showTotalAssets, showMonthlyIncome, showMonthlyExpense, showWallets, showBudgets, showSavingsGoals, showRecentTransactions, showFlexibleFunds, cardOrder)
 - **user_analytics_preferences**: 数据分析偏好设置表 (id, userId, cardOrder)
 - **user_mobile_nav_preferences**: 移动端导航偏好设置表 (id, userId, mainNavItems)
+- **user_wallet_preferences**: 钱包排序偏好设置表 (id, userId, walletOrder, typeOrder, groupByType)
 
 ## API路由
 ### 用户
@@ -181,6 +184,10 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 ### 移动端导航偏好
 - `GET /api/mobile-nav-preferences` - 获取移动端底部导航偏好设置
 - `PATCH /api/mobile-nav-preferences` - 更新移动端底部导航偏好设置
+
+### 钱包排序偏好
+- `GET /api/wallet-preferences` - 获取钱包排序偏好设置
+- `PATCH /api/wallet-preferences` - 更新钱包排序偏好设置
 
 ## 支持的货币
 - MYR (马来西亚林吉特) - RM

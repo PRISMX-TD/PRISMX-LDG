@@ -36,8 +36,14 @@ import type {
   Category,
   Transaction,
 } from "@shared/schema";
-import { getCurrencyInfo } from "@shared/schema";
+import { getCurrencyInfo, walletTypes, walletTypeLabels } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+interface WalletPreferences {
+  walletOrder: Record<string, number[]> | null;
+  typeOrder: string[] | null;
+  groupByType: boolean;
+}
 
 interface DashboardPreferences {
   showTotalAssets: boolean;
@@ -117,6 +123,11 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: walletPreferences } = useQuery<WalletPreferences>({
+    queryKey: ["/api/wallet-preferences"],
+    enabled: isAuthenticated,
+  });
+
   const prefs = preferences ?? {
     showTotalAssets: true,
     showMonthlyIncome: true,
@@ -140,6 +151,49 @@ export default function Dashboard() {
     const remaining = defaultCardOrder.filter(key => !validOrder.includes(key));
     return [...validOrder, ...remaining];
   }, [prefs.cardOrder]);
+
+  const groupedWallets = useMemo(() => {
+    const wPrefs = walletPreferences;
+    const savedTypeOrder = wPrefs?.typeOrder || [];
+    const walletOrderByType = wPrefs?.walletOrder || {};
+
+    const fullTypeOrder = [...savedTypeOrder];
+    walletTypes.forEach((type) => {
+      if (!fullTypeOrder.includes(type)) {
+        fullTypeOrder.push(type);
+      }
+    });
+
+    const groups: Record<string, WalletType[]> = {};
+    
+    fullTypeOrder.forEach((type) => {
+      groups[type] = [];
+    });
+
+    wallets.forEach((wallet) => {
+      const type = wallet.type || "cash";
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(wallet);
+    });
+
+    Object.keys(groups).forEach((type) => {
+      const order = walletOrderByType[type];
+      if (order && order.length > 0) {
+        groups[type].sort((a, b) => {
+          const aIndex = order.map(Number).indexOf(a.id);
+          const bIndex = order.map(Number).indexOf(b.id);
+          if (aIndex === -1 && bIndex === -1) return 0;
+          if (aIndex === -1) return 1;
+          if (bIndex === -1) return -1;
+          return aIndex - bIndex;
+        });
+      }
+    });
+
+    return { groups, typeOrder: fullTypeOrder };
+  }, [wallets, walletPreferences]);
 
   const recentTransactions = transactions.slice(0, 10);
 
@@ -365,32 +419,44 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <>
-                <div className="hidden md:grid gap-4 grid-cols-2 lg:grid-cols-3">
-                  {wallets.map((wallet) => (
-                    <WalletCard
-                      key={wallet.id}
-                      wallet={wallet}
-                      onClick={() => {
-                        setSelectedWallet(wallet);
-                        setIsWalletModalOpen(true);
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="md:hidden space-y-2">
-                  {wallets.map((wallet) => (
-                    <WalletCard
-                      key={wallet.id}
-                      wallet={wallet}
-                      onClick={() => {
-                        setSelectedWallet(wallet);
-                        setIsWalletModalOpen(true);
-                      }}
-                    />
-                  ))}
-                </div>
-              </>
+              <div className="space-y-4">
+                {groupedWallets.typeOrder.map((type) => {
+                  const walletsInType = groupedWallets.groups[type] || [];
+                  if (walletsInType.length === 0) return null;
+                  return (
+                    <div key={type} className="space-y-2">
+                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        {walletTypeLabels[type] || type}
+                        <span className="text-xs text-muted-foreground/60">({walletsInType.length})</span>
+                      </h3>
+                      <div className="hidden md:grid gap-3 grid-cols-2 lg:grid-cols-3">
+                        {walletsInType.map((wallet) => (
+                          <WalletCard
+                            key={wallet.id}
+                            wallet={wallet}
+                            onClick={() => {
+                              setSelectedWallet(wallet);
+                              setIsWalletModalOpen(true);
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <div className="md:hidden space-y-2">
+                        {walletsInType.map((wallet) => (
+                          <WalletCard
+                            key={wallet.id}
+                            wallet={wallet}
+                            onClick={() => {
+                              setSelectedWallet(wallet);
+                              setIsWalletModalOpen(true);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </section>
         ) : null;
