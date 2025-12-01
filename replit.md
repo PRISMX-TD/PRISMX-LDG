@@ -27,7 +27,9 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 │   │   │   ├── TotalAssetsCard.tsx
 │   │   │   ├── ExpenseChart.tsx
 │   │   │   ├── EmptyState.tsx
-│   │   │   ├── DashboardSettingsModal.tsx  # 仪表盘设置弹窗
+│   │   │   ├── DashboardSettingsModal.tsx  # 仪表盘设置弹窗（支持拖拽排序）
+│   │   │   ├── MobileNavSettingsModal.tsx  # 移动端导航设置弹窗
+│   │   │   ├── MobileNavBar.tsx            # 移动端底部导航栏
 │   │   │   └── ThemeProvider.tsx
 │   │   ├── hooks/          # React Hooks
 │   │   │   ├── useAuth.ts
@@ -74,7 +76,8 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 9. **数据分析**: 可视化图表展示收支趋势和分类占比
 10. **财务报表**: 月度/年度财务报表，支持CSV导出
 11. **仪表盘**: 显示总资产摘要和最近交易历史
-    - 可自定义卡片显示: 通过设置按钮控制各卡片的可见性
+    - 可自定义卡片显示: 通过设置按钮控制各卡片的可见性和顺序
+    - 支持拖拽排序: 使用HTML5原生拖放API重新排列卡片
     - 可灵活调用资金卡片: 单独显示流动资金总额
 12. **数据隔离**: 严格的用户数据隔离确保安全
 13. **交易所集成**: 连接MEXC和派网(Pionex)加密货币交易所API，实时显示账户余额
@@ -108,7 +111,9 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - **recurring_transactions**: 定期交易表 (id, userId, type, amount, currency, walletId, categoryId, frequency, startDate, description, isActive)
 - **bill_reminders**: 账单提醒表 (id, userId, name, amount, dueDate, frequency, categoryId, walletId, isPaid, notes)
 - **exchange_credentials**: 交易所API凭证表 (id, userId, exchange, apiKey, apiSecret, label, isActive, lastSyncAt)
-- **dashboard_preferences**: 仪表盘偏好设置表 (id, userId, preferences)
+- **dashboard_preferences**: 仪表盘偏好设置表 (id, userId, showTotalAssets, showMonthlyIncome, showMonthlyExpense, showWallets, showBudgets, showSavingsGoals, showRecentTransactions, showFlexibleFunds, cardOrder)
+- **user_analytics_preferences**: 数据分析偏好设置表 (id, userId, cardOrder)
+- **user_mobile_nav_preferences**: 移动端导航偏好设置表 (id, userId, mainNavItems)
 
 ## API路由
 ### 用户
@@ -172,6 +177,10 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 ### 仪表盘偏好
 - `GET /api/dashboard-preferences` - 获取用户仪表盘偏好设置
 - `PATCH /api/dashboard-preferences` - 更新仪表盘偏好设置
+
+### 移动端导航偏好
+- `GET /api/mobile-nav-preferences` - 获取移动端底部导航偏好设置
+- `PATCH /api/mobile-nav-preferences` - 更新移动端底部导航偏好设置
 
 ## 支持的货币
 - MYR (马来西亚林吉特) - RM
