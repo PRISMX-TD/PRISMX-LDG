@@ -76,7 +76,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 6. **储蓄目标**: 设置储蓄目标，跟踪积累进度
 7. **定期交易**: 管理周期性收入和支出
 8. **账单提醒**: 设置账单到期提醒，支持循环账单
-9. **数据分析**: 可视化图表展示收支趋势和分类占比
+9. **数据分析**: 可视化图表展示收支趋势和分类占比，支持按子账本筛选
 10. **财务报表**: 月度/年度财务报表，支持CSV导出
 11. **仪表盘**: 显示总资产摘要和最近交易历史
     - 可自定义卡片显示: 通过设置按钮控制各卡片的可见性和顺序
@@ -85,16 +85,23 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
     - 钱包排序设置: 在设置弹窗中可自定义钱包类型顺序和类型内钱包顺序
 12. **数据隔离**: 严格的用户数据隔离确保安全
 13. **交易所集成**: 连接MEXC和派网(Pionex)加密货币交易所API，实时显示账户余额
-    - MEXC: 支持现货和合约账户余额查询
-    - Pionex: 支持交易账户余额查询
-    - 手动余额录入: 支持录入API无法获取的账户余额（理财、机器人等）
-    - 总资产汇总: 自动计算所有交易所的总资产估值
+14. **子账本管理**: 创建多个子账本用于特定用途追踪（如旅行、项目等）
+    - 交易可关联子账本
+    - 可设置是否将子账本纳入主账本分析
+    - 分析页面支持按子账本筛选数据
+
+交易所集成详情:
+- MEXC: 支持现货和合约账户余额查询
+- Pionex: 支持交易账户余额查询
+- 手动余额录入: 支持录入API无法获取的账户余额（理财、机器人等）
+- 总资产汇总: 自动计算所有交易所的总资产估值
 
 ## 导航结构 (侧边栏)
 - 仪表盘 (/)
 - 交易记录 (/transactions)
 - 钱包管理 (/wallets)
 - 交易所 (/exchange)
+- 子账本 (/sub-ledgers)
 - 分类管理 (/categories)
 - 预算管理 (/budgets)
 - 储蓄目标 (/savings)
@@ -109,7 +116,8 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - **sessions**: 会话存储表
 - **wallets**: 钱包表 (id, userId, name, type, currency, balance, exchangeRateToDefault, icon, color, isDefault, isFlexible)
 - **categories**: 分类表 (id, userId, name, type, icon, color, isDefault)
-- **transactions**: 交易表 (id, userId, type, amount, currency, originalAmount, exchangeRate, walletId, toWalletId, toWalletAmount, toExchangeRate, categoryId, description, date)
+- **transactions**: 交易表 (id, userId, type, amount, currency, originalAmount, exchangeRate, walletId, toWalletId, toWalletAmount, toExchangeRate, categoryId, subLedgerId, description, date)
+- **sub_ledgers**: 子账本表 (id, userId, name, description, color, icon, includeInMainLedger, isArchived, createdAt)
 - **budgets**: 预算表 (id, userId, categoryId, amount, month, year)
 - **savings_goals**: 储蓄目标表 (id, userId, name, targetAmount, currentAmount, currency, isCompleted)
 - **recurring_transactions**: 定期交易表 (id, userId, type, amount, currency, walletId, categoryId, frequency, startDate, description, isActive)
@@ -170,6 +178,12 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - `POST /api/bill-reminders` - 创建账单提醒
 - `PATCH /api/bill-reminders/:id` - 更新账单提醒
 - `DELETE /api/bill-reminders/:id` - 删除账单提醒
+
+### 子账本
+- `GET /api/sub-ledgers` - 获取子账本列表
+- `POST /api/sub-ledgers` - 创建子账本
+- `PATCH /api/sub-ledgers/:id` - 更新子账本
+- `DELETE /api/sub-ledgers/:id` - 删除子账本
 
 ### 交易所集成
 - `GET /api/exchange-credentials` - 获取用户交易所API凭证列表

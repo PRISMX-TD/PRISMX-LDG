@@ -53,7 +53,15 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Transaction, Category, Wallet as WalletType, Budget, SavingsGoal } from "@shared/schema";
+import type { Transaction, Category, Wallet as WalletType, Budget, SavingsGoal, SubLedger } from "@shared/schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BookOpen } from "lucide-react";
 
 const CHART_COLORS = [
   "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE",
@@ -115,6 +123,7 @@ export default function Analytics() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+  const [selectedSubLedgerId, setSelectedSubLedgerId] = useState<string>("all");
 
   const { data: preferences = defaultPreferences } = useQuery<AnalyticsPreferences>({
     queryKey: ["/api/analytics-preferences"],
@@ -221,9 +230,35 @@ export default function Analytics() {
     queryKey: ["/api/savings-goals"],
   });
 
+  const { data: subLedgers = [] } = useQuery<SubLedger[]>({
+    queryKey: ["/api/sub-ledgers"],
+  });
+
   const { data: budgetSpending = [] } = useQuery<any[]>({
     queryKey: ["/api/budgets/spending", { month: new Date().getMonth() + 1, year: selectedYear }],
   });
+
+  // Filter transactions by sub-ledger
+  const filteredTransactions = useMemo(() => {
+    if (selectedSubLedgerId === "all") {
+      // Show all transactions when "all" is selected
+      return transactions;
+    }
+    if (selectedSubLedgerId === "main") {
+      // Show only main ledger transactions:
+      // - Transactions without a sub-ledger
+      // - Transactions with a sub-ledger that has includeInMainLedger = true (or is undefined, defaulting to true)
+      return transactions.filter((t) => {
+        if (!t.subLedgerId) return true;
+        const subLedger = subLedgers.find((s) => s.id === t.subLedgerId);
+        // Explicitly check: if includeInMainLedger is false, exclude; otherwise include
+        if (subLedger && subLedger.includeInMainLedger === false) return false;
+        return true;
+      });
+    }
+    // Filter by specific sub-ledger
+    return transactions.filter((t) => String(t.subLedgerId) === selectedSubLedgerId);
+  }, [transactions, selectedSubLedgerId, subLedgers]);
 
   const monthlyData = useMemo(() => {
     const months = Array.from({ length: 12 }, (_, i) => {
@@ -237,7 +272,7 @@ export default function Analytics() {
       };
     });
 
-    transactions.forEach((t) => {
+    filteredTransactions.forEach((t) => {
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
       const monthIndex = date.getMonth();
@@ -254,12 +289,12 @@ export default function Analytics() {
     });
 
     return months;
-  }, [transactions, selectedYear]);
+  }, [filteredTransactions, selectedYear]);
 
   const expenseCategoryData = useMemo(() => {
     const categoryTotals: Record<number, { name: string; color: string; total: number }> = {};
     
-    transactions.forEach((t) => {
+    filteredTransactions.forEach((t) => {
       if (t.type !== "expense") return;
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
@@ -279,12 +314,12 @@ export default function Analytics() {
     return Object.values(categoryTotals)
       .sort((a, b) => b.total - a.total)
       .slice(0, 6);
-  }, [transactions, categories, selectedYear]);
+  }, [filteredTransactions, categories, selectedYear]);
 
   const incomeCategoryData = useMemo(() => {
     const categoryTotals: Record<number, { name: string; color: string; total: number }> = {};
     
-    transactions.forEach((t) => {
+    filteredTransactions.forEach((t) => {
       if (t.type !== "income") return;
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
@@ -304,7 +339,7 @@ export default function Analytics() {
     return Object.values(categoryTotals)
       .sort((a, b) => b.total - a.total)
       .slice(0, 6);
-  }, [transactions, categories, selectedYear]);
+  }, [filteredTransactions, categories, selectedYear]);
 
   const walletData = useMemo(() => {
     return wallets.map((w, i) => ({
@@ -318,7 +353,7 @@ export default function Analytics() {
     let income = 0;
     let expense = 0;
 
-    transactions.forEach((t) => {
+    filteredTransactions.forEach((t) => {
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
       const amount = parseFloat(t.amount);
@@ -330,7 +365,7 @@ export default function Analytics() {
     });
 
     return { income, expense, savings: income - expense };
-  }, [transactions, selectedYear]);
+  }, [filteredTransactions, selectedYear]);
 
   const compareData = useMemo(() => {
     const currentMonth = new Date().getMonth();
@@ -497,6 +532,43 @@ export default function Analytics() {
             </Button>
           ))}
         </div>
+
+        {/* Sub-ledger filter */}
+        {subLedgers.length > 0 && (
+          <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-muted-foreground" />
+              <Select value={selectedSubLedgerId} onValueChange={setSelectedSubLedgerId}>
+                <SelectTrigger className="w-[180px]" data-testid="select-subledger-filter">
+                  <SelectValue placeholder="选择账本" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="option-subledger-all">
+                    全部账本
+                  </SelectItem>
+                  <SelectItem value="main" data-testid="option-subledger-main">
+                    仅主账本
+                  </SelectItem>
+                  {subLedgers.filter(s => !s.isArchived).map((subLedger) => (
+                    <SelectItem
+                      key={subLedger.id}
+                      value={String(subLedger.id)}
+                      data-testid={`option-subledger-${subLedger.id}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: subLedger.color || "#8B5CF6" }}
+                        />
+                        {subLedger.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 flex-wrap">
