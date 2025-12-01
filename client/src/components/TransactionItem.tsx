@@ -2,7 +2,6 @@ import type { Transaction, Category, Wallet } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
 import {
   TrendingDown,
   TrendingUp,
@@ -18,8 +17,6 @@ import {
   Briefcase,
   DollarSign,
   MoreHorizontal,
-  Pencil,
-  Trash2,
 } from "lucide-react";
 
 interface TransactionItemProps {
@@ -27,8 +24,7 @@ interface TransactionItemProps {
   category?: Category | null;
   wallet?: Wallet | null;
   toWallet?: Wallet | null;
-  onEdit?: (transaction: Transaction) => void;
-  onDelete?: (transaction: Transaction) => void;
+  onClick?: (transaction: Transaction) => void;
 }
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {
@@ -50,8 +46,7 @@ export function TransactionItem({
   category,
   wallet,
   toWallet,
-  onEdit,
-  onDelete,
+  onClick,
 }: TransactionItemProps) {
   const amount = parseFloat(transaction.amount || "0");
   const isExpense = transaction.type === "expense";
@@ -104,8 +99,9 @@ export function TransactionItem({
 
   return (
     <div
-      className={`group flex items-center gap-3 py-3 px-3 rounded-lg border-l-3 bg-card/50 hover-elevate ${getBorderColor()}`}
+      className={`flex items-center gap-3 py-3 px-3 rounded-lg border-l-3 bg-card/50 hover-elevate cursor-pointer ${getBorderColor()}`}
       data-testid={`item-transaction-${transaction.id}`}
+      onClick={() => onClick?.(transaction)}
     >
       <div
         className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -134,62 +130,27 @@ export function TransactionItem({
         </div>
       </div>
 
-      <div className="text-right flex-shrink-0 flex items-center gap-2">
-        <div>
-          <p
-            className={`font-semibold font-mono text-sm ${getTypeColor()}`}
-            data-testid={`text-amount-${transaction.id}`}
-          >
-            {getAmountPrefix()}{getCurrencyInfo(wallet?.currency || "MYR").symbol}
-            {amount.toLocaleString("zh-CN", {
+      <div className="text-right flex-shrink-0">
+        <p
+          className={`font-semibold font-mono text-sm ${getTypeColor()}`}
+          data-testid={`text-amount-${transaction.id}`}
+        >
+          {getAmountPrefix()}{getCurrencyInfo(wallet?.currency || "MYR").symbol}
+          {amount.toLocaleString("zh-CN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </p>
+        {transaction.currency && transaction.currency !== (wallet?.currency || "MYR") && transaction.originalAmount ? (
+          <p className="text-xs text-muted-foreground">
+            原: {getCurrencyInfo(transaction.currency).symbol}{parseFloat(transaction.originalAmount).toLocaleString("zh-CN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </p>
-          {transaction.currency && transaction.currency !== (wallet?.currency || "MYR") && transaction.originalAmount ? (
-            <p className="text-xs text-muted-foreground">
-              原: {getCurrencyInfo(transaction.currency).symbol}{parseFloat(transaction.originalAmount).toLocaleString("zh-CN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </p>
-          ) : category && !isTransfer ? (
-            <p className="text-xs text-muted-foreground">{category.name}</p>
-          ) : null}
-        </div>
-        
-        {(onEdit || onDelete) && (
-          <div className="flex items-center gap-1 invisible group-hover:visible">
-            {onEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(transaction);
-                }}
-                data-testid={`button-edit-transaction-${transaction.id}`}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(transaction);
-                }}
-                data-testid={`button-delete-transaction-${transaction.id}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        )}
+        ) : category && !isTransfer ? (
+          <p className="text-xs text-muted-foreground">{category.name}</p>
+        ) : null}
       </div>
     </div>
   );

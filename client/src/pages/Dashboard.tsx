@@ -21,16 +21,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Wallet,
   Receipt,
   ChevronRight,
@@ -74,7 +64,6 @@ export default function Dashboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -172,7 +161,6 @@ export default function Dashboard() {
         title: "删除成功",
         description: "交易记录已删除",
       });
-      setDeletingTransaction(null);
     },
     onError: () => {
       toast({
@@ -184,13 +172,7 @@ export default function Dashboard() {
   });
 
   const handleDeleteTransaction = (transaction: Transaction) => {
-    setDeletingTransaction(transaction);
-  };
-
-  const confirmDelete = () => {
-    if (deletingTransaction) {
-      deleteMutation.mutate(deletingTransaction.id);
-    }
+    deleteMutation.mutate(transaction.id);
   };
 
   if (isAuthLoading) {
@@ -449,11 +431,10 @@ export default function Dashboard() {
                         category={transaction.category}
                         wallet={transaction.wallet}
                         toWallet={transaction.toWallet}
-                        onEdit={(tx) => {
+                        onClick={(tx) => {
                           setEditingTransaction(tx);
                           setIsModalOpen(true);
                         }}
-                        onDelete={handleDeleteTransaction}
                       />
                     ))}
                   </div>
@@ -481,6 +462,7 @@ export default function Dashboard() {
         categories={categories}
         defaultCurrency={user?.defaultCurrency || "MYR"}
         transaction={editingTransaction}
+        onDelete={handleDeleteTransaction}
       />
 
       <WalletModal
@@ -494,27 +476,6 @@ export default function Dashboard() {
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
       />
-
-      <AlertDialog open={!!deletingTransaction} onOpenChange={(open) => !open && setDeletingTransaction(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除这笔交易记录吗？删除后将无法恢复，钱包余额也会相应调整。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete"
-            >
-              {deleteMutation.isPending ? "删除中..." : "删除"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

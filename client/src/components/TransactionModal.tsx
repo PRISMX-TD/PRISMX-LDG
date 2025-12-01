@@ -13,6 +13,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -37,7 +47,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Loader2, ArrowRightLeft, RefreshCw } from "lucide-react";
+import { CalendarIcon, Loader2, ArrowRightLeft, RefreshCw, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import type { Wallet, Category, TransactionType, Transaction } from "@shared/schema";
@@ -50,6 +60,7 @@ interface TransactionModalProps {
   categories: Category[];
   defaultCurrency?: string;
   transaction?: Transaction | null;
+  onDelete?: (transaction: Transaction) => void;
 }
 
 const transactionSchema = z.object({
@@ -78,11 +89,19 @@ export function TransactionModal({
   categories,
   defaultCurrency = "MYR",
   transaction,
+  onDelete,
 }: TransactionModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = !!transaction;
   const [activeTab, setActiveTab] = useState<TransactionType>("expense");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setShowDeleteConfirm(false);
+    }
+  }, [open]);
 
   const [isLoadingRate, setIsLoadingRate] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
@@ -697,24 +716,64 @@ export function TransactionModal({
               )}
             />
 
-            <Button
-              type="submit"
-              className="w-full h-12 text-base"
-              disabled={mutation.isPending}
-              data-testid="button-submit-transaction"
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isEditing ? "更新中..." : "保存中..."}
-                </>
-              ) : (
-                isEditing ? "更新交易" : `记录${typeLabels[activeTab]}`
+            <div className={`flex gap-3 ${isEditing ? '' : ''}`}>
+              {isEditing && onDelete && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 px-4 text-destructive border-destructive/50 hover:bg-destructive/10"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  data-testid="button-delete-transaction"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               )}
-            </Button>
+              <Button
+                type="submit"
+                className="flex-1 h-12 text-base"
+                disabled={mutation.isPending}
+                data-testid="button-submit-transaction"
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? "更新中..." : "保存中..."}
+                  </>
+                ) : (
+                  isEditing ? "更新交易" : `记录${typeLabels[activeTab]}`
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这笔交易吗？此操作无法撤销，钱包余额将会自动调整。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">取消</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (transaction && onDelete) {
+                  onDelete(transaction);
+                  setShowDeleteConfirm(false);
+                  onOpenChange(false);
+                }
+              }}
+              data-testid="button-confirm-delete"
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
