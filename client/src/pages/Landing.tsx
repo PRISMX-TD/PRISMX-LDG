@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Target } from "lucide-react";
+import { Target, Mail } from "lucide-react";
 import {
   Wallet,
   TrendingUp,
@@ -9,6 +9,8 @@ import {
   BarChart3,
   Smartphone,
 } from "lucide-react";
+import { SiGoogle, SiGithub, SiApple } from "react-icons/si";
+import { RiTwitterXFill } from "react-icons/ri";
 
 export default function Landing() {
   const features = [
@@ -85,6 +87,31 @@ export default function Landing() {
               <Button size="lg" variant="outline" className="text-base border-primary/30 hover:bg-primary/10 hover:border-primary/50" data-testid="button-learn-more">
                 <a href="#features">了解更多</a>
               </Button>
+            </div>
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <p className="text-sm text-muted-foreground">支持以下方式登录</p>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-google">
+                  <SiGoogle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-xs text-muted-foreground hidden sm:inline">Google</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-github">
+                  <SiGithub className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-xs text-muted-foreground hidden sm:inline">GitHub</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-x">
+                  <RiTwitterXFill className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-xs text-muted-foreground hidden sm:inline">X</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-apple">
+                  <SiApple className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-xs text-muted-foreground hidden sm:inline">Apple</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-email">
+                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-xs text-muted-foreground hidden sm:inline">邮箱</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
