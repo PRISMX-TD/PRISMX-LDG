@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismx-ledger-v2';
+const CACHE_NAME = 'prismx-ledger-v3';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [
