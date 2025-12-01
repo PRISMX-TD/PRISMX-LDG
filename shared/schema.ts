@@ -79,6 +79,7 @@ export const transactions = pgTable("transactions", {
   toWalletAmount: decimal("to_wallet_amount", { precision: 15, scale: 2 }), // amount received in destination wallet (for transfers with different currencies)
   toExchangeRate: decimal("to_exchange_rate", { precision: 15, scale: 6 }), // exchange rate for destination wallet
   categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
+  subLedgerId: integer("sub_ledger_id").references(() => subLedgers.id, { onDelete: "set null" }), // optional sub-ledger association
   description: text("description"),
   tags: text("tags").array(), // tags for transaction
   date: timestamp("date").notNull().defaultNow(),
@@ -141,6 +142,22 @@ export const billReminders = pgTable("bill_reminders", {
   isPaid: boolean("is_paid").default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Sub-ledgers table - for separate tracking of specific spending (e.g., travel, projects)
+export const subLedgers = pgTable("sub_ledgers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }),
+  color: varchar("color", { length: 20 }),
+  includeInMainAnalytics: boolean("include_in_main_analytics").default(true), // whether to include in main ledger analytics
+  isArchived: boolean("is_archived").default(false),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // User dashboard preferences table
@@ -224,7 +241,13 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   recurringTransactions: many(recurringTransactions),
   billReminders: many(billReminders),
   exchangeCredentials: many(exchangeCredentials),
+  subLedgers: many(subLedgers),
   dashboardPreferences: one(userDashboardPreferences),
+}));
+
+export const subLedgersRelations = relations(subLedgers, ({ one, many }) => ({
+  user: one(users, { fields: [subLedgers.userId], references: [users.id] }),
+  transactions: many(transactions),
 }));
 
 export const userDashboardPreferencesRelations = relations(userDashboardPreferences, ({ one }) => ({
@@ -259,6 +282,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   wallet: one(wallets, { fields: [transactions.walletId], references: [wallets.id] }),
   toWallet: one(wallets, { fields: [transactions.toWalletId], references: [wallets.id] }),
   category: one(categories, { fields: [transactions.categoryId], references: [categories.id] }),
+  subLedger: one(subLedgers, { fields: [transactions.subLedgerId], references: [subLedgers.id] }),
 }));
 
 export const budgetsRelations = relations(budgets, ({ one }) => ({
@@ -326,6 +350,9 @@ export type UserMobileNavPreferences = typeof userMobileNavPreferences.$inferSel
 export type InsertUserWalletPreferences = typeof userWalletPreferences.$inferInsert;
 export type UserWalletPreferences = typeof userWalletPreferences.$inferSelect;
 
+export type InsertSubLedger = typeof subLedgers.$inferInsert;
+export type SubLedger = typeof subLedgers.$inferSelect;
+
 // Zod schemas for validation
 export const insertWalletSchema = createInsertSchema(wallets).omit({
   id: true,
@@ -387,6 +414,12 @@ export const insertUserMobileNavPreferencesSchema = createInsertSchema(userMobil
 });
 
 export const insertUserWalletPreferencesSchema = createInsertSchema(userWalletPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSubLedgerSchema = createInsertSchema(subLedgers).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

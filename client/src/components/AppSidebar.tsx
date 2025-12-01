@@ -30,6 +30,7 @@ import {
   LogOut,
   Target,
   ArrowUpDown,
+  BookOpen,
 } from "lucide-react";
 import type { User, BillReminder } from "@shared/schema";
 
@@ -80,6 +81,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const analyticsNavItems = [
     { href: "/analytics", icon: BarChart3, label: "数据分析" },
     { href: "/reports", icon: FileText, label: "财务报表" },
+    { href: "/sub-ledgers", icon: BookOpen, label: "子账本" },
   ];
 
   return (

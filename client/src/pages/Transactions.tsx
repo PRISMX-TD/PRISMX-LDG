@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Receipt, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
-import type { Wallet, Category, Transaction } from "@shared/schema";
+import type { Wallet, Category, Transaction, SubLedger } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -44,6 +44,11 @@ export default function Transactions() {
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: subLedgers = [] } = useQuery<SubLedger[]>({
+    queryKey: ["/api/sub-ledgers"],
     enabled: isAuthenticated,
   });
 
@@ -277,6 +282,7 @@ export default function Transactions() {
         onOpenChange={handleCloseModal}
         wallets={wallets}
         categories={categories}
+        subLedgers={subLedgers}
         defaultCurrency={user?.defaultCurrency || "MYR"}
         transaction={editingTransaction}
         onDelete={handleDeleteTransaction}

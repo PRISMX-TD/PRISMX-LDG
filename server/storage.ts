@@ -8,6 +8,7 @@ import {
   recurringTransactions,
   billReminders,
   exchangeCredentials,
+  subLedgers,
   userDashboardPreferences,
   userAnalyticsPreferences,
   userMobileNavPreferences,
@@ -30,6 +31,8 @@ import {
   type InsertBillReminder,
   type ExchangeCredential,
   type InsertExchangeCredential,
+  type SubLedger,
+  type InsertSubLedger,
   type UserDashboardPreferences,
   type InsertUserDashboardPreferences,
   type UserAnalyticsPreferences,
@@ -151,6 +154,13 @@ export interface IStorage {
   // Wallet preferences operations
   getWalletPreferences(userId: string): Promise<UserWalletPreferences | undefined>;
   upsertWalletPreferences(userId: string, data: Partial<InsertUserWalletPreferences>): Promise<UserWalletPreferences>;
+
+  // Sub-ledger operations
+  getSubLedgers(userId: string, includeArchived?: boolean): Promise<SubLedger[]>;
+  getSubLedger(id: number, userId: string): Promise<SubLedger | undefined>;
+  createSubLedger(subLedger: InsertSubLedger): Promise<SubLedger>;
+  updateSubLedger(id: number, userId: string, data: Partial<InsertSubLedger>): Promise<SubLedger | undefined>;
+  deleteSubLedger(id: number, userId: string): Promise<boolean>;
 
   // Initialization
   initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
@@ -753,6 +763,42 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // Sub-ledger operations
+  async getSubLedgers(userId: string, includeArchived: boolean = false): Promise<SubLedger[]> {
+    if (includeArchived) {
+      return db.select().from(subLedgers).where(eq(subLedgers.userId, userId)).orderBy(desc(subLedgers.createdAt));
+    }
+    return db.select().from(subLedgers)
+      .where(and(eq(subLedgers.userId, userId), eq(subLedgers.isArchived, false)))
+      .orderBy(desc(subLedgers.createdAt));
+  }
+
+  async getSubLedger(id: number, userId: string): Promise<SubLedger | undefined> {
+    const [subLedger] = await db.select().from(subLedgers)
+      .where(and(eq(subLedgers.id, id), eq(subLedgers.userId, userId)));
+    return subLedger;
+  }
+
+  async createSubLedger(subLedger: InsertSubLedger): Promise<SubLedger> {
+    const [newSubLedger] = await db.insert(subLedgers).values(subLedger).returning();
+    return newSubLedger;
+  }
+
+  async updateSubLedger(id: number, userId: string, data: Partial<InsertSubLedger>): Promise<SubLedger | undefined> {
+    const [updated] = await db.update(subLedgers)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(subLedgers.id, id), eq(subLedgers.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteSubLedger(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(subLedgers)
+      .where(and(eq(subLedgers.id, id), eq(subLedgers.userId, userId)))
+      .returning();
+    return result.length > 0;
   }
 
   // Initialize default data for new users with idempotent inserts

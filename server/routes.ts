@@ -550,6 +550,7 @@ export async function registerRoutes(
         walletId: req.body.walletId,
         toWalletId: req.body.toWalletId || null,
         categoryId: req.body.categoryId || null,
+        subLedgerId: req.body.subLedgerId || null,
         description: req.body.description || null,
         date: new Date(req.body.date),
       };
@@ -715,6 +716,7 @@ export async function registerRoutes(
         walletId: req.body.walletId,
         toWalletId: req.body.toWalletId || null,
         categoryId: req.body.categoryId || null,
+        subLedgerId: req.body.subLedgerId || null,
         description: req.body.description || null,
         date: new Date(req.body.date),
       };
@@ -1190,6 +1192,107 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting bill reminder:", error);
       res.status(500).json({ message: "Failed to delete bill reminder" });
+    }
+  });
+
+  // Sub-ledger routes
+  app.get('/api/sub-ledgers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const includeArchived = req.query.includeArchived === 'true';
+      const subLedgers = await storage.getSubLedgers(userId, includeArchived);
+      res.json(subLedgers);
+    } catch (error) {
+      console.error("Error fetching sub-ledgers:", error);
+      res.status(500).json({ message: "Failed to fetch sub-ledgers" });
+    }
+  });
+
+  app.get('/api/sub-ledgers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const subLedger = await storage.getSubLedger(id, userId);
+      if (!subLedger) {
+        return res.status(404).json({ message: "Sub-ledger not found" });
+      }
+      res.json(subLedger);
+    } catch (error) {
+      console.error("Error fetching sub-ledger:", error);
+      res.status(500).json({ message: "Failed to fetch sub-ledger" });
+    }
+  });
+
+  app.post('/api/sub-ledgers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, description, icon, color, includeInMainAnalytics, startDate, endDate } = req.body;
+      
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      const subLedger = await storage.createSubLedger({
+        userId,
+        name: name.trim(),
+        description: description?.trim() || null,
+        icon: icon || null,
+        color: color || '#8B5CF6',
+        includeInMainAnalytics: includeInMainAnalytics ?? true,
+        isArchived: false,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+      });
+      res.status(201).json(subLedger);
+    } catch (error) {
+      console.error("Error creating sub-ledger:", error);
+      res.status(500).json({ message: "Failed to create sub-ledger" });
+    }
+  });
+
+  app.patch('/api/sub-ledgers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { name, description, icon, color, includeInMainAnalytics, isArchived, startDate, endDate } = req.body;
+      
+      const existing = await storage.getSubLedger(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Sub-ledger not found" });
+      }
+      
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (description !== undefined) updateData.description = description?.trim() || null;
+      if (icon !== undefined) updateData.icon = icon;
+      if (color !== undefined) updateData.color = color;
+      if (includeInMainAnalytics !== undefined) updateData.includeInMainAnalytics = includeInMainAnalytics;
+      if (isArchived !== undefined) updateData.isArchived = isArchived;
+      if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+      
+      const subLedger = await storage.updateSubLedger(id, userId, updateData);
+      res.json(subLedger);
+    } catch (error) {
+      console.error("Error updating sub-ledger:", error);
+      res.status(500).json({ message: "Failed to update sub-ledger" });
+    }
+  });
+
+  app.delete('/api/sub-ledgers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const deleted = await storage.deleteSubLedger(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Sub-ledger not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting sub-ledger:", error);
+      res.status(500).json({ message: "Failed to delete sub-ledger" });
     }
   });
 

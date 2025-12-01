@@ -47,10 +47,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Loader2, ArrowRightLeft, RefreshCw, Trash2 } from "lucide-react";
+import { CalendarIcon, Loader2, ArrowRightLeft, RefreshCw, Trash2, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import type { Wallet, Category, TransactionType, Transaction } from "@shared/schema";
+import type { Wallet, Category, TransactionType, Transaction, SubLedger } from "@shared/schema";
 import { supportedCurrencies, getCurrencyInfo } from "@shared/schema";
 
 interface TransactionModalProps {
@@ -58,6 +58,7 @@ interface TransactionModalProps {
   onOpenChange: (open: boolean) => void;
   wallets: Wallet[];
   categories: Category[];
+  subLedgers?: SubLedger[];
   defaultCurrency?: string;
   transaction?: Transaction | null;
   onDelete?: (transaction: Transaction) => void;
@@ -76,6 +77,7 @@ const transactionSchema = z.object({
   toWalletId: z.string().optional(),
   toWalletAmount: z.string().optional(),
   categoryId: z.string().optional(),
+  subLedgerId: z.string().optional(),
   description: z.string().optional(),
   date: z.date(),
 });
@@ -87,6 +89,7 @@ export function TransactionModal({
   onOpenChange,
   wallets,
   categories,
+  subLedgers = [],
   defaultCurrency = "MYR",
   transaction,
   onDelete,
@@ -118,6 +121,7 @@ export function TransactionModal({
       toWalletId: "",
       toWalletAmount: "",
       categoryId: "",
+      subLedgerId: "",
       description: "",
       date: new Date(),
     },
@@ -189,6 +193,7 @@ export function TransactionModal({
         toWalletId: transaction.toWalletId ? String(transaction.toWalletId) : "",
         toWalletAmount: transaction.toWalletAmount || "",
         categoryId: transaction.categoryId ? String(transaction.categoryId) : "",
+        subLedgerId: transaction.subLedgerId ? String(transaction.subLedgerId) : "",
         description: transaction.description || "",
         date: new Date(transaction.date),
       });
@@ -204,6 +209,7 @@ export function TransactionModal({
         toWalletId: "",
         toWalletAmount: "",
         categoryId: "",
+        subLedgerId: "",
         description: "",
         date: new Date(),
       });
@@ -269,6 +275,7 @@ export function TransactionModal({
         walletId: parseInt(data.walletId),
         toWalletId: data.toWalletId ? parseInt(data.toWalletId) : null,
         categoryId: data.categoryId ? parseInt(data.categoryId) : null,
+        subLedgerId: data.subLedgerId ? parseInt(data.subLedgerId) : null,
         description: data.description || null,
         date: data.date.toISOString(),
       };
@@ -648,6 +655,49 @@ export function TransactionModal({
                             data-testid={`option-category-${category.id}`}
                           >
                             {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {subLedgers.length > 0 && (
+              <FormField
+                control={form.control}
+                name="subLedgerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      子账本（可选）
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-subledger">
+                          <SelectValue placeholder="选择子账本" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="" data-testid="option-subledger-none">
+                          不关联子账本
+                        </SelectItem>
+                        {subLedgers.filter(s => !s.isArchived).map((subLedger) => (
+                          <SelectItem
+                            key={subLedger.id}
+                            value={String(subLedger.id)}
+                            data-testid={`option-subledger-${subLedger.id}`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: subLedger.color || "#8B5CF6" }}
+                              />
+                              {subLedger.name}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
