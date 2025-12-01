@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -171,6 +172,9 @@ export default function Dashboard() {
     })
   );
 
+  const [, setLocation] = useLocation();
+  const searchString = useSearch();
+
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       toast({
@@ -183,6 +187,16 @@ export default function Dashboard() {
       }, 500);
     }
   }, [isAuthenticated, isAuthLoading, toast]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const action = params.get('action');
+    
+    if (action === 'add-transaction' && isAuthenticated && !isAuthLoading) {
+      setIsModalOpen(true);
+      setLocation('/', { replace: true });
+    }
+  }, [searchString, isAuthenticated, isAuthLoading, setLocation]);
 
   const { data: wallets = [], isLoading: isWalletsLoading } = useQuery<
     WalletType[]

@@ -10,6 +10,60 @@
   "orientation": "portrait-primary",
   "categories": ["finance", "productivity"],
   "lang": "zh-CN",
+  "shortcuts": [
+    {
+      "name": "快速记账",
+      "short_name": "记账",
+      "description": "快速添加新交易记录",
+      "url": "/?action=add-transaction",
+      "icons": [
+        {
+          "src": "/pwa-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "查看钱包",
+      "short_name": "钱包",
+      "description": "查看所有钱包余额",
+      "url": "/wallets",
+      "icons": [
+        {
+          "src": "/pwa-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "交易记录",
+      "short_name": "交易",
+      "description": "查看所有交易记录",
+      "url": "/transactions",
+      "icons": [
+        {
+          "src": "/pwa-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "数据分析",
+      "short_name": "分析",
+      "description": "查看收支分析图表",
+      "url": "/analytics",
+      "icons": [
+        {
+          "src": "/pwa-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
   "icons": [
     {
       "src": "/pwa-72x72.png",
