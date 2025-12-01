@@ -188,6 +188,17 @@ export const userMobileNavPreferences = pgTable("user_mobile_nav_preferences", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User wallet preferences table - for wallet ordering within dashboard
+export const userWalletPreferences = pgTable("user_wallet_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  walletOrder: integer("wallet_order").array(), // array of wallet IDs in user's preferred order
+  typeOrder: text("type_order").array(), // array of wallet types in user's preferred order
+  groupByType: boolean("group_by_type").default(true), // whether to group wallets by type
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Exchange credentials table - for crypto exchange API integration
 export const exchangeCredentials = pgTable("exchange_credentials", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -226,6 +237,10 @@ export const userAnalyticsPreferencesRelations = relations(userAnalyticsPreferen
 
 export const userMobileNavPreferencesRelations = relations(userMobileNavPreferences, ({ one }) => ({
   user: one(users, { fields: [userMobileNavPreferences.userId], references: [users.id] }),
+}));
+
+export const userWalletPreferencesRelations = relations(userWalletPreferences, ({ one }) => ({
+  user: one(users, { fields: [userWalletPreferences.userId], references: [users.id] }),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -308,6 +323,9 @@ export type UserAnalyticsPreferences = typeof userAnalyticsPreferences.$inferSel
 export type InsertUserMobileNavPreferences = typeof userMobileNavPreferences.$inferInsert;
 export type UserMobileNavPreferences = typeof userMobileNavPreferences.$inferSelect;
 
+export type InsertUserWalletPreferences = typeof userWalletPreferences.$inferInsert;
+export type UserWalletPreferences = typeof userWalletPreferences.$inferSelect;
+
 // Zod schemas for validation
 export const insertWalletSchema = createInsertSchema(wallets).omit({
   id: true,
@@ -368,13 +386,28 @@ export const insertUserMobileNavPreferencesSchema = createInsertSchema(userMobil
   updatedAt: true,
 });
 
+export const insertUserWalletPreferencesSchema = createInsertSchema(userWalletPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Transaction types enum
 export const transactionTypes = ['expense', 'income', 'transfer'] as const;
 export type TransactionType = typeof transactionTypes[number];
 
 // Wallet types enum
-export const walletTypes = ['cash', 'bank_card', 'digital_wallet', 'credit_card'] as const;
+export const walletTypes = ['cash', 'bank_card', 'digital_wallet', 'credit_card', 'investment'] as const;
 export type WalletType = typeof walletTypes[number];
+
+// Wallet type labels for display
+export const walletTypeLabels: Record<string, string> = {
+  cash: '现金',
+  bank_card: '银行卡',
+  digital_wallet: '数字钱包',
+  credit_card: '信用卡',
+  investment: '投资账户',
+};
 
 // Category types enum  
 export const categoryTypes = ['expense', 'income'] as const;
