@@ -49,8 +49,7 @@ export function PWAUpdatePrompt() {
       });
 
       navigator.serviceWorker.ready.then(() => {
-        setOfflineReady(true);
-        setTimeout(() => setOfflineReady(false), 3000);
+        // 离线就绪不显示提示
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
