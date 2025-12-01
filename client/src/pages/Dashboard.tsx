@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,7 +48,21 @@ interface DashboardPreferences {
   showSavingsGoals: boolean;
   showRecentTransactions: boolean;
   showFlexibleFunds: boolean;
+  cardOrder: string[] | null;
 }
+
+type CardKey = "showTotalAssets" | "showMonthlyIncome" | "showMonthlyExpense" | "showFlexibleFunds" | "showWallets" | "showBudgets" | "showSavingsGoals" | "showRecentTransactions";
+
+const defaultCardOrder: CardKey[] = [
+  "showTotalAssets",
+  "showMonthlyIncome", 
+  "showMonthlyExpense",
+  "showFlexibleFunds",
+  "showWallets",
+  "showBudgets",
+  "showSavingsGoals",
+  "showRecentTransactions",
+];
 
 interface TransactionWithRelations extends Transaction {
   category?: Category | null;
@@ -112,7 +126,20 @@ export default function Dashboard() {
     showSavingsGoals: true,
     showRecentTransactions: true,
     showFlexibleFunds: false,
+    cardOrder: null,
   };
+
+  const orderedCardKeys = useMemo(() => {
+    const order = prefs.cardOrder;
+    if (!order || order.length === 0) {
+      return defaultCardOrder;
+    }
+    const validOrder = order.filter((key): key is CardKey => 
+      defaultCardOrder.includes(key as CardKey)
+    );
+    const remaining = defaultCardOrder.filter(key => !validOrder.includes(key));
+    return [...validOrder, ...remaining];
+  }, [prefs.cardOrder]);
 
   const recentTransactions = transactions.slice(0, 10);
 
@@ -190,122 +217,111 @@ export default function Dashboard() {
     return null;
   }
 
-  return (
-    <div className="min-h-screen">
-      <div className="hidden md:block">
-        <Header user={user} />
-      </div>
-
-      <main className="container mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-lg font-semibold md:hidden">仪表盘</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsSettingsOpen(true)}
-            data-testid="button-dashboard-settings"
-            className="ml-auto"
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="grid gap-3 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {prefs.showTotalAssets && (
-            <TotalAssetsCard 
-              wallets={wallets} 
-              isLoading={isWalletsLoading} 
-              defaultCurrency={user?.defaultCurrency || "MYR"}
-            />
-          )}
-
-          {prefs.showFlexibleFunds && (
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <Unlock className="w-4 h-4 text-primary" />
-                  可灵活调用
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isWalletsLoading ? (
-                  <Skeleton className="h-9 w-32" />
-                ) : (
-                  <p
-                    className="text-3xl font-bold font-mono text-primary"
-                    data-testid="text-flexible-funds"
-                  >
-                    {userCurrencyInfo.symbol}
-                    {flexibleFundsTotal.toLocaleString("zh-CN", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  非长期储蓄/应急资金
+  const renderSummaryCard = (key: CardKey) => {
+    switch (key) {
+      case "showTotalAssets":
+        return prefs.showTotalAssets ? (
+          <TotalAssetsCard 
+            key={key}
+            wallets={wallets} 
+            isLoading={isWalletsLoading} 
+            defaultCurrency={user?.defaultCurrency || "MYR"}
+          />
+        ) : null;
+      case "showFlexibleFunds":
+        return prefs.showFlexibleFunds ? (
+          <Card key={key} className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Unlock className="w-4 h-4 text-primary" />
+                可灵活调用
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isWalletsLoading ? (
+                <Skeleton className="h-9 w-32" />
+              ) : (
+                <p
+                  className="text-3xl font-bold font-mono text-primary"
+                  data-testid="text-flexible-funds"
+                >
+                  {userCurrencyInfo.symbol}
+                  {flexibleFundsTotal.toLocaleString("zh-CN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
-              </CardContent>
-            </Card>
-          )}
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                非长期储蓄/应急资金
+              </p>
+            </CardContent>
+          </Card>
+        ) : null;
+      case "showMonthlyIncome":
+        return prefs.showMonthlyIncome ? (
+          <Card key={key} className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-income" />
+                本月收入
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isTransactionsLoading ? (
+                <Skeleton className="h-9 w-32" />
+              ) : (
+                <p
+                  className="text-3xl font-bold font-mono text-income"
+                  data-testid="text-monthly-income"
+                >
+                  +{userCurrencyInfo.symbol}
+                  {monthlyIncome.toLocaleString("zh-CN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : null;
+      case "showMonthlyExpense":
+        return prefs.showMonthlyExpense ? (
+          <Card key={key} className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-expense" />
+                本月支出
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isTransactionsLoading ? (
+                <Skeleton className="h-9 w-32" />
+              ) : (
+                <p
+                  className="text-3xl font-bold font-mono text-expense"
+                  data-testid="text-monthly-expense"
+                >
+                  -{userCurrencyInfo.symbol}
+                  {monthlyExpense.toLocaleString("zh-CN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : null;
+      default:
+        return null;
+    }
+  };
 
-          {prefs.showMonthlyIncome && (
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-income" />
-                  本月收入
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isTransactionsLoading ? (
-                  <Skeleton className="h-9 w-32" />
-                ) : (
-                  <p
-                    className="text-3xl font-bold font-mono text-income"
-                    data-testid="text-monthly-income"
-                  >
-                    +{userCurrencyInfo.symbol}
-                    {monthlyIncome.toLocaleString("zh-CN", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {prefs.showMonthlyExpense && (
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-expense" />
-                  本月支出
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isTransactionsLoading ? (
-                  <Skeleton className="h-9 w-32" />
-                ) : (
-                  <p
-                    className="text-3xl font-bold font-mono text-expense"
-                    data-testid="text-monthly-expense"
-                  >
-                    -{userCurrencyInfo.symbol}
-                    {monthlyExpense.toLocaleString("zh-CN", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {prefs.showWallets && (
-          <section>
+  const renderSection = (key: CardKey) => {
+    switch (key) {
+      case "showWallets":
+        return prefs.showWallets ? (
+          <section key={key}>
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
                 <Wallet className="w-5 h-5" />
@@ -325,7 +341,6 @@ export default function Dashboard() {
                 <span className="sm:hidden">添加</span>
               </Button>
             </div>
-
             {isWalletsLoading ? (
               <>
                 <div className="hidden md:grid gap-4 grid-cols-2 lg:grid-cols-3">
@@ -378,21 +393,18 @@ export default function Dashboard() {
               </>
             )}
           </section>
-        )}
-
-        {(prefs.showBudgets || prefs.showSavingsGoals) && (
-          <div className="grid gap-3 md:gap-6 grid-cols-1 md:grid-cols-2">
-            {prefs.showBudgets && (
-              <BudgetCard currency={user?.defaultCurrency || "MYR"} categories={categories} />
-            )}
-            {prefs.showSavingsGoals && (
-              <SavingsGoalCard currency={user?.defaultCurrency || "MYR"} />
-            )}
-          </div>
-        )}
-
-        {prefs.showRecentTransactions && (
-          <section>
+        ) : null;
+      case "showBudgets":
+        return prefs.showBudgets ? (
+          <BudgetCard key={key} currency={user?.defaultCurrency || "MYR"} categories={categories} />
+        ) : null;
+      case "showSavingsGoals":
+        return prefs.showSavingsGoals ? (
+          <SavingsGoalCard key={key} currency={user?.defaultCurrency || "MYR"} />
+        ) : null;
+      case "showRecentTransactions":
+        return prefs.showRecentTransactions ? (
+          <section key={key}>
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
                 <Receipt className="w-5 h-5" />
@@ -405,7 +417,6 @@ export default function Dashboard() {
                 </Button>
               </Link>
             </div>
-
             <Card className="glass-card">
               <CardContent className="p-4">
                 {isTransactionsLoading ? (
@@ -442,7 +453,83 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </section>
-        )}
+        ) : null;
+      default:
+        return null;
+    }
+  };
+
+  const summaryCardKeys: CardKey[] = ["showTotalAssets", "showFlexibleFunds", "showMonthlyIncome", "showMonthlyExpense"];
+  
+  const renderCardByKey = (key: CardKey): JSX.Element | null => {
+    if (summaryCardKeys.includes(key)) {
+      return renderSummaryCard(key);
+    }
+    return renderSection(key);
+  };
+
+  return (
+    <div className="min-h-screen">
+      <div className="hidden md:block">
+        <Header user={user} />
+      </div>
+
+      <main className="container mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-lg font-semibold md:hidden">仪表盘</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSettingsOpen(true)}
+            data-testid="button-dashboard-settings"
+            className="ml-auto"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {orderedCardKeys.map((key, index) => {
+          const isSummaryCard = summaryCardKeys.includes(key);
+          const isBudgetOrSavings = key === "showBudgets" || key === "showSavingsGoals";
+          const isFirstSummaryCard = isSummaryCard && 
+            orderedCardKeys.slice(0, index).filter(k => summaryCardKeys.includes(k)).length === 0;
+          
+          if (isSummaryCard) {
+            if (isFirstSummaryCard) {
+              const summaryCards = orderedCardKeys.filter(k => summaryCardKeys.includes(k));
+              return (
+                <div key="summary-grid" className="grid gap-3 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {summaryCards.map(k => renderSummaryCard(k))}
+                </div>
+              );
+            }
+            return null;
+          }
+          
+          if (isBudgetOrSavings) {
+            const budgetIndex = orderedCardKeys.indexOf("showBudgets");
+            const savingsIndex = orderedCardKeys.indexOf("showSavingsGoals");
+            const areBothVisible = prefs.showBudgets && prefs.showSavingsGoals;
+            const areConsecutive = Math.abs(budgetIndex - savingsIndex) === 1;
+            
+            if (areBothVisible && areConsecutive) {
+              const firstOfPair = Math.min(budgetIndex, savingsIndex);
+              if (index === firstOfPair) {
+                const pairKeys = budgetIndex < savingsIndex 
+                  ? ["showBudgets", "showSavingsGoals"] 
+                  : ["showSavingsGoals", "showBudgets"];
+                return (
+                  <div key="budget-savings-grid" className="grid gap-3 md:gap-6 grid-cols-1 md:grid-cols-2">
+                    {pairKeys.map(k => renderSection(k as CardKey))}
+                  </div>
+                );
+              }
+              return null;
+            }
+          }
+          
+          return renderCardByKey(key);
+        })}
       </main>
 
       <FloatingActionButton onClick={() => {

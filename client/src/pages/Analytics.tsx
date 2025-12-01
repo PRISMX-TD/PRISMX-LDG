@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,9 @@ import {
   Target,
   Percent,
   Activity,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { getCurrencyInfo } from "@shared/schema";
 import {
@@ -85,12 +88,33 @@ const defaultPreferences: AnalyticsPreferences = {
   cardOrder: null,
 };
 
+interface SettingsItem {
+  key: keyof AnalyticsPreferences;
+  label: string;
+  description: string;
+}
+
+const defaultSettingsItems: SettingsItem[] = [
+  { key: "showYearlyStats", label: "年度统计", description: "显示年度收入、支出和结余统计" },
+  { key: "showMonthlyTrend", label: "月度收支趋势", description: "显示每月收支趋势图表" },
+  { key: "showExpenseDistribution", label: "支出分布", description: "显示支出分类饼图" },
+  { key: "showIncomeDistribution", label: "收入分布", description: "显示收入分类饼图" },
+  { key: "showBudgetProgress", label: "预算执行情况", description: "显示预算使用进度" },
+  { key: "showSavingsProgress", label: "储蓄目标进度", description: "显示储蓄目标完成情况" },
+  { key: "showWalletDistribution", label: "账户分布", description: "显示各钱包余额分布" },
+  { key: "showCashflowTrend", label: "累计现金流", description: "显示累计储蓄趋势" },
+];
+
 export default function Analytics() {
   const { user } = useAuth();
   const currencyInfo = getCurrencyInfo(user?.defaultCurrency || "MYR");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [timePeriod, setTimePeriod] = useState<"year" | "month" | "week">("year");
   const [dataView, setDataView] = useState<"overview" | "income" | "expense" | "savings">("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
 
   const { data: preferences = defaultPreferences } = useQuery<AnalyticsPreferences>({
     queryKey: ["/api/analytics-preferences"],
@@ -98,11 +122,84 @@ export default function Analytics() {
 
   const updatePreferencesMutation = useMutation({
     mutationFn: (data: Partial<AnalyticsPreferences>) =>
-      apiRequest("/api/analytics-preferences", { method: "PATCH", body: JSON.stringify(data) }),
-    onSuccess: () => {
+      apiRequest("PATCH", "/api/analytics-preferences", data),
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/analytics-preferences"] });
+      const previousPrefs = queryClient.getQueryData<AnalyticsPreferences>(["/api/analytics-preferences"]);
+      queryClient.setQueryData<AnalyticsPreferences>(["/api/analytics-preferences"], (old) => ({
+        ...(old ?? defaultPreferences),
+        ...updates,
+      }));
+      return { previousPrefs };
+    },
+    onError: (_error, _updates, context) => {
+      if (context?.previousPrefs) {
+        queryClient.setQueryData(["/api/analytics-preferences"], context.previousPrefs);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/analytics-preferences"] });
     },
   });
+
+  const orderedItems = useCallback(() => {
+    const order = preferences.cardOrder;
+    if (!order || order.length === 0) {
+      return defaultSettingsItems;
+    }
+    const orderedList: SettingsItem[] = [];
+    const itemsMap = new Map(defaultSettingsItems.map(item => [item.key, item]));
+    order.forEach(key => {
+      const item = itemsMap.get(key as keyof AnalyticsPreferences);
+      if (item) {
+        orderedList.push(item);
+        itemsMap.delete(key as keyof AnalyticsPreferences);
+      }
+    });
+    itemsMap.forEach(item => orderedList.push(item));
+    return orderedList;
+  }, [preferences.cardOrder]);
+
+  const handleDragStart = (key: string) => {
+    setDraggedItem(key);
+  };
+
+  const handleDragOver = (e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    if (draggedItem !== key) {
+      setDragOverItem(key);
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (draggedItem && dragOverItem && draggedItem !== dragOverItem) {
+      const items = orderedItems();
+      const currentOrder = items.map(item => item.key);
+      const fromIndex = currentOrder.indexOf(draggedItem as keyof AnalyticsPreferences);
+      const toIndex = currentOrder.indexOf(dragOverItem as keyof AnalyticsPreferences);
+      if (fromIndex !== -1 && toIndex !== -1) {
+        const newOrder = [...currentOrder];
+        newOrder.splice(fromIndex, 1);
+        newOrder.splice(toIndex, 0, draggedItem as keyof AnalyticsPreferences);
+        updatePreferencesMutation.mutate({ cardOrder: newOrder as string[] });
+      }
+    }
+    setDraggedItem(null);
+    setDragOverItem(null);
+  };
+
+  const moveItem = (key: string, direction: 'up' | 'down') => {
+    const items = orderedItems();
+    const currentOrder = items.map(item => item.key);
+    const currentIndex = currentOrder.indexOf(key as keyof AnalyticsPreferences);
+    if (currentIndex === -1) return;
+    if (direction === 'up' && currentIndex === 0) return;
+    if (direction === 'down' && currentIndex === currentOrder.length - 1) return;
+    const newOrder = [...currentOrder];
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
+    updatePreferencesMutation.mutate({ cardOrder: newOrder as string[] });
+  };
 
   const { data: transactions = [], isLoading: isTransactionsLoading } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
@@ -309,25 +406,97 @@ export default function Analytics() {
     );
   }
 
+  const months = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+  const currentMonth = new Date().getMonth();
+  
+  const handlePrevPeriod = () => {
+    if (timePeriod === "year") {
+      setSelectedYear(selectedYear - 1);
+    } else if (timePeriod === "month") {
+      if (selectedMonth === null) {
+        setSelectedMonth(currentMonth);
+      } else if (selectedMonth === 0) {
+        setSelectedMonth(11);
+        setSelectedYear(selectedYear - 1);
+      } else {
+        setSelectedMonth(selectedMonth - 1);
+      }
+    }
+  };
+
+  const handleNextPeriod = () => {
+    if (timePeriod === "year") {
+      setSelectedYear(selectedYear + 1);
+    } else if (timePeriod === "month") {
+      if (selectedMonth === null) {
+        setSelectedMonth(currentMonth);
+      } else if (selectedMonth === 11) {
+        setSelectedMonth(0);
+        setSelectedYear(selectedYear + 1);
+      } else {
+        setSelectedMonth(selectedMonth + 1);
+      }
+    }
+  };
+
+  const getPeriodLabel = () => {
+    if (timePeriod === "year") {
+      return `${selectedYear}年`;
+    } else if (timePeriod === "month") {
+      const month = selectedMonth ?? currentMonth;
+      return `${selectedYear}年${months[month]}`;
+    }
+    return `${selectedYear}年`;
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="hidden md:flex text-2xl font-bold items-center gap-2">
-          <BarChart3 className="w-6 h-6" />
-          数据分析
-        </h1>
-        <div className="flex items-center gap-2 mx-auto md:mx-0">
-          <Button variant="ghost" size="icon" onClick={() => setSelectedYear(selectedYear - 1)} data-testid="button-prev-year">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h1 className="hidden md:flex text-2xl font-bold items-center gap-2">
+            <BarChart3 className="w-6 h-6" />
+            数据分析
+          </h1>
+          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} data-testid="button-analytics-settings" className="ml-auto md:ml-0">
+            <Settings2 className="w-5 h-5" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-center gap-2 py-2">
+          <Button variant="outline" size="icon" onClick={handlePrevPeriod} data-testid="button-prev-period">
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <span className="text-lg font-semibold min-w-[80px] text-center" data-testid="text-selected-year">{selectedYear}年</span>
-          <Button variant="ghost" size="icon" onClick={() => setSelectedYear(selectedYear + 1)} data-testid="button-next-year">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border/50 bg-card/50 min-w-[140px] justify-center">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-lg font-semibold" data-testid="text-selected-period">{getPeriodLabel()}</span>
+          </div>
+          <Button variant="outline" size="icon" onClick={handleNextPeriod} data-testid="button-next-period">
             <ChevronRight className="w-5 h-5" />
           </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} data-testid="button-analytics-settings">
-          <Settings2 className="w-5 h-5" />
-        </Button>
+
+        <div className="flex items-center justify-center gap-2">
+          {[
+            { key: "month", label: "按月" },
+            { key: "year", label: "按年" },
+          ].map((item) => (
+            <Button
+              key={item.key}
+              variant={timePeriod === item.key ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setTimePeriod(item.key as "year" | "month");
+                if (item.key === "month" && selectedMonth === null) {
+                  setSelectedMonth(currentMonth);
+                }
+              }}
+              className="min-w-[60px]"
+              data-testid={`button-period-${item.key}`}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -968,77 +1137,73 @@ export default function Analytics() {
       )}
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" data-testid="modal-analytics-settings">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings2 className="w-5 h-5" />
               分析页设置
             </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              选择要显示的卡片，拖拽或使用箭头调整顺序
+            </p>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="showYearlyStats" className="cursor-pointer">年度统计卡片</Label>
-              <Switch
-                id="showYearlyStats"
-                checked={preferences.showYearlyStats}
-                onCheckedChange={() => togglePreference("showYearlyStats")}
-                data-testid="switch-yearly-stats"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="showMonthlyTrend" className="cursor-pointer">月度收支趋势</Label>
-              <Switch
-                id="showMonthlyTrend"
-                checked={preferences.showMonthlyTrend}
-                onCheckedChange={() => togglePreference("showMonthlyTrend")}
-                data-testid="switch-monthly-trend"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="showExpenseDistribution" className="cursor-pointer">支出分布</Label>
-              <Switch
-                id="showExpenseDistribution"
-                checked={preferences.showExpenseDistribution}
-                onCheckedChange={() => togglePreference("showExpenseDistribution")}
-                data-testid="switch-expense-distribution"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="showBudgetProgress" className="cursor-pointer">预算执行情况</Label>
-              <Switch
-                id="showBudgetProgress"
-                checked={preferences.showBudgetProgress}
-                onCheckedChange={() => togglePreference("showBudgetProgress")}
-                data-testid="switch-budget-progress"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="showSavingsProgress" className="cursor-pointer">储蓄目标进度</Label>
-              <Switch
-                id="showSavingsProgress"
-                checked={preferences.showSavingsProgress}
-                onCheckedChange={() => togglePreference("showSavingsProgress")}
-                data-testid="switch-savings-progress"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="showWalletDistribution" className="cursor-pointer">账户分布</Label>
-              <Switch
-                id="showWalletDistribution"
-                checked={preferences.showWalletDistribution}
-                onCheckedChange={() => togglePreference("showWalletDistribution")}
-                data-testid="switch-wallet-distribution"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="showCashflowTrend" className="cursor-pointer">累计现金流趋势</Label>
-              <Switch
-                id="showCashflowTrend"
-                checked={preferences.showCashflowTrend}
-                onCheckedChange={() => togglePreference("showCashflowTrend")}
-                data-testid="switch-cashflow-trend"
-              />
-            </div>
+          <div className="space-y-2 py-4 max-h-[60vh] overflow-y-auto">
+            {orderedItems().map((item, index) => {
+              const isChecked = preferences[item.key] as boolean;
+              const isDragging = draggedItem === item.key;
+              const isDragOver = dragOverItem === item.key;
+              return (
+                <div
+                  key={item.key}
+                  draggable
+                  onDragStart={() => handleDragStart(item.key)}
+                  onDragOver={(e) => handleDragOver(e, item.key)}
+                  onDragEnd={handleDragEnd}
+                  className={`
+                    flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move
+                    ${isDragging ? 'opacity-50 bg-muted' : ''}
+                    ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
+                  `}
+                  data-testid={`card-item-${item.key}`}
+                >
+                  <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-sm font-medium cursor-move">{item.label}</Label>
+                    <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex flex-col">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={() => moveItem(item.key, 'up')}
+                        disabled={index === 0 || updatePreferencesMutation.isPending}
+                        data-testid={`button-move-up-${item.key}`}
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={() => moveItem(item.key, 'down')}
+                        disabled={index === orderedItems().length - 1 || updatePreferencesMutation.isPending}
+                        data-testid={`button-move-down-${item.key}`}
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    <Switch
+                      checked={isChecked}
+                      onCheckedChange={() => togglePreference(item.key)}
+                      disabled={updatePreferencesMutation.isPending}
+                      data-testid={`switch-${item.key}`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>
