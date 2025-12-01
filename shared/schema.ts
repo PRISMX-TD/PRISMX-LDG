@@ -155,6 +155,35 @@ export const userDashboardPreferences = pgTable("user_dashboard_preferences", {
   showSavingsGoals: boolean("show_savings_goals").default(true),
   showRecentTransactions: boolean("show_recent_transactions").default(true),
   showFlexibleFunds: boolean("show_flexible_funds").default(false),
+  cardOrder: text("card_order").array(), // array of card keys in user's preferred order
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User analytics preferences table
+export const userAnalyticsPreferences = pgTable("user_analytics_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  showYearlyStats: boolean("show_yearly_stats").default(true),
+  showMonthlyTrend: boolean("show_monthly_trend").default(true),
+  showExpenseDistribution: boolean("show_expense_distribution").default(true),
+  showIncomeDistribution: boolean("show_income_distribution").default(true),
+  showBudgetProgress: boolean("show_budget_progress").default(true),
+  showSavingsProgress: boolean("show_savings_progress").default(true),
+  showWalletDistribution: boolean("show_wallet_distribution").default(true),
+  showCashflowTrend: boolean("show_cashflow_trend").default(true),
+  showTopCategories: boolean("show_top_categories").default(true),
+  showMonthlyComparison: boolean("show_monthly_comparison").default(true),
+  cardOrder: text("card_order").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User mobile nav preferences table
+export const userMobileNavPreferences = pgTable("user_mobile_nav_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  navOrder: text("nav_order").array(), // array of nav item keys in user's preferred order
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -189,6 +218,14 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 
 export const userDashboardPreferencesRelations = relations(userDashboardPreferences, ({ one }) => ({
   user: one(users, { fields: [userDashboardPreferences.userId], references: [users.id] }),
+}));
+
+export const userAnalyticsPreferencesRelations = relations(userAnalyticsPreferences, ({ one }) => ({
+  user: one(users, { fields: [userAnalyticsPreferences.userId], references: [users.id] }),
+}));
+
+export const userMobileNavPreferencesRelations = relations(userMobileNavPreferences, ({ one }) => ({
+  user: one(users, { fields: [userMobileNavPreferences.userId], references: [users.id] }),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -265,6 +302,12 @@ export type ExchangeCredential = typeof exchangeCredentials.$inferSelect;
 export type InsertUserDashboardPreferences = typeof userDashboardPreferences.$inferInsert;
 export type UserDashboardPreferences = typeof userDashboardPreferences.$inferSelect;
 
+export type InsertUserAnalyticsPreferences = typeof userAnalyticsPreferences.$inferInsert;
+export type UserAnalyticsPreferences = typeof userAnalyticsPreferences.$inferSelect;
+
+export type InsertUserMobileNavPreferences = typeof userMobileNavPreferences.$inferInsert;
+export type UserMobileNavPreferences = typeof userMobileNavPreferences.$inferSelect;
+
 // Zod schemas for validation
 export const insertWalletSchema = createInsertSchema(wallets).omit({
   id: true,
@@ -308,6 +351,18 @@ export const insertExchangeCredentialSchema = createInsertSchema(exchangeCredent
 });
 
 export const insertUserDashboardPreferencesSchema = createInsertSchema(userDashboardPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserAnalyticsPreferencesSchema = createInsertSchema(userAnalyticsPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserMobileNavPreferencesSchema = createInsertSchema(userMobileNavPreferences).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

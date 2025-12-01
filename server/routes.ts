@@ -1210,6 +1210,7 @@ export async function registerRoutes(
           showSavingsGoals: true,
           showRecentTransactions: true,
           showFlexibleFunds: false,
+          cardOrder: null,
         });
       }
       
@@ -1232,6 +1233,7 @@ export async function registerRoutes(
         showSavingsGoals,
         showRecentTransactions,
         showFlexibleFunds,
+        cardOrder,
       } = req.body;
       
       const updateData: any = {};
@@ -1243,12 +1245,115 @@ export async function registerRoutes(
       if (showSavingsGoals !== undefined) updateData.showSavingsGoals = showSavingsGoals;
       if (showRecentTransactions !== undefined) updateData.showRecentTransactions = showRecentTransactions;
       if (showFlexibleFunds !== undefined) updateData.showFlexibleFunds = showFlexibleFunds;
+      if (cardOrder !== undefined) updateData.cardOrder = cardOrder;
       
       const preferences = await storage.upsertDashboardPreferences(userId, updateData);
       res.json(preferences);
     } catch (error) {
       console.error("Error updating dashboard preferences:", error);
       res.status(500).json({ message: "Failed to update dashboard preferences" });
+    }
+  });
+
+  // Analytics preferences routes
+  app.get('/api/analytics-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const preferences = await storage.getAnalyticsPreferences(userId);
+      
+      if (!preferences) {
+        return res.json({
+          showYearlyStats: true,
+          showMonthlyTrend: true,
+          showExpenseDistribution: true,
+          showIncomeDistribution: true,
+          showBudgetProgress: true,
+          showSavingsProgress: true,
+          showWalletDistribution: true,
+          showCashflowTrend: true,
+          showTopCategories: true,
+          showMonthlyComparison: true,
+          cardOrder: null,
+        });
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching analytics preferences:", error);
+      res.status(500).json({ message: "Failed to fetch analytics preferences" });
+    }
+  });
+
+  app.patch('/api/analytics-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const {
+        showYearlyStats,
+        showMonthlyTrend,
+        showExpenseDistribution,
+        showIncomeDistribution,
+        showBudgetProgress,
+        showSavingsProgress,
+        showWalletDistribution,
+        showCashflowTrend,
+        showTopCategories,
+        showMonthlyComparison,
+        cardOrder,
+      } = req.body;
+      
+      const updateData: any = {};
+      if (showYearlyStats !== undefined) updateData.showYearlyStats = showYearlyStats;
+      if (showMonthlyTrend !== undefined) updateData.showMonthlyTrend = showMonthlyTrend;
+      if (showExpenseDistribution !== undefined) updateData.showExpenseDistribution = showExpenseDistribution;
+      if (showIncomeDistribution !== undefined) updateData.showIncomeDistribution = showIncomeDistribution;
+      if (showBudgetProgress !== undefined) updateData.showBudgetProgress = showBudgetProgress;
+      if (showSavingsProgress !== undefined) updateData.showSavingsProgress = showSavingsProgress;
+      if (showWalletDistribution !== undefined) updateData.showWalletDistribution = showWalletDistribution;
+      if (showCashflowTrend !== undefined) updateData.showCashflowTrend = showCashflowTrend;
+      if (showTopCategories !== undefined) updateData.showTopCategories = showTopCategories;
+      if (showMonthlyComparison !== undefined) updateData.showMonthlyComparison = showMonthlyComparison;
+      if (cardOrder !== undefined) updateData.cardOrder = cardOrder;
+      
+      const preferences = await storage.upsertAnalyticsPreferences(userId, updateData);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating analytics preferences:", error);
+      res.status(500).json({ message: "Failed to update analytics preferences" });
+    }
+  });
+
+  // Mobile nav preferences routes
+  app.get('/api/mobile-nav-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const preferences = await storage.getMobileNavPreferences(userId);
+      
+      if (!preferences) {
+        return res.json({
+          navOrder: null,
+        });
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching mobile nav preferences:", error);
+      res.status(500).json({ message: "Failed to fetch mobile nav preferences" });
+    }
+  });
+
+  app.patch('/api/mobile-nav-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { navOrder } = req.body;
+      
+      const updateData: any = {};
+      if (navOrder !== undefined) updateData.navOrder = navOrder;
+      
+      const preferences = await storage.upsertMobileNavPreferences(userId, updateData);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating mobile nav preferences:", error);
+      res.status(500).json({ message: "Failed to update mobile nav preferences" });
     }
   });
 

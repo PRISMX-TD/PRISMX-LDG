@@ -9,6 +9,8 @@ import {
   billReminders,
   exchangeCredentials,
   userDashboardPreferences,
+  userAnalyticsPreferences,
+  userMobileNavPreferences,
   type User,
   type UpsertUser,
   type Wallet,
@@ -29,6 +31,10 @@ import {
   type InsertExchangeCredential,
   type UserDashboardPreferences,
   type InsertUserDashboardPreferences,
+  type UserAnalyticsPreferences,
+  type InsertUserAnalyticsPreferences,
+  type UserMobileNavPreferences,
+  type InsertUserMobileNavPreferences,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, gte, lte, between } from "drizzle-orm";
@@ -130,6 +136,14 @@ export interface IStorage {
   // Dashboard preferences operations
   getDashboardPreferences(userId: string): Promise<UserDashboardPreferences | undefined>;
   upsertDashboardPreferences(userId: string, data: Partial<InsertUserDashboardPreferences>): Promise<UserDashboardPreferences>;
+
+  // Analytics preferences operations
+  getAnalyticsPreferences(userId: string): Promise<UserAnalyticsPreferences | undefined>;
+  upsertAnalyticsPreferences(userId: string, data: Partial<InsertUserAnalyticsPreferences>): Promise<UserAnalyticsPreferences>;
+
+  // Mobile nav preferences operations
+  getMobileNavPreferences(userId: string): Promise<UserMobileNavPreferences | undefined>;
+  upsertMobileNavPreferences(userId: string, data: Partial<InsertUserMobileNavPreferences>): Promise<UserMobileNavPreferences>;
 
   // Initialization
   initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
@@ -656,6 +670,54 @@ export class DatabaseStorage implements IStorage {
       return updated;
     } else {
       const [created] = await db.insert(userDashboardPreferences)
+        .values({ userId, ...data })
+        .returning();
+      return created;
+    }
+  }
+
+  // Analytics preferences operations
+  async getAnalyticsPreferences(userId: string): Promise<UserAnalyticsPreferences | undefined> {
+    const [prefs] = await db.select().from(userAnalyticsPreferences)
+      .where(eq(userAnalyticsPreferences.userId, userId));
+    return prefs;
+  }
+
+  async upsertAnalyticsPreferences(userId: string, data: Partial<InsertUserAnalyticsPreferences>): Promise<UserAnalyticsPreferences> {
+    const existing = await this.getAnalyticsPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db.update(userAnalyticsPreferences)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(userAnalyticsPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(userAnalyticsPreferences)
+        .values({ userId, ...data })
+        .returning();
+      return created;
+    }
+  }
+
+  // Mobile nav preferences operations
+  async getMobileNavPreferences(userId: string): Promise<UserMobileNavPreferences | undefined> {
+    const [prefs] = await db.select().from(userMobileNavPreferences)
+      .where(eq(userMobileNavPreferences.userId, userId));
+    return prefs;
+  }
+
+  async upsertMobileNavPreferences(userId: string, data: Partial<InsertUserMobileNavPreferences>): Promise<UserMobileNavPreferences> {
+    const existing = await this.getMobileNavPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db.update(userMobileNavPreferences)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(userMobileNavPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(userMobileNavPreferences)
         .values({ userId, ...data })
         .returning();
       return created;
