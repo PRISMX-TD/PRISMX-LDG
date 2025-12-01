@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset, SidebarRail } from "@/co
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNavBar } from "@/components/MobileNavBar";
 import { MobileHeader } from "@/components/MobileHeader";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
@@ -133,6 +134,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
+        <PWAUpdatePrompt />
       </TooltipProvider>
     </QueryClientProvider>
   );
