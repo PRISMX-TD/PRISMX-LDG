@@ -7,17 +7,6 @@ import {
   Wallet,
   BarChart3,
   MoreHorizontal,
-} from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
   Tags,
   TrendingUp,
   PiggyBank,
@@ -28,17 +17,51 @@ import {
   LogOut,
   ArrowUpDown,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import type { User, BillReminder } from "@shared/schema";
+
+interface MobileNavPreferences {
+  mainNavItems: string[];
+}
 
 interface MobileNavBarProps {
   user: User;
 }
+
+const allNavItems = [
+  { key: "dashboard", href: "/", icon: LayoutDashboard, label: "首页" },
+  { key: "transactions", href: "/transactions", icon: Receipt, label: "交易" },
+  { key: "wallets", href: "/wallets", icon: Wallet, label: "钱包" },
+  { key: "analytics", href: "/analytics", icon: BarChart3, label: "分析" },
+  { key: "exchange", href: "/exchange", icon: ArrowUpDown, label: "交易所" },
+  { key: "categories", href: "/categories", icon: Tags, label: "分类" },
+  { key: "budgets", href: "/budgets", icon: TrendingUp, label: "预算" },
+  { key: "savings", href: "/savings", icon: PiggyBank, label: "储蓄" },
+  { key: "recurring", href: "/recurring", icon: CalendarClock, label: "定期" },
+  { key: "reminders", href: "/reminders", icon: Bell, label: "提醒" },
+  { key: "reports", href: "/reports", icon: FileText, label: "报表" },
+  { key: "settings", href: "/settings", icon: Settings, label: "设置" },
+];
+
+const defaultMainNavKeys = ["dashboard", "transactions", "wallets", "analytics"];
 
 export function MobileNavBar({ user }: MobileNavBarProps) {
   const [location] = useLocation();
 
   const { data: reminders = [] } = useQuery<BillReminder[]>({
     queryKey: ["/api/bill-reminders"],
+  });
+
+  const { data: navPrefs } = useQuery<MobileNavPreferences>({
+    queryKey: ["/api/mobile-nav-preferences"],
   });
 
   const upcomingReminders = reminders.filter((r) => {
@@ -59,23 +82,18 @@ export function MobileNavBar({ user }: MobileNavBarProps) {
       ? `${user.firstName[0]}${user.lastName[0]}`
       : displayName.slice(0, 2).toUpperCase();
 
-  const mainNavItems = [
-    { href: "/", icon: LayoutDashboard, label: "首页" },
-    { href: "/transactions", icon: Receipt, label: "交易" },
-    { href: "/wallets", icon: Wallet, label: "钱包" },
-    { href: "/analytics", icon: BarChart3, label: "分析" },
-  ];
+  const mainNavKeys = navPrefs?.mainNavItems || defaultMainNavKeys;
+  
+  const mainNavItems = mainNavKeys
+    .map(key => allNavItems.find(item => item.key === key))
+    .filter((item): item is typeof allNavItems[0] => item !== undefined);
 
-  const moreMenuItems = [
-    { href: "/exchange", icon: ArrowUpDown, label: "交易所" },
-    { href: "/categories", icon: Tags, label: "分类管理" },
-    { href: "/budgets", icon: TrendingUp, label: "预算管理" },
-    { href: "/savings", icon: PiggyBank, label: "储蓄目标" },
-    { href: "/recurring", icon: CalendarClock, label: "定期交易" },
-    { href: "/reminders", icon: Bell, label: "账单提醒", badge: upcomingReminders.length },
-    { href: "/reports", icon: FileText, label: "财务报表" },
-    { href: "/settings", icon: Settings, label: "设置" },
-  ];
+  const moreMenuItems = allNavItems
+    .filter(item => !mainNavKeys.includes(item.key))
+    .map(item => ({
+      ...item,
+      badge: item.key === "reminders" ? upcomingReminders.length : undefined,
+    }));
 
   const isMoreActive = moreMenuItems.some((item) => location === item.href);
 

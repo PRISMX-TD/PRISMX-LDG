@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,13 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings as SettingsIcon, Globe, User, Shield, Loader2 } from "lucide-react";
+import { Settings as SettingsIcon, Globe, User, Shield, Loader2, Smartphone, ChevronRight } from "lucide-react";
 import { supportedCurrencies } from "@shared/schema";
+import { MobileNavSettingsModal } from "@/components/MobileNavSettingsModal";
 
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isMobileNavSettingsOpen, setIsMobileNavSettingsOpen] = useState(false);
 
   const displayName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
@@ -120,6 +123,27 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      <Card className="md:hidden">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="w-5 h-5" />
+            移动端导航
+          </CardTitle>
+          <CardDescription>自定义底部导航栏显示的项目</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            className="w-full justify-between"
+            onClick={() => setIsMobileNavSettingsOpen(true)}
+            data-testid="button-mobile-nav-settings"
+          >
+            <span>配置导航栏</span>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -134,6 +158,11 @@ export default function Settings() {
           </Button>
         </CardContent>
       </Card>
+
+      <MobileNavSettingsModal
+        open={isMobileNavSettingsOpen}
+        onOpenChange={setIsMobileNavSettingsOpen}
+      />
     </div>
   );
 }
