@@ -10,6 +10,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - **认证**: Replit Auth (OpenID Connect)
 - **状态管理**: TanStack Query
 - **图表**: Recharts
+- **PWA**: 手动实现 (manifest.json + Service Worker)
 
 ## 项目结构
 ```
@@ -30,6 +31,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 │   │   │   ├── DashboardSettingsModal.tsx  # 仪表盘设置弹窗（支持拖拽排序）
 │   │   │   ├── MobileNavSettingsModal.tsx  # 移动端导航设置弹窗
 │   │   │   ├── MobileNavBar.tsx            # 移动端底部导航栏
+│   │   │   ├── PWAUpdatePrompt.tsx         # PWA更新提示组件
 │   │   │   └── ThemeProvider.tsx
 │   │   ├── hooks/          # React Hooks
 │   │   │   ├── useAuth.ts
