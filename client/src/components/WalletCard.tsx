@@ -12,6 +12,7 @@ import {
 interface WalletCardProps {
   wallet: Wallet;
   onClick?: () => void;
+  className?: string;
 }
 
 const walletTypeLabels: Record<string, string> = {
@@ -28,7 +29,7 @@ const walletTypeIcons: Record<string, typeof WalletIcon> = {
   credit_card: CreditCard,
 };
 
-export function WalletCard({ wallet, onClick }: WalletCardProps) {
+export function WalletCard({ wallet, onClick, className = "" }: WalletCardProps) {
   const Icon = walletTypeIcons[wallet.type] || WalletIcon;
   const balance = parseFloat(wallet.balance || "0");
   const currencyInfo = getCurrencyInfo(wallet.currency || "MYR");
@@ -36,7 +37,7 @@ export function WalletCard({ wallet, onClick }: WalletCardProps) {
   return (
     <>
       <div
-        className="hidden md:block"
+        className={`hidden md:block ${className}`}
         onClick={onClick}
         data-testid={`card-wallet-${wallet.id}`}
       >
@@ -84,7 +85,7 @@ export function WalletCard({ wallet, onClick }: WalletCardProps) {
       </div>
 
       <div
-        className="md:hidden flex items-center justify-between p-3 glass-card rounded-lg cursor-pointer transition-all duration-300"
+        className={`md:hidden flex items-center justify-between p-3 glass-card rounded-lg cursor-pointer transition-all duration-300 ${className}`}
         onClick={onClick}
         data-testid={`card-wallet-mobile-${wallet.id}`}
       >

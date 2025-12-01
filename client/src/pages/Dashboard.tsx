@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +21,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Wallet,
   Receipt,
   ChevronRight,
@@ -30,6 +49,9 @@ import {
   Plus,
   Settings,
   Unlock,
+  GripVertical,
+  Check,
+  X,
 } from "lucide-react";
 import type {
   Wallet as WalletType,
@@ -76,6 +98,51 @@ interface TransactionWithRelations extends Transaction {
   toWallet?: WalletType | null;
 }
 
+interface SortableWalletCardProps {
+  wallet: WalletType;
+  onClick: () => void;
+  isReorderMode: boolean;
+}
+
+function SortableWalletCard({ wallet, onClick, isReorderMode }: SortableWalletCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: wallet.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative touch-none ${isReorderMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      {...(isReorderMode ? { ...attributes, ...listeners } : {})}
+    >
+      {isReorderMode && (
+        <div className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 bg-primary/20 rounded-full p-1" data-testid={`drag-handle-${wallet.id}`}>
+          <GripVertical className="w-4 h-4 text-primary" />
+        </div>
+      )}
+      <div className={isReorderMode ? 'ring-2 ring-primary/30 rounded-lg' : ''}>
+        <WalletCard
+          wallet={wallet}
+          onClick={isReorderMode ? undefined : onClick}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -84,6 +151,25 @@ export default function Dashboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isWalletReorderMode, setIsWalletReorderMode] = useState(false);
+  const [localWalletOrder, setLocalWalletOrder] = useState<Record<string, number[]>>({});
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -194,6 +280,72 @@ export default function Dashboard() {
 
     return { groups, typeOrder: fullTypeOrder };
   }, [wallets, walletPreferences]);
+
+  const walletPrefsMutation = useMutation({
+    mutationFn: async (updates: Partial<WalletPreferences>) => {
+      const res = await apiRequest("PATCH", "/api/wallet-preferences", updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wallet-preferences"] });
+      toast({
+        title: "保存成功",
+        description: "钱包排序已更新",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "保存失败",
+        description: "请稍后重试",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEnterReorderMode = useCallback(() => {
+    const currentOrder: Record<string, number[]> = {};
+    groupedWallets.typeOrder.forEach((type) => {
+      const walletsInType = groupedWallets.groups[type] || [];
+      currentOrder[type] = walletsInType.map((w) => w.id);
+    });
+    setLocalWalletOrder(currentOrder);
+    setIsWalletReorderMode(true);
+  }, [groupedWallets]);
+
+  const handleSaveReorder = useCallback(() => {
+    walletPrefsMutation.mutate({ walletOrder: localWalletOrder });
+    setIsWalletReorderMode(false);
+  }, [localWalletOrder, walletPrefsMutation]);
+
+  const handleCancelReorder = useCallback(() => {
+    setIsWalletReorderMode(false);
+    setLocalWalletOrder({});
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent, type: string) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLocalWalletOrder((prev) => {
+        const oldOrder = prev[type] || [];
+        const oldIndex = oldOrder.indexOf(Number(active.id));
+        const newIndex = oldOrder.indexOf(Number(over.id));
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        const newOrder = arrayMove(oldOrder, oldIndex, newIndex);
+        return { ...prev, [type]: newOrder };
+      });
+    }
+  }, []);
+
+  const getWalletsForType = useCallback((type: string) => {
+    if (isWalletReorderMode && localWalletOrder[type]) {
+      const order = localWalletOrder[type];
+      const walletsInType = groupedWallets.groups[type] || [];
+      return order
+        .map((id) => walletsInType.find((w) => w.id === id))
+        .filter((w): w is WalletType => w !== undefined);
+    }
+    return groupedWallets.groups[type] || [];
+  }, [isWalletReorderMode, localWalletOrder, groupedWallets]);
 
   const recentTransactions = transactions.slice(0, 10);
 
@@ -381,20 +533,63 @@ export default function Dashboard() {
                 <Wallet className="w-5 h-5" />
                 我的钱包
               </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedWallet(null);
-                  setIsWalletModalOpen(true);
-                }}
-                data-testid="button-add-wallet"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">添加钱包</span>
-                <span className="sm:hidden">添加</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                {isWalletReorderMode ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancelReorder}
+                      data-testid="button-cancel-reorder"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      取消
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleSaveReorder}
+                      disabled={walletPrefsMutation.isPending}
+                      data-testid="button-save-reorder"
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      保存
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEnterReorderMode}
+                      data-testid="button-reorder-wallets"
+                    >
+                      <GripVertical className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">排序</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedWallet(null);
+                        setIsWalletModalOpen(true);
+                      }}
+                      data-testid="button-add-wallet"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">添加钱包</span>
+                      <span className="sm:hidden">添加</span>
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
+            {isWalletReorderMode && (
+              <div className="mb-3 p-2 bg-primary/10 rounded-lg text-sm text-primary flex items-center gap-2">
+                <GripVertical className="w-4 h-4" />
+                <span>拖拽钱包卡片以调整顺序 (手机端长按拖动)</span>
+              </div>
+            )}
             {isWalletsLoading ? (
               <>
                 <div className="hidden md:grid gap-4 grid-cols-2 lg:grid-cols-3">
@@ -421,38 +616,69 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-4">
                 {groupedWallets.typeOrder.map((type) => {
-                  const walletsInType = groupedWallets.groups[type] || [];
+                  const walletsInType = getWalletsForType(type);
                   if (walletsInType.length === 0) return null;
+                  const walletIds = walletsInType.map((w) => w.id);
+                  
                   return (
                     <div key={type} className="space-y-2">
                       <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         {walletTypeLabels[type] || type}
                         <span className="text-xs text-muted-foreground/60">({walletsInType.length})</span>
                       </h3>
-                      <div className="hidden md:grid gap-3 grid-cols-2 lg:grid-cols-3">
-                        {walletsInType.map((wallet) => (
-                          <WalletCard
-                            key={wallet.id}
-                            wallet={wallet}
-                            onClick={() => {
-                              setSelectedWallet(wallet);
-                              setIsWalletModalOpen(true);
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <div className="md:hidden space-y-2">
-                        {walletsInType.map((wallet) => (
-                          <WalletCard
-                            key={wallet.id}
-                            wallet={wallet}
-                            onClick={() => {
-                              setSelectedWallet(wallet);
-                              setIsWalletModalOpen(true);
-                            }}
-                          />
-                        ))}
-                      </div>
+                      {isWalletReorderMode ? (
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={(event) => handleDragEnd(event, type)}
+                        >
+                          <SortableContext
+                            items={walletIds}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-2">
+                              {walletsInType.map((wallet) => (
+                                <SortableWalletCard
+                                  key={wallet.id}
+                                  wallet={wallet}
+                                  onClick={() => {
+                                    setSelectedWallet(wallet);
+                                    setIsWalletModalOpen(true);
+                                  }}
+                                  isReorderMode={isWalletReorderMode}
+                                />
+                              ))}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      ) : (
+                        <>
+                          <div className="hidden md:grid gap-3 grid-cols-2 lg:grid-cols-3">
+                            {walletsInType.map((wallet) => (
+                              <WalletCard
+                                key={wallet.id}
+                                wallet={wallet}
+                                onClick={() => {
+                                  setSelectedWallet(wallet);
+                                  setIsWalletModalOpen(true);
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <div className="md:hidden space-y-2">
+                            {walletsInType.map((wallet) => (
+                              <WalletCard
+                                key={wallet.id}
+                                wallet={wallet}
+                                onClick={() => {
+                                  setSelectedWallet(wallet);
+                                  setIsWalletModalOpen(true);
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}
@@ -586,7 +812,11 @@ export default function Dashboard() {
                   : ["showSavingsGoals", "showBudgets"];
                 return (
                   <div key="budget-savings-grid" className="grid gap-3 md:gap-6 grid-cols-1 md:grid-cols-2">
-                    {pairKeys.map(k => renderSection(k as CardKey))}
+                    {pairKeys.map(k => (
+                      <div key={k} className="min-w-0">
+                        {renderSection(k as CardKey)}
+                      </div>
+                    ))}
                   </div>
                 );
               }

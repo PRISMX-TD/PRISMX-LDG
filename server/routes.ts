@@ -1383,25 +1383,33 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const { walletOrder, typeOrder, groupByType } = req.body;
       
+      console.log("PATCH /api/wallet-preferences - userId:", userId);
+      console.log("PATCH /api/wallet-preferences - body:", JSON.stringify(req.body));
+      
       const updateData: any = {};
       
       if (walletOrder !== undefined) {
         const normalizedWalletOrder: Record<string, number[]> = {};
         for (const [type, ids] of Object.entries(walletOrder)) {
           if (Array.isArray(ids)) {
-            normalizedWalletOrder[type] = [...new Set((ids as (number | string)[]).map(Number).filter(n => !isNaN(n)))];
+            const numIds = (ids as (number | string)[]).map(Number).filter(n => !isNaN(n));
+            normalizedWalletOrder[type] = Array.from(new Set(numIds));
           }
         }
         updateData.walletOrder = normalizedWalletOrder;
       }
       
       if (typeOrder !== undefined && Array.isArray(typeOrder)) {
-        updateData.typeOrder = [...new Set(typeOrder.filter((t: string) => typeof t === 'string'))];
+        const validTypes = typeOrder.filter((t: string) => typeof t === 'string');
+        updateData.typeOrder = Array.from(new Set(validTypes));
       }
       
       if (groupByType !== undefined) updateData.groupByType = groupByType;
       
+      console.log("PATCH /api/wallet-preferences - updateData:", JSON.stringify(updateData));
+      
       const preferences = await storage.upsertWalletPreferences(userId, updateData);
+      console.log("PATCH /api/wallet-preferences - success:", JSON.stringify(preferences));
       res.json(preferences);
     } catch (error) {
       console.error("Error updating wallet preferences:", error);

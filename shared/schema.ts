@@ -192,7 +192,7 @@ export const userMobileNavPreferences = pgTable("user_mobile_nav_preferences", {
 export const userWalletPreferences = pgTable("user_wallet_preferences", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  walletOrder: integer("wallet_order").array(), // array of wallet IDs in user's preferred order
+  walletOrder: jsonb("wallet_order"), // { [type: string]: number[] } - wallet IDs ordered within each type
   typeOrder: text("type_order").array(), // array of wallet types in user's preferred order
   groupByType: boolean("group_by_type").default(true), // whether to group wallets by type
   createdAt: timestamp("created_at").defaultNow(),
