@@ -1357,6 +1357,45 @@ export async function registerRoutes(
     }
   });
 
+  // Wallet preferences routes
+  app.get('/api/wallet-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const preferences = await storage.getWalletPreferences(userId);
+      
+      if (!preferences) {
+        return res.json({
+          walletOrder: null,
+          typeOrder: null,
+          groupByType: true,
+        });
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching wallet preferences:", error);
+      res.status(500).json({ message: "Failed to fetch wallet preferences" });
+    }
+  });
+
+  app.patch('/api/wallet-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { walletOrder, typeOrder, groupByType } = req.body;
+      
+      const updateData: any = {};
+      if (walletOrder !== undefined) updateData.walletOrder = walletOrder;
+      if (typeOrder !== undefined) updateData.typeOrder = typeOrder;
+      if (groupByType !== undefined) updateData.groupByType = groupByType;
+      
+      const preferences = await storage.upsertWalletPreferences(userId, updateData);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating wallet preferences:", error);
+      res.status(500).json({ message: "Failed to update wallet preferences" });
+    }
+  });
+
   // Exchange credentials routes (MEXC API integration)
   app.get('/api/exchange-credentials', isAuthenticated, async (req: any, res) => {
     try {

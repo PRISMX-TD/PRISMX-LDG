@@ -11,6 +11,7 @@ import {
   userDashboardPreferences,
   userAnalyticsPreferences,
   userMobileNavPreferences,
+  userWalletPreferences,
   type User,
   type UpsertUser,
   type Wallet,
@@ -35,6 +36,8 @@ import {
   type InsertUserAnalyticsPreferences,
   type UserMobileNavPreferences,
   type InsertUserMobileNavPreferences,
+  type UserWalletPreferences,
+  type InsertUserWalletPreferences,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, gte, lte, between } from "drizzle-orm";
@@ -144,6 +147,10 @@ export interface IStorage {
   // Mobile nav preferences operations
   getMobileNavPreferences(userId: string): Promise<UserMobileNavPreferences | undefined>;
   upsertMobileNavPreferences(userId: string, data: Partial<InsertUserMobileNavPreferences>): Promise<UserMobileNavPreferences>;
+
+  // Wallet preferences operations
+  getWalletPreferences(userId: string): Promise<UserWalletPreferences | undefined>;
+  upsertWalletPreferences(userId: string, data: Partial<InsertUserWalletPreferences>): Promise<UserWalletPreferences>;
 
   // Initialization
   initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
@@ -718,6 +725,30 @@ export class DatabaseStorage implements IStorage {
       return updated;
     } else {
       const [created] = await db.insert(userMobileNavPreferences)
+        .values({ userId, ...data })
+        .returning();
+      return created;
+    }
+  }
+
+  // Wallet preferences operations
+  async getWalletPreferences(userId: string): Promise<UserWalletPreferences | undefined> {
+    const [prefs] = await db.select().from(userWalletPreferences)
+      .where(eq(userWalletPreferences.userId, userId));
+    return prefs;
+  }
+
+  async upsertWalletPreferences(userId: string, data: Partial<InsertUserWalletPreferences>): Promise<UserWalletPreferences> {
+    const existing = await this.getWalletPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db.update(userWalletPreferences)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(userWalletPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(userWalletPreferences)
         .values({ userId, ...data })
         .returning();
       return created;
