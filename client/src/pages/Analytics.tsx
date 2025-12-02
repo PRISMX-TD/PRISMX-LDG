@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BarChart3,
   TrendingUp,
@@ -31,6 +32,12 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  Coins,
+  ArrowUp,
+  ArrowDown,
+  Banknote,
+  CreditCard,
+  BookOpen,
 } from "lucide-react";
 import { getCurrencyInfo } from "@shared/schema";
 import {
@@ -61,7 +68,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookOpen } from "lucide-react";
 
 const CHART_COLORS = [
   "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE",
@@ -238,25 +244,18 @@ export default function Analytics() {
     queryKey: ["/api/budgets/spending", { month: new Date().getMonth() + 1, year: selectedYear }],
   });
 
-  // Filter transactions by sub-ledger
   const filteredTransactions = useMemo(() => {
     if (selectedSubLedgerId === "all") {
-      // Show all transactions when "all" is selected
       return transactions;
     }
     if (selectedSubLedgerId === "main") {
-      // Show only main ledger transactions:
-      // - Transactions without a sub-ledger
-      // - Transactions with a sub-ledger that has includeInMainAnalytics = true (or is undefined, defaulting to true)
       return transactions.filter((t) => {
         if (!t.subLedgerId) return true;
         const subLedger = subLedgers.find((s) => s.id === t.subLedgerId);
-        // Explicitly check: if includeInMainAnalytics is false, exclude; otherwise include
         if (subLedger && subLedger.includeInMainAnalytics === false) return false;
         return true;
       });
     }
-    // Filter by specific sub-ledger
     return transactions.filter((t) => String(t.subLedgerId) === selectedSubLedgerId);
   }, [transactions, selectedSubLedgerId, subLedgers]);
 
@@ -429,6 +428,10 @@ export default function Analytics() {
     return value.toFixed(0);
   };
 
+  const formatFullAmount = (value: number) => {
+    return value.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const togglePreference = (key: keyof AnalyticsPreferences) => {
     updatePreferencesMutation.mutate({ [key]: !preferences[key] });
   };
@@ -484,403 +487,219 @@ export default function Analytics() {
     return `${selectedYear}年`;
   };
 
+  const savingsRate = yearlyTotals.income > 0 ? ((yearlyTotals.savings / yearlyTotals.income) * 100) : 0;
+
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-3">
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      {/* Header Section */}
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h1 className="hidden md:flex text-2xl font-bold items-center gap-2">
-            <BarChart3 className="w-6 h-6" />
-            数据分析
-          </h1>
-          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} data-testid="button-analytics-settings" className="ml-auto md:ml-0">
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="hidden md:block text-xl font-semibold">数据分析</h1>
+              <p className="hidden md:block text-sm text-muted-foreground">财务数据概览与趋势分析</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} data-testid="button-analytics-settings">
             <Settings2 className="w-5 h-5" />
           </Button>
         </div>
         
-        <div className="flex items-center justify-center gap-2 py-2">
-          <Button variant="outline" size="icon" onClick={handlePrevPeriod} data-testid="button-prev-period">
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border/50 bg-card/50 min-w-[140px] justify-center">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
-            <span className="text-lg font-semibold" data-testid="text-selected-period">{getPeriodLabel()}</span>
-          </div>
-          <Button variant="outline" size="icon" onClick={handleNextPeriod} data-testid="button-next-period">
-            <ChevronRight className="w-5 h-5" />
-          </Button>
-        </div>
-
-        <div className="flex items-center justify-center gap-2">
-          {[
-            { key: "month", label: "按月" },
-            { key: "year", label: "按年" },
-          ].map((item) => (
-            <Button
-              key={item.key}
-              variant={timePeriod === item.key ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
-                setTimePeriod(item.key as "year" | "month");
-                if (item.key === "month" && selectedMonth === null) {
-                  setSelectedMonth(currentMonth);
-                }
-              }}
-              className="min-w-[60px]"
-              data-testid={`button-period-${item.key}`}
-            >
-              {item.label}
+        {/* Time Period Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-card/50 border border-border/30">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handlePrevPeriod} data-testid="button-prev-period">
+              <ChevronLeft className="w-4 h-4" />
             </Button>
-          ))}
-        </div>
-
-        {/* Sub-ledger filter */}
-        {subLedgers.length > 0 && (
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/50 min-w-[120px] justify-center">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-sm font-medium" data-testid="text-selected-period">{getPeriodLabel()}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleNextPeriod} data-testid="button-next-period">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Tabs value={timePeriod} onValueChange={(v) => {
+              setTimePeriod(v as "year" | "month");
+              if (v === "month" && selectedMonth === null) {
+                setSelectedMonth(currentMonth);
+              }
+            }}>
+              <TabsList className="h-8">
+                <TabsTrigger value="month" className="text-xs px-3 h-6" data-testid="button-period-month">按月</TabsTrigger>
+                <TabsTrigger value="year" className="text-xs px-3 h-6" data-testid="button-period-year">按年</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {subLedgers.length > 0 && (
               <Select value={selectedSubLedgerId} onValueChange={setSelectedSubLedgerId}>
-                <SelectTrigger className="w-[180px]" data-testid="select-subledger-filter">
-                  <SelectValue placeholder="选择账本" />
+                <SelectTrigger className="w-[130px] h-8 text-xs" data-testid="select-subledger-filter">
+                  <BookOpen className="w-3 h-3 mr-1" />
+                  <SelectValue placeholder="账本" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" data-testid="option-subledger-all">
-                    全部账本
-                  </SelectItem>
-                  <SelectItem value="main" data-testid="option-subledger-main">
-                    仅主账本
-                  </SelectItem>
+                  <SelectItem value="all" data-testid="option-subledger-all">全部账本</SelectItem>
+                  <SelectItem value="main" data-testid="option-subledger-main">仅主账本</SelectItem>
                   {subLedgers.filter(s => !s.isArchived).map((subLedger) => (
-                    <SelectItem
-                      key={subLedger.id}
-                      value={String(subLedger.id)}
-                      data-testid={`option-subledger-${subLedger.id}`}
-                    >
+                    <SelectItem key={subLedger.id} value={String(subLedger.id)} data-testid={`option-subledger-${subLedger.id}`}>
                       <span className="flex items-center gap-2">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: subLedger.color || "#8B5CF6" }}
-                        />
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: subLedger.color || "#8B5CF6" }} />
                         {subLedger.name}
                       </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        {[
-          { key: "overview", label: "总览", icon: BarChart3 },
-          { key: "income", label: "收入分析", icon: TrendingUp },
-          { key: "expense", label: "支出分析", icon: TrendingDown },
-          { key: "savings", label: "储蓄趋势", icon: Wallet },
-        ].map((item) => (
-          <Button
-            key={item.key}
-            variant={dataView === item.key ? "default" : "outline"}
-            size="sm"
-            onClick={() => setDataView(item.key as any)}
-            className="gap-1.5"
-            data-testid={`button-view-${item.key}`}
-          >
-            <item.icon className="w-4 h-4" />
-            {item.label}
-          </Button>
-        ))}
-      </div>
+      {/* View Tabs */}
+      <Tabs value={dataView} onValueChange={(v) => setDataView(v as any)} className="w-full">
+        <TabsList className="w-full justify-start bg-transparent gap-1 p-0 h-auto flex-wrap">
+          {[
+            { key: "overview", label: "总览", icon: BarChart3 },
+            { key: "income", label: "收入", icon: TrendingUp },
+            { key: "expense", label: "支出", icon: TrendingDown },
+            { key: "savings", label: "储蓄", icon: Wallet },
+          ].map((item) => (
+            <TabsTrigger
+              key={item.key}
+              value={item.key}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg gap-1.5 px-3 py-1.5"
+              data-testid={`button-view-${item.key}`}
+            >
+              <item.icon className="w-3.5 h-3.5" />
+              <span className="text-sm">{item.label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
+      {/* Main Stats Cards */}
       {preferences.showYearlyStats && (
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          <Card className="glass-card" data-testid="card-yearly-income">
+          {/* Income Card */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5" data-testid="card-yearly-income">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <TrendingUp className="w-4 h-4 text-income" />
-                <span>年度收入</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/20">
+                  <ArrowUp className="w-4 h-4 text-emerald-500" />
+                </div>
+                {compareData.incomeChange !== 0 && (
+                  <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.incomeChange > 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                    {compareData.incomeChange > 0 ? "+" : ""}{compareData.incomeChange.toFixed(1)}%
+                  </Badge>
+                )}
               </div>
-              <p className="text-xl md:text-2xl font-bold font-mono text-income">
-                +{currencyInfo.symbol}{formatAmount(yearlyTotals.income)}
-              </p>
-              {compareData.incomeChange !== 0 && (
-                <p className={`text-xs mt-1 ${compareData.incomeChange > 0 ? "text-income" : "text-expense"}`}>
-                  {compareData.incomeChange > 0 ? "↑" : "↓"} {Math.abs(compareData.incomeChange).toFixed(1)}% vs上月
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card" data-testid="card-yearly-expense">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <TrendingDown className="w-4 h-4 text-expense" />
-                <span>年度支出</span>
-              </div>
-              <p className="text-xl md:text-2xl font-bold font-mono text-expense">
-                -{currencyInfo.symbol}{formatAmount(yearlyTotals.expense)}
-              </p>
-              {compareData.expenseChange !== 0 && (
-                <p className={`text-xs mt-1 ${compareData.expenseChange > 0 ? "text-expense" : "text-income"}`}>
-                  {compareData.expenseChange > 0 ? "↑" : "↓"} {Math.abs(compareData.expenseChange).toFixed(1)}% vs上月
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card" data-testid="card-yearly-savings">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Wallet className="w-4 h-4 text-primary" />
-                <span>年度结余</span>
-              </div>
-              <p className={`text-xl md:text-2xl font-bold font-mono ${yearlyTotals.savings >= 0 ? "text-income" : "text-expense"}`}>
-                {yearlyTotals.savings >= 0 ? "+" : ""}{currencyInfo.symbol}{formatAmount(yearlyTotals.savings)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                储蓄率: {yearlyTotals.income > 0 ? ((yearlyTotals.savings / yearlyTotals.income) * 100).toFixed(1) : 0}%
+              <p className="text-xs text-muted-foreground mb-1">年度收入</p>
+              <p className="text-lg md:text-xl font-bold font-mono text-emerald-500">
+                {currencyInfo.symbol}{formatAmount(yearlyTotals.income)}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="glass-card" data-testid="card-total-assets">
+          {/* Expense Card */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-rose-500/10 to-rose-600/5" data-testid="card-yearly-expense">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <ArrowUpDown className="w-4 h-4 text-transfer" />
-                <span>总资产</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500/20">
+                  <ArrowDown className="w-4 h-4 text-rose-500" />
+                </div>
+                {compareData.expenseChange !== 0 && (
+                  <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.expenseChange > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                    {compareData.expenseChange > 0 ? "+" : ""}{compareData.expenseChange.toFixed(1)}%
+                  </Badge>
+                )}
               </div>
-              <p className="text-xl md:text-2xl font-bold font-mono">
+              <p className="text-xs text-muted-foreground mb-1">年度支出</p>
+              <p className="text-lg md:text-xl font-bold font-mono text-rose-500">
+                {currencyInfo.symbol}{formatAmount(yearlyTotals.expense)}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Savings Card */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-500/10 to-violet-600/5" data-testid="card-yearly-savings">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/20">
+                  <Coins className="w-4 h-4 text-violet-500" />
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {savingsRate.toFixed(0)}%
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mb-1">年度结余</p>
+              <p className={`text-lg md:text-xl font-bold font-mono ${yearlyTotals.savings >= 0 ? "text-violet-500" : "text-rose-500"}`}>
+                {yearlyTotals.savings >= 0 ? "+" : "-"}{currencyInfo.symbol}{formatAmount(Math.abs(yearlyTotals.savings))}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Total Assets Card */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 to-blue-600/5" data-testid="card-total-assets">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/20">
+                  <CreditCard className="w-4 h-4 text-blue-500" />
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {wallets.length} 账户
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mb-1">总资产</p>
+              <p className="text-lg md:text-xl font-bold font-mono text-blue-500">
                 {currencyInfo.symbol}{formatAmount(totalBalance)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {wallets.length} 个账户
               </p>
             </CardContent>
           </Card>
         </div>
       )}
 
+      {/* Overview View */}
       {dataView === "overview" && (
-        <>
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-            {preferences.showMonthlyTrend && (
-              <Card className="glass-card lg:col-span-2" data-testid="card-monthly-trend">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    月度收支趋势
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[280px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={monthlyData}>
-                        <defs>
-                          <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                        <XAxis 
-                          dataKey="shortMonth" 
-                          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                          axisLine={{ stroke: 'hsl(var(--border))' }}
-                        />
-                        <YAxis 
-                          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                          axisLine={{ stroke: 'hsl(var(--border))' }}
-                          tickFormatter={(v) => formatAmount(v)}
-                        />
-                        <Tooltip
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                            color: 'hsl(var(--foreground))',
-                          }}
-                          labelStyle={{ color: 'hsl(var(--foreground))' }}
-                          itemStyle={{ color: 'hsl(var(--foreground))' }}
-                          formatter={(value: number, name: string) => [
-                            `${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`,
-                            name === "income" ? "收入" : "支出"
-                          ]}
-                          labelFormatter={(label) => `${label}月`}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="income"
-                          stroke="#10B981"
-                          strokeWidth={2}
-                          fill="url(#colorIncome)"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="expense"
-                          stroke="#EF4444"
-                          strokeWidth={2}
-                          fill="url(#colorExpense)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {preferences.showExpenseDistribution && (
-              <Card className="glass-card" data-testid="card-expense-distribution">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <PieChartIcon className="w-4 h-4" />
-                    支出分布
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[180px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={expenseCategoryData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={70}
-                          dataKey="total"
-                          paddingAngle={2}
-                        >
-                          {expenseCategoryData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          formatter={(value: number) => [`${currencyInfo.symbol}${value.toFixed(2)}`, ""]} 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                            color: 'hsl(var(--foreground))',
-                          }}
-                          labelStyle={{ color: 'hsl(var(--foreground))' }}
-                          itemStyle={{ color: 'hsl(var(--foreground))' }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="space-y-2 mt-2">
-                    {expenseCategoryData.slice(0, 4).map((cat, index) => (
-                      <div key={index} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                          <span className="text-muted-foreground">{cat.name}</span>
-                        </div>
-                        <span className="font-mono text-xs">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-            {preferences.showBudgetProgress && budgetProgressData.length > 0 && (
-              <Card className="glass-card" data-testid="card-budget-progress">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Target className="w-4 h-4" />
-                    预算执行情况
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {budgetProgressData.map((b, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: b.color }} />
-                          <span>{b.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {currencyInfo.symbol}{formatAmount(b.spent)} / {currencyInfo.symbol}{formatAmount(b.budget)}
-                          </span>
-                          <Badge variant={b.percentage > 100 ? "destructive" : b.percentage > 80 ? "secondary" : "outline"} className="text-xs">
-                            {b.percentage.toFixed(0)}%
-                          </Badge>
-                        </div>
-                      </div>
-                      <Progress value={Math.min(b.percentage, 100)} className="h-1.5" />
-                    </div>
-                  ))}
-                  {budgetProgressData.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">暂无预算数据</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {preferences.showSavingsProgress && savingsGoalsProgress.length > 0 && (
-              <Card className="glass-card" data-testid="card-savings-progress">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Percent className="w-4 h-4" />
-                    储蓄目标进度
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {savingsGoalsProgress.map((g, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className={g.isCompleted ? "line-through text-muted-foreground" : ""}>{g.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {currencyInfo.symbol}{formatAmount(g.current)} / {currencyInfo.symbol}{formatAmount(g.target)}
-                          </span>
-                          <Badge variant={g.isCompleted ? "default" : "outline"} className="text-xs">
-                            {g.percentage.toFixed(0)}%
-                          </Badge>
-                        </div>
-                      </div>
-                      <Progress value={Math.min(g.percentage, 100)} className="h-1.5" />
-                    </div>
-                  ))}
-                  {savingsGoalsProgress.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">暂无储蓄目标</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {preferences.showCashflowTrend && (
-            <Card className="glass-card" data-testid="card-cashflow-trend">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  累计现金流趋势
+        <div className="space-y-4">
+          {/* Trend Chart */}
+          {preferences.showMonthlyTrend && (
+            <Card className="border-0 bg-card/50" data-testid="card-monthly-trend">
+              <CardHeader className="pb-2 px-4 pt-4">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-primary" />
+                  收支趋势
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
+              <CardContent className="px-2 pb-4">
+                <div className="h-[220px] md:h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={cumulativeSavingsData}>
+                    <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
                       <XAxis 
                         dataKey="shortMonth" 
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
                       />
                       <YAxis 
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
                         tickFormatter={(v) => formatAmount(v)}
                       />
                       <Tooltip
@@ -888,61 +707,259 @@ export default function Analytics() {
                           backgroundColor: 'hsl(var(--card))', 
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
-                          color: 'hsl(var(--foreground))',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                         }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
                         formatter={(value: number, name: string) => [
-                          `${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`,
-                          name === "savings" ? "月结余" : "累计储蓄"
+                          `${currencyInfo.symbol}${formatFullAmount(value)}`,
+                          name === "income" ? "收入" : "支出"
                         ]}
                         labelFormatter={(label) => `${label}月`}
                       />
-                      <Bar dataKey="savings" fill="#8B5CF6" opacity={0.6} radius={[4, 4, 0, 0]} />
-                      <Line 
-                        type="monotone" 
-                        dataKey="cumulative" 
-                        stroke="#10B981" 
-                        strokeWidth={2}
-                        dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
+                      <Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} fill="url(#colorIncome)" />
+                      <Area type="monotone" dataKey="expense" stroke="#EF4444" strokeWidth={2} fill="url(#colorExpense)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Distribution Charts Row */}
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            {/* Expense Distribution */}
+            {preferences.showExpenseDistribution && expenseCategoryData.length > 0 && (
+              <Card className="border-0 bg-card/50" data-testid="card-expense-distribution">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <PieChartIcon className="w-4 h-4 text-rose-500" />
+                    支出构成
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-[120px] h-[120px] md:w-[140px] md:h-[140px] flex-shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={expenseCategoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius="55%"
+                            outerRadius="85%"
+                            dataKey="total"
+                            paddingAngle={3}
+                            strokeWidth={0}
+                          >
+                            {expenseCategoryData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      {expenseCategoryData.slice(0, 4).map((cat, index) => {
+                        const percentage = (cat.total / yearlyTotals.expense) * 100;
+                        return (
+                          <div key={index} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                            <span className="text-xs text-muted-foreground flex-1 truncate">{cat.name}</span>
+                            <span className="text-xs font-mono">{percentage.toFixed(0)}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Income Distribution */}
+            {preferences.showIncomeDistribution && incomeCategoryData.length > 0 && (
+              <Card className="border-0 bg-card/50" data-testid="card-income-distribution">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <PieChartIcon className="w-4 h-4 text-emerald-500" />
+                    收入构成
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-[120px] h-[120px] md:w-[140px] md:h-[140px] flex-shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={incomeCategoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius="55%"
+                            outerRadius="85%"
+                            dataKey="total"
+                            paddingAngle={3}
+                            strokeWidth={0}
+                          >
+                            {incomeCategoryData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      {incomeCategoryData.slice(0, 4).map((cat, index) => {
+                        const percentage = (cat.total / yearlyTotals.income) * 100;
+                        return (
+                          <div key={index} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                            <span className="text-xs text-muted-foreground flex-1 truncate">{cat.name}</span>
+                            <span className="text-xs font-mono">{percentage.toFixed(0)}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Budget & Savings Progress */}
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            {preferences.showBudgetProgress && budgetProgressData.length > 0 && (
+              <Card className="border-0 bg-card/50" data-testid="card-budget-progress">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary" />
+                    预算执行
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-3">
+                  {budgetProgressData.map((b, index) => (
+                    <div key={index} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: b.color }} />
+                          <span className="text-xs">{b.name}</span>
+                        </div>
+                        <span className={`text-xs font-mono ${b.percentage > 100 ? "text-rose-500" : b.percentage > 80 ? "text-amber-500" : "text-muted-foreground"}`}>
+                          {b.percentage.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.min(b.percentage, 100)}%`, 
+                            backgroundColor: b.percentage > 100 ? "#EF4444" : b.color 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {preferences.showSavingsProgress && savingsGoalsProgress.length > 0 && (
+              <Card className="border-0 bg-card/50" data-testid="card-savings-progress">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Percent className="w-4 h-4 text-emerald-500" />
+                    储蓄目标
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-3">
+                  {savingsGoalsProgress.slice(0, 4).map((g, index) => (
+                    <div key={index} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs ${g.isCompleted ? "line-through text-muted-foreground" : ""}`}>{g.name}</span>
+                        <span className={`text-xs font-mono ${g.isCompleted ? "text-emerald-500" : "text-muted-foreground"}`}>
+                          {g.percentage.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                          style={{ width: `${Math.min(g.percentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Cashflow Trend */}
+          {preferences.showCashflowTrend && (
+            <Card className="border-0 bg-card/50" data-testid="card-cashflow-trend">
+              <CardHeader className="pb-2 px-4 pt-4">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  累计现金流
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-2 pb-4">
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={cumulativeSavingsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                      <XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                      <Tooltip
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        }}
+                        formatter={(value: number, name: string) => [
+                          `${currencyInfo.symbol}${formatFullAmount(value)}`,
+                          name === "savings" ? "月结余" : "累计"
+                        ]}
+                        labelFormatter={(label) => `${label}月`}
                       />
+                      <Bar dataKey="savings" fill="#8B5CF6" opacity={0.5} radius={[4, 4, 0, 0]} />
+                      <Line type="monotone" dataKey="cumulative" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
           )}
-        </>
+        </div>
       )}
 
+      {/* Income View */}
       {dataView === "income" && (
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">月度收入</CardTitle>
+        <div className="space-y-4">
+          <Card className="border-0 bg-card/50">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-emerald-500" />
+                月度收入
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
+            <CardContent className="px-2 pb-4">
+              <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis 
-                      dataKey="shortMonth" 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      tickFormatter={(v) => formatAmount(v)}
-                    />
+                  <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                    <XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
                     <Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
-                        color: 'hsl(var(--foreground))',
                       }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [`${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`, "收入"]}
+                      formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "收入"]}
                     />
                     <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -951,86 +968,58 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">收入来源</CardTitle>
+          <Card className="border-0 bg-card/50">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="text-sm font-medium">收入来源排行</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={incomeCategoryData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={70}
-                      dataKey="total"
-                      paddingAngle={2}
-                    >
-                      {incomeCategoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number) => [`${currencyInfo.symbol}${value.toFixed(2)}`, ""]} 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        color: 'hsl(var(--foreground))',
-                      }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2 mt-4">
-                {incomeCategoryData.map((cat, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                      <span className="text-muted-foreground">{cat.name}</span>
+            <CardContent className="px-4 pb-4 space-y-3">
+              {incomeCategoryData.map((cat, index) => {
+                const maxTotal = incomeCategoryData[0]?.total || 1;
+                const percentage = (cat.total / maxTotal) * 100;
+                return (
+                  <div key={index} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{index + 1}</Badge>
+                        <span className="text-sm">{cat.name}</span>
+                      </div>
+                      <span className="text-sm font-mono text-emerald-500">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
                     </div>
-                    <span className="font-mono text-income">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
+                    <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: cat.color }} />
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </CardContent>
           </Card>
         </div>
       )}
 
+      {/* Expense View */}
       {dataView === "expense" && (
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">月度支出</CardTitle>
+        <div className="space-y-4">
+          <Card className="border-0 bg-card/50">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-rose-500" />
+                月度支出
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
+            <CardContent className="px-2 pb-4">
+              <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis 
-                      dataKey="shortMonth" 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      tickFormatter={(v) => formatAmount(v)}
-                    />
+                  <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                    <XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
                     <Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
-                        color: 'hsl(var(--foreground))',
                       }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [`${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`, "支出"]}
+                      formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "支出"]}
                     />
                     <Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -1039,187 +1028,157 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">支出分类排行</CardTitle>
+          <Card className="border-0 bg-card/50">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="text-sm font-medium">支出分类排行</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {expenseCategoryData.map((cat, index) => {
-                  const maxTotal = expenseCategoryData[0]?.total || 1;
-                  const percentage = (cat.total / maxTotal) * 100;
-                  return (
-                    <div key={index} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs px-1.5 py-0">
-                            {index + 1}
-                          </Badge>
-                          <span>{cat.name}</span>
-                        </div>
-                        <span className="font-mono text-expense">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
+            <CardContent className="px-4 pb-4 space-y-3">
+              {expenseCategoryData.map((cat, index) => {
+                const maxTotal = expenseCategoryData[0]?.total || 1;
+                const percentage = (cat.total / maxTotal) * 100;
+                return (
+                  <div key={index} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{index + 1}</Badge>
+                        <span className="text-sm">{cat.name}</span>
                       </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all" 
-                          style={{ width: `${percentage}%`, backgroundColor: cat.color }}
-                        />
-                      </div>
+                      <span className="text-sm font-mono text-rose-500">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: cat.color }} />
+                    </div>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         </div>
       )}
 
+      {/* Savings View */}
       {dataView === "savings" && (
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          <Card className="glass-card lg:col-span-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">月度储蓄趋势</CardTitle>
+        <div className="space-y-4">
+          <Card className="border-0 bg-card/50">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="w-4 h-4 text-violet-500" />
+                月度储蓄趋势
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
+            <CardContent className="px-2 pb-4">
+              <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyData}>
+                  <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4}/>
                         <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis 
-                      dataKey="month" 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      tickFormatter={(v) => formatAmount(v)}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                    <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
                     <Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
-                        color: 'hsl(var(--foreground))',
                       }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [`${currencyInfo.symbol}${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`, "结余"]}
+                      formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "结余"]}
                     />
-                    <Area
-                      type="monotone"
-                      dataKey="savings"
-                      stroke="#8B5CF6"
-                      strokeWidth={2}
-                      fill="url(#colorSavings)"
-                    />
+                    <Area type="monotone" dataKey="savings" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorSavings)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
 
-          {preferences.showWalletDistribution && (
-            <Card className="glass-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">账户分布</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[180px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={walletData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        dataKey="balance"
-                        paddingAngle={2}
-                      >
-                        {walletData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value: number) => [`${currencyInfo.symbol}${value.toFixed(2)}`, ""]} 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          color: 'hsl(var(--foreground))',
-                        }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="space-y-2 mt-2">
-                  {walletData.slice(0, 4).map((wallet, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: wallet.color }} />
-                        <span className="text-muted-foreground">{wallet.name}</span>
-                      </div>
-                      <span className="font-mono">{currencyInfo.symbol}{formatAmount(wallet.balance)}</span>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            {preferences.showWalletDistribution && walletData.length > 0 && (
+              <Card className="border-0 bg-card/50">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-blue-500" />
+                    账户分布
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-[100px] h-[100px] flex-shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={walletData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius="50%"
+                            outerRadius="80%"
+                            dataKey="balance"
+                            paddingAngle={3}
+                            strokeWidth={0}
+                          >
+                            {walletData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
-                  ))}
+                    <div className="flex-1 space-y-2">
+                      {walletData.slice(0, 4).map((wallet, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: wallet.color }} />
+                          <span className="text-xs text-muted-foreground flex-1 truncate">{wallet.name}</span>
+                          <span className="text-xs font-mono">{currencyInfo.symbol}{formatAmount(wallet.balance)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="border-0 bg-card/50">
+              <CardHeader className="pb-2 px-4 pt-4">
+                <CardTitle className="text-sm font-medium">储蓄概览</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-border/30">
+                  <span className="text-xs text-muted-foreground">平均月储蓄</span>
+                  <span className="text-sm font-mono">{currencyInfo.symbol}{formatAmount(yearlyTotals.savings / 12)}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border/30">
+                  <span className="text-xs text-muted-foreground">最高月储蓄</span>
+                  <span className="text-sm font-mono text-emerald-500">{currencyInfo.symbol}{formatAmount(Math.max(...monthlyData.map(m => m.savings)))}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border/30">
+                  <span className="text-xs text-muted-foreground">最低月储蓄</span>
+                  <span className="text-sm font-mono text-rose-500">{currencyInfo.symbol}{formatAmount(Math.min(...monthlyData.map(m => m.savings)))}</span>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-xs text-muted-foreground">储蓄率</span>
+                  <span className="text-sm font-mono">{savingsRate.toFixed(1)}%</span>
                 </div>
               </CardContent>
             </Card>
-          )}
-
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">储蓄概览</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between py-2 border-b border-border/50">
-                <span className="text-muted-foreground">平均月储蓄</span>
-                <span className="font-mono font-medium">
-                  {currencyInfo.symbol}{formatAmount(yearlyTotals.savings / 12)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-border/50">
-                <span className="text-muted-foreground">最高月储蓄</span>
-                <span className="font-mono font-medium text-income">
-                  {currencyInfo.symbol}{formatAmount(Math.max(...monthlyData.map(m => m.savings)))}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-border/50">
-                <span className="text-muted-foreground">最低月储蓄</span>
-                <span className="font-mono font-medium text-expense">
-                  {currencyInfo.symbol}{formatAmount(Math.min(...monthlyData.map(m => m.savings)))}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">储蓄率</span>
-                <span className="font-mono font-medium">
-                  {yearlyTotals.income > 0 ? ((yearlyTotals.savings / yearlyTotals.income) * 100).toFixed(1) : 0}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       )}
 
+      {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-md" data-testid="modal-analytics-settings">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings2 className="w-5 h-5" />
+        <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col" data-testid="modal-analytics-settings">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Settings2 className="w-4 h-4" />
               分析页设置
             </DialogTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               选择要显示的卡片，拖拽或使用箭头调整顺序
             </p>
           </DialogHeader>
-          <div className="space-y-2 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2 overflow-y-auto flex-1 pr-1">
             {orderedItems().map((item, index) => {
               const isChecked = preferences[item.key] as boolean;
               const isDragging = draggedItem === item.key;
@@ -1232,16 +1191,16 @@ export default function Analytics() {
                   onDragOver={(e) => handleDragOver(e, item.key)}
                   onDragEnd={handleDragEnd}
                   className={`
-                    flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move
+                    flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-move
                     ${isDragging ? 'opacity-50 bg-muted' : ''}
                     ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
                   `}
                   data-testid={`card-item-${item.key}`}
                 >
-                  <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <Label className="text-sm font-medium cursor-move">{item.label}</Label>
-                    <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                    <Label className="text-xs font-medium cursor-move">{item.label}</Label>
+                    <p className="text-[10px] text-muted-foreground truncate">{item.description}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <div className="flex flex-col">
