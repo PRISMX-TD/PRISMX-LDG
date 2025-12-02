@@ -137,7 +137,7 @@ export default function Transactions() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen aurora-bg">
       <div className="hidden md:block">
         <Header user={user} />
       </div>
