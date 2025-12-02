@@ -89,6 +89,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
     - 交易可关联子账本
     - 可设置是否将子账本纳入主账本分析
     - 分析页面支持按子账本筛选数据
+    - 子账本预算: 可为子账本设置预算金额，显示支出进度条和超支警告
 
 交易所集成详情:
 - MEXC: 支持现货和合约账户余额查询
@@ -117,7 +118,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 - **wallets**: 钱包表 (id, userId, name, type, currency, balance, exchangeRateToDefault, icon, color, isDefault, isFlexible)
 - **categories**: 分类表 (id, userId, name, type, icon, color, isDefault)
 - **transactions**: 交易表 (id, userId, type, amount, currency, originalAmount, exchangeRate, walletId, toWalletId, toWalletAmount, toExchangeRate, categoryId, subLedgerId, description, date)
-- **sub_ledgers**: 子账本表 (id, userId, name, description, color, icon, includeInMainLedger, isArchived, createdAt)
+- **sub_ledgers**: 子账本表 (id, userId, name, description, color, icon, budgetAmount, includeInMainAnalytics, isArchived, startDate, endDate, createdAt, updatedAt)
 - **budgets**: 预算表 (id, userId, categoryId, amount, month, year)
 - **savings_goals**: 储蓄目标表 (id, userId, name, targetAmount, currentAmount, currency, isCompleted)
 - **recurring_transactions**: 定期交易表 (id, userId, type, amount, currency, walletId, categoryId, frequency, startDate, description, isActive)
