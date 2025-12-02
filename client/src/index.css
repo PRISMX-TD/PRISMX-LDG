@@ -4,6 +4,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent Text Selection on Draggable Elements (PWA Long Press Fix) */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Apply no-select to all draggable elements */
+[draggable="true"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
+}
+
+/* Re-enable selection for input fields */
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
 /* Mobile Safe Area Support */
 .safe-area-top {
   padding-top: env(safe-area-inset-top, 0px);
