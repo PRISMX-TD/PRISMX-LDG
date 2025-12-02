@@ -292,11 +292,13 @@ export default function Analytics() {
 
   const expenseCategoryData = useMemo(() => {
     const categoryTotals: Record<number, { name: string; color: string; total: number }> = {};
+    const targetMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
     
     filteredTransactions.forEach((t) => {
       if (t.type !== "expense") return;
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
+      if (timePeriod === "month" && date.getMonth() !== targetMonth) return;
       
       const categoryId = t.categoryId || 0;
       if (!categoryTotals[categoryId]) {
@@ -313,15 +315,17 @@ export default function Analytics() {
     return Object.values(categoryTotals)
       .sort((a, b) => b.total - a.total)
       .slice(0, 6);
-  }, [filteredTransactions, categories, selectedYear]);
+  }, [filteredTransactions, categories, selectedYear, timePeriod, selectedMonth]);
 
   const incomeCategoryData = useMemo(() => {
     const categoryTotals: Record<number, { name: string; color: string; total: number }> = {};
+    const targetMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
     
     filteredTransactions.forEach((t) => {
       if (t.type !== "income") return;
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
+      if (timePeriod === "month" && date.getMonth() !== targetMonth) return;
       
       const categoryId = t.categoryId || 0;
       if (!categoryTotals[categoryId]) {
@@ -338,7 +342,7 @@ export default function Analytics() {
     return Object.values(categoryTotals)
       .sort((a, b) => b.total - a.total)
       .slice(0, 6);
-  }, [filteredTransactions, categories, selectedYear]);
+  }, [filteredTransactions, categories, selectedYear, timePeriod, selectedMonth]);
 
   const walletData = useMemo(() => {
     return wallets.map((w, i) => ({
@@ -413,7 +417,19 @@ export default function Analytics() {
   }, [wallets]);
 
   const cumulativeSavingsData = useMemo(() => {
+    const targetMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
     let cumulative = 0;
+    
+    if (timePeriod === "month") {
+      return monthlyData.slice(0, targetMonth + 1).map((m) => {
+        cumulative += m.savings;
+        return {
+          ...m,
+          cumulative,
+        };
+      });
+    }
+    
     return monthlyData.map((m) => {
       cumulative += m.savings;
       return {
@@ -421,7 +437,7 @@ export default function Analytics() {
         cumulative,
       };
     });
-  }, [monthlyData]);
+  }, [monthlyData, timePeriod, selectedMonth]);
 
   const budgetProgressData = useMemo(() => {
     return budgetSpending.map((b: any) => ({
