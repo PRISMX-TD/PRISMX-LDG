@@ -1351,32 +1351,38 @@ export default function Analytics() {
             />
           </div>
           
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={orderedItems.map(item => item.key)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2 overflow-y-auto flex-1 pr-1">
-                {orderedItems.map((item, index) => {
-                  const isChecked = preferences[item.key] as boolean;
-                  return (
-                    <SortableSettingsItem
-                      key={item.key}
-                      item={item}
-                      isChecked={isChecked}
-                      onToggle={togglePreference}
-                      onMove={moveItem}
-                      index={index}
-                      total={orderedItems.length}
-                      isPending={updatePreferencesMutation.isPending}
-                    />
-                  );
-                })}
-              </div>
-            </SortableContext>
-          </DndContext>
+          {orderedItems.length > 0 ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={orderedItems.map(item => item.key)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+                  {orderedItems.map((item, index) => {
+                    const isChecked = preferences[item.key] as boolean;
+                    return (
+                      <SortableSettingsItem
+                        key={item.key}
+                        item={item}
+                        isChecked={isChecked}
+                        onToggle={togglePreference}
+                        onMove={moveItem}
+                        index={index}
+                        total={orderedItems.length}
+                        isPending={updatePreferencesMutation.isPending}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              没有可显示的卡片
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

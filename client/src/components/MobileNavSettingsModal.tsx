@@ -315,28 +315,34 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
         <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium mb-2 text-muted-foreground">主导航栏（拖拽排序）</h3>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={currentPrefs.mainNavItems} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
-                  {mainNavItems.map((item, index) => (
-                    <SortableNavItem
-                      key={item.key}
-                      item={item}
-                      index={index}
-                      total={mainNavItems.length}
-                      onMove={moveItem}
-                      onToggle={handleToggleMain}
-                      isPending={updateMutation.isPending}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+            {mainNavItems.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={mainNavItems.map(item => item.key)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {mainNavItems.map((item, index) => (
+                      <SortableNavItem
+                        key={item.key}
+                        item={item}
+                        index={index}
+                        total={mainNavItems.length}
+                        onMove={moveItem}
+                        onToggle={handleToggleMain}
+                        isPending={updateMutation.isPending}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                没有选择导航项目
+              </div>
+            )}
           </div>
           
           <div>

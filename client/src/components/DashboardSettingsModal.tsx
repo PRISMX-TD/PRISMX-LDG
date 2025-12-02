@@ -688,66 +688,78 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
           </TabsList>
           
           <TabsContent value="cards" className="mt-4">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleCardDragStart}
-              onDragEnd={handleCardDragEnd}
-            >
-              <SortableContext items={cardItemIds} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                  {orderedItems.map((item, index) => {
-                    const key = item.key as keyof DashboardPreferences;
-                    const isChecked = currentPrefs[key] as boolean;
-                    
-                    return (
-                      <SortableCardItem
-                        key={item.key}
-                        item={item}
-                        isChecked={isChecked}
-                        onToggle={handleToggle}
-                        onMove={moveItem}
-                        index={index}
-                        total={orderedItems.length}
-                        isPending={updateMutation.isPending}
-                      />
-                    );
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
+            {cardItemIds.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleCardDragStart}
+                onDragEnd={handleCardDragEnd}
+              >
+                <SortableContext items={cardItemIds} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                    {orderedItems.map((item, index) => {
+                      const key = item.key as keyof DashboardPreferences;
+                      const isChecked = currentPrefs[key] as boolean;
+                      
+                      return (
+                        <SortableCardItem
+                          key={item.key}
+                          item={item}
+                          isChecked={isChecked}
+                          onToggle={handleToggle}
+                          onMove={moveItem}
+                          index={index}
+                          total={orderedItems.length}
+                          isPending={updateMutation.isPending}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                没有可显示的卡片
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="wallets" className="mt-4">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleTypeDragStart}
-              onDragEnd={handleTypeDragEnd}
-            >
-              <SortableContext items={orderedTypes} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-                  {orderedTypes.map((type, typeIndex) => {
-                    const walletsInType = groupedWallets[type] || [];
-                    
-                    return (
-                      <SortableTypeItem
-                        key={type}
-                        type={type}
-                        walletsInType={walletsInType}
-                        walletOrder={currentWalletPrefs.walletOrder}
-                        typeIndex={typeIndex}
-                        totalTypes={orderedTypes.length}
-                        onMoveType={moveType}
-                        onMoveWallet={moveWallet}
-                        onWalletDragEnd={handleWalletDragEnd}
-                        isPending={updateWalletMutation.isPending}
-                      />
-                    );
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
+            {orderedTypes.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleTypeDragStart}
+                onDragEnd={handleTypeDragEnd}
+              >
+                <SortableContext items={orderedTypes} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                    {orderedTypes.map((type, typeIndex) => {
+                      const walletsInType = groupedWallets[type] || [];
+                      
+                      return (
+                        <SortableTypeItem
+                          key={type}
+                          type={type}
+                          walletsInType={walletsInType}
+                          walletOrder={currentWalletPrefs.walletOrder}
+                          typeIndex={typeIndex}
+                          totalTypes={orderedTypes.length}
+                          onMoveType={moveType}
+                          onMoveWallet={moveWallet}
+                          onWalletDragEnd={handleWalletDragEnd}
+                          isPending={updateWalletMutation.isPending}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                没有可排序的钱包类型
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>
