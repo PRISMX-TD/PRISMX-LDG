@@ -9,7 +9,6 @@ import { TransactionModal } from "@/components/TransactionModal";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { EmptyState } from "@/components/EmptyState";
 import { ExpenseChart } from "@/components/ExpenseChart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Receipt, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
@@ -157,65 +156,56 @@ export default function Transactions() {
           </h1>
         </div>
 
-        <div className="grid gap-3 md:gap-6 grid-cols-2 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-base font-medium flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-income" />
-                收入
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isStatsLoading ? (
-                <Skeleton className="h-7 w-20" />
-              ) : (
-                <p className="text-lg md:text-2xl font-bold font-mono text-income">
-                  +{currencyInfo.symbol}{(stats?.totalIncome || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+        {/* 统计卡片 - 使用透明玻璃效果 */}
+        <div className="grid gap-3 md:gap-4 grid-cols-3">
+          <div className="p-3 md:p-4 rounded-xl bg-income/5 border border-income/20">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-4 h-4 text-income" />
+              <span className="text-xs md:text-sm text-muted-foreground">收入</span>
+            </div>
+            {isStatsLoading ? (
+              <Skeleton className="h-6 w-16" />
+            ) : (
+              <p className="text-base md:text-xl font-bold font-mono text-income">
+                +{currencyInfo.symbol}{(stats?.totalIncome || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
+              </p>
+            )}
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-base font-medium flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-expense" />
-                支出
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isStatsLoading ? (
-                <Skeleton className="h-7 w-20" />
-              ) : (
-                <p className="text-lg md:text-2xl font-bold font-mono text-expense">
-                  -{currencyInfo.symbol}{(stats?.totalExpense || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <div className="p-3 md:p-4 rounded-xl bg-expense/5 border border-expense/20">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingDown className="w-4 h-4 text-expense" />
+              <span className="text-xs md:text-sm text-muted-foreground">支出</span>
+            </div>
+            {isStatsLoading ? (
+              <Skeleton className="h-6 w-16" />
+            ) : (
+              <p className="text-base md:text-xl font-bold font-mono text-expense">
+                -{currencyInfo.symbol}{(stats?.totalExpense || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
+              </p>
+            )}
+          </div>
 
-          <Card className="col-span-2 md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">净收入</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isStatsLoading ? (
-                <Skeleton className="h-8 w-24" />
-              ) : (
-                <p
-                  className={`text-xl md:text-2xl font-bold font-mono ${
-                    (stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "text-income" : "text-expense"
-                  }`}
-                >
-                  {(stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "+" : ""}
-                  {currencyInfo.symbol}
-                  {((stats?.totalIncome || 0) - (stats?.totalExpense || 0)).toLocaleString("zh-CN", {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <div className="p-3 md:p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs md:text-sm text-muted-foreground">净收入</span>
+            </div>
+            {isStatsLoading ? (
+              <Skeleton className="h-6 w-16" />
+            ) : (
+              <p
+                className={`text-base md:text-xl font-bold font-mono ${
+                  (stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "text-income" : "text-expense"
+                }`}
+              >
+                {(stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "+" : ""}
+                {currencyInfo.symbol}
+                {((stats?.totalIncome || 0) - (stats?.totalExpense || 0)).toLocaleString("zh-CN", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
@@ -228,15 +218,16 @@ export default function Transactions() {
               onExport={handleExport}
             />
 
-            <Card>
-              <CardContent className="p-4">
-                {isTransactionsLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <TransactionItemSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : transactions.length === 0 ? (
+            {/* 交易列表 - 无卡片包装，直接展示 */}
+            <div>
+              {isTransactionsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <TransactionItemSkeleton key={i} />
+                  ))}
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="py-12">
                   <EmptyState
                     icon={Receipt}
                     title="没有找到交易记录"
@@ -244,25 +235,25 @@ export default function Transactions() {
                     actionLabel="记一笔"
                     onAction={handleAddNew}
                   />
-                ) : (
-                  <div className="space-y-3">
-                    {transactions.map((transaction) => (
-                      <TransactionItem
-                        key={transaction.id}
-                        transaction={transaction}
-                        category={transaction.category}
-                        wallet={transaction.wallet}
-                        toWallet={transaction.toWallet}
-                        onClick={(tx) => {
-                          setEditingTransaction(tx);
-                          setIsModalOpen(true);
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {transactions.map((transaction) => (
+                    <TransactionItem
+                      key={transaction.id}
+                      transaction={transaction}
+                      category={transaction.category}
+                      wallet={transaction.wallet}
+                      toWallet={transaction.toWallet}
+                      onClick={(tx) => {
+                        setEditingTransaction(tx);
+                        setIsModalOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

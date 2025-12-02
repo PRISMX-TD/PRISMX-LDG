@@ -97,29 +97,37 @@ export function TransactionItem({
     return "转账";
   };
 
+  const getBgColor = () => {
+    if (isExpense) return "bg-expense/5 hover:bg-expense/10";
+    if (isIncome) return "bg-income/5 hover:bg-income/10";
+    return "bg-transfer/5 hover:bg-transfer/10";
+  };
+
   return (
     <div
-      className={`flex items-center gap-3 py-3 px-3 rounded-lg border-l-3 bg-card/50 hover-elevate cursor-pointer ${getBorderColor()}`}
+      className={`flex items-center gap-3 py-3 px-4 rounded-xl border transition-colors cursor-pointer ${getBgColor()} ${
+        isExpense ? "border-expense/10" : isIncome ? "border-income/10" : "border-transfer/10"
+      }`}
       data-testid={`item-transaction-${transaction.id}`}
       onClick={() => onClick?.(transaction)}
     >
       <div
-        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
           isExpense
-            ? "bg-expense/10"
+            ? "bg-expense/15"
             : isIncome
-            ? "bg-income/10"
-            : "bg-transfer/10"
+            ? "bg-income/15"
+            : "bg-transfer/15"
         }`}
       >
-        <CategoryIcon className={`w-4 h-4 ${getTypeColor()}`} />
+        <CategoryIcon className={`w-5 h-5 ${getTypeColor()}`} />
       </div>
 
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm truncate" data-testid={`text-description-${transaction.id}`}>
           {getDescription()}
         </p>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
           <span className="truncate max-w-[80px]">{wallet?.name || "未知"}</span>
           <span>·</span>
           <span className="whitespace-nowrap">
@@ -132,7 +140,7 @@ export function TransactionItem({
 
       <div className="text-right flex-shrink-0">
         <p
-          className={`font-semibold font-mono text-sm ${getTypeColor()}`}
+          className={`font-semibold font-mono ${getTypeColor()}`}
           data-testid={`text-amount-${transaction.id}`}
         >
           {getAmountPrefix()}{getCurrencyInfo(wallet?.currency || "MYR").symbol}
@@ -142,14 +150,14 @@ export function TransactionItem({
           })}
         </p>
         {transaction.currency && transaction.currency !== (wallet?.currency || "MYR") && transaction.originalAmount ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-0.5">
             原: {getCurrencyInfo(transaction.currency).symbol}{parseFloat(transaction.originalAmount).toLocaleString("zh-CN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </p>
         ) : category && !isTransfer ? (
-          <p className="text-xs text-muted-foreground">{category.name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{category.name}</p>
         ) : null}
       </div>
     </div>
@@ -158,15 +166,15 @@ export function TransactionItem({
 
 export function TransactionItemSkeleton() {
   return (
-    <div className="flex items-center gap-3 py-3 px-3 rounded-lg border-l-3 border-l-muted bg-card/50 animate-pulse">
-      <div className="w-9 h-9 rounded-full bg-muted flex-shrink-0" />
+    <div className="flex items-center gap-3 py-3 px-4 rounded-xl border border-border/50 bg-muted/5 animate-pulse">
+      <div className="w-10 h-10 rounded-full bg-muted/20 flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="h-4 w-24 bg-muted rounded mb-1.5" />
-        <div className="h-3 w-32 bg-muted rounded" />
+        <div className="h-4 w-24 bg-muted/20 rounded mb-1.5" />
+        <div className="h-3 w-32 bg-muted/20 rounded" />
       </div>
       <div className="text-right flex-shrink-0">
-        <div className="h-4 w-20 bg-muted rounded mb-1" />
-        <div className="h-3 w-10 bg-muted rounded ml-auto" />
+        <div className="h-4 w-20 bg-muted/20 rounded mb-1" />
+        <div className="h-3 w-10 bg-muted/20 rounded ml-auto" />
       </div>
     </div>
   );
