@@ -675,14 +675,14 @@ export function TransactionModal({
                       <BookOpen className="w-3.5 h-3.5" />
                       子账本（可选）
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={(value) => field.onChange(value === "none" ? "" : value)} value={field.value || "none"}>
                       <FormControl>
                         <SelectTrigger data-testid="select-subledger">
                           <SelectValue placeholder="选择子账本" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="" data-testid="option-subledger-none">
+                        <SelectItem value="none" data-testid="option-subledger-none">
                           不关联子账本
                         </SelectItem>
                         {subLedgers.filter(s => !s.isArchived).map((subLedger) => (
