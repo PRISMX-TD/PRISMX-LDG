@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Loader2, Palette, BookOpen, CalendarIcon, X } from "lucide-react";
+import { Loader2, Palette, BookOpen, CalendarIcon, X, Target } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -59,6 +59,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("trip");
   const [color, setColor] = useState("#8B5CF6");
+  const [budgetAmount, setBudgetAmount] = useState("");
   const [includeInMainAnalytics, setIncludeInMainAnalytics] = useState(true);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -71,6 +72,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
       setDescription(subLedger.description || "");
       setIcon(subLedger.icon || "trip");
       setColor(subLedger.color || "#8B5CF6");
+      setBudgetAmount(subLedger.budgetAmount || "");
       setIncludeInMainAnalytics(subLedger.includeInMainAnalytics ?? true);
       setStartDate(subLedger.startDate ? new Date(subLedger.startDate) : undefined);
       setEndDate(subLedger.endDate ? new Date(subLedger.endDate) : undefined);
@@ -79,6 +81,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
       setDescription("");
       setIcon("trip");
       setColor("#8B5CF6");
+      setBudgetAmount("");
       setIncludeInMainAnalytics(true);
       setStartDate(undefined);
       setEndDate(undefined);
@@ -131,6 +134,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
       description: description.trim() || null,
       icon,
       color,
+      budgetAmount: budgetAmount ? budgetAmount : null,
       includeInMainAnalytics,
       startDate: startDate ? startDate.toISOString() : null,
       endDate: endDate ? endDate.toISOString() : null,
@@ -177,6 +181,26 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
               rows={2}
               data-testid="input-subledger-description"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="budgetAmount" className="flex items-center gap-1.5">
+              <Target className="w-4 h-4" />
+              预算金额
+            </Label>
+            <Input
+              id="budgetAmount"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="设置预算上限（可选）"
+              value={budgetAmount}
+              onChange={(e) => setBudgetAmount(e.target.value)}
+              data-testid="input-subledger-budget"
+            />
+            <p className="text-xs text-muted-foreground">
+              设置后可在子账本页面查看预算使用进度
+            </p>
           </div>
 
           <div className="space-y-2">
