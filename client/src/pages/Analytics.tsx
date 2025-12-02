@@ -366,10 +366,36 @@ export default function Analytics() {
     return { income, expense, savings: income - expense };
   }, [filteredTransactions, selectedYear]);
 
+  const currentMonthTotals = useMemo(() => {
+    const targetMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
+    let income = 0;
+    let expense = 0;
+
+    filteredTransactions.forEach((t) => {
+      const date = new Date(t.date);
+      if (date.getFullYear() !== selectedYear) return;
+      if (date.getMonth() !== targetMonth) return;
+      const amount = parseFloat(t.amount);
+      if (t.type === "income") {
+        income += amount;
+      } else if (t.type === "expense") {
+        expense += amount;
+      }
+    });
+
+    return { income, expense, savings: income - expense };
+  }, [filteredTransactions, selectedYear, selectedMonth]);
+
+  const displayTotals = useMemo(() => {
+    return timePeriod === "month" ? currentMonthTotals : yearlyTotals;
+  }, [timePeriod, currentMonthTotals, yearlyTotals]);
+
+  const periodLabel = timePeriod === "month" ? "月度" : "年度";
+
   const compareData = useMemo(() => {
-    const currentMonth = new Date().getMonth();
-    const currentMonthData = monthlyData[currentMonth];
-    const lastMonthData = currentMonth > 0 ? monthlyData[currentMonth - 1] : null;
+    const targetMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
+    const currentMonthData = monthlyData[targetMonth];
+    const lastMonthData = targetMonth > 0 ? monthlyData[targetMonth - 1] : null;
     
     const expenseChange = lastMonthData && lastMonthData.expense > 0 
       ? ((currentMonthData.expense - lastMonthData.expense) / lastMonthData.expense) * 100 
@@ -380,7 +406,7 @@ export default function Analytics() {
       : 0;
 
     return { expenseChange, incomeChange };
-  }, [monthlyData]);
+  }, [monthlyData, selectedMonth]);
 
   const totalBalance = useMemo(() => {
     return wallets.reduce((sum, w) => sum + parseFloat(w.balance || "0"), 0);
@@ -592,15 +618,15 @@ export default function Analytics() {
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/20">
                   <ArrowUp className="w-4 h-4 text-emerald-500" />
                 </div>
-                {compareData.incomeChange !== 0 && (
+                {timePeriod === "month" && compareData.incomeChange !== 0 && (
                   <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.incomeChange > 0 ? "text-emerald-500" : "text-rose-500"}`}>
                     {compareData.incomeChange > 0 ? "+" : ""}{compareData.incomeChange.toFixed(1)}%
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mb-1">年度收入</p>
+              <p className="text-xs text-muted-foreground mb-1">{periodLabel}收入</p>
               <p className="text-lg md:text-xl font-bold font-mono text-emerald-500">
-                {currencyInfo.symbol}{formatAmount(yearlyTotals.income)}
+                {currencyInfo.symbol}{formatAmount(displayTotals.income)}
               </p>
             </CardContent>
           </Card>
@@ -612,15 +638,15 @@ export default function Analytics() {
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500/20">
                   <ArrowDown className="w-4 h-4 text-rose-500" />
                 </div>
-                {compareData.expenseChange !== 0 && (
+                {timePeriod === "month" && compareData.expenseChange !== 0 && (
                   <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.expenseChange > 0 ? "text-rose-500" : "text-emerald-500"}`}>
                     {compareData.expenseChange > 0 ? "+" : ""}{compareData.expenseChange.toFixed(1)}%
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mb-1">年度支出</p>
+              <p className="text-xs text-muted-foreground mb-1">{periodLabel}支出</p>
               <p className="text-lg md:text-xl font-bold font-mono text-rose-500">
-                {currencyInfo.symbol}{formatAmount(yearlyTotals.expense)}
+                {currencyInfo.symbol}{formatAmount(displayTotals.expense)}
               </p>
             </CardContent>
           </Card>
@@ -633,12 +659,12 @@ export default function Analytics() {
                   <Coins className="w-4 h-4 text-violet-500" />
                 </div>
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {savingsRate.toFixed(0)}%
+                  {(displayTotals.income > 0 ? (displayTotals.savings / displayTotals.income * 100) : 0).toFixed(0)}%
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground mb-1">年度结余</p>
-              <p className={`text-lg md:text-xl font-bold font-mono ${yearlyTotals.savings >= 0 ? "text-violet-500" : "text-rose-500"}`}>
-                {yearlyTotals.savings >= 0 ? "+" : "-"}{currencyInfo.symbol}{formatAmount(Math.abs(yearlyTotals.savings))}
+              <p className="text-xs text-muted-foreground mb-1">{periodLabel}结余</p>
+              <p className={`text-lg md:text-xl font-bold font-mono ${displayTotals.savings >= 0 ? "text-violet-500" : "text-rose-500"}`}>
+                {displayTotals.savings >= 0 ? "+" : "-"}{currencyInfo.symbol}{formatAmount(Math.abs(displayTotals.savings))}
               </p>
             </CardContent>
           </Card>
