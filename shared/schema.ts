@@ -192,6 +192,7 @@ export const userAnalyticsPreferences = pgTable("user_analytics_preferences", {
   showCashflowTrend: boolean("show_cashflow_trend").default(true),
   showTopCategories: boolean("show_top_categories").default(true),
   showMonthlyComparison: boolean("show_monthly_comparison").default(true),
+  showFullAmount: boolean("show_full_amount").default(false),
   cardOrder: text("card_order").array(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

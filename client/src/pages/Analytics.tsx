@@ -1226,6 +1226,21 @@ export default function Analytics() {
               选择要显示的卡片，拖拽或使用箭头调整顺序
             </p>
           </DialogHeader>
+          
+          {/* Amount Display Format Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/30 mb-2">
+            <div className="flex-1 min-w-0">
+              <Label className="text-xs font-medium">显示完整金额</Label>
+              <p className="text-[10px] text-muted-foreground">关闭时显示缩写(如 8.4k)，开启后显示完整数字</p>
+            </div>
+            <Switch
+              checked={preferences.showFullAmount}
+              onCheckedChange={() => togglePreference("showFullAmount")}
+              disabled={updatePreferencesMutation.isPending}
+              data-testid="switch-showFullAmount"
+            />
+          </div>
+          
           <div className="space-y-2 overflow-y-auto flex-1 pr-1">
             {orderedItems().map((item, index) => {
               const isChecked = preferences[item.key] as boolean;
