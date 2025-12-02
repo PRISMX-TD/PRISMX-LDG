@@ -8,7 +8,6 @@ import { TransactionItem, TransactionItemSkeleton } from "@/components/Transacti
 import { TransactionModal } from "@/components/TransactionModal";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { EmptyState } from "@/components/EmptyState";
-import { ExpenseChart } from "@/components/ExpenseChart";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Receipt, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
@@ -254,14 +253,6 @@ export default function Transactions() {
                 </div>
               )}
             </div>
-          </div>
-
-          <div>
-            <ExpenseChart
-              data={stats?.categoryBreakdown || []}
-              currency={user?.defaultCurrency}
-              isLoading={isStatsLoading}
-            />
           </div>
         </div>
       </main>
