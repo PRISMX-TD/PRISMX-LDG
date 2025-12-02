@@ -58,6 +58,7 @@ import type {
   Wallet as WalletType,
   Category,
   Transaction,
+  SubLedger,
 } from "@shared/schema";
 import { getCurrencyInfo, walletTypes, walletTypeLabels } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -209,6 +210,11 @@ export default function Dashboard() {
     Category[]
   >({
     queryKey: ["/api/categories"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: subLedgers = [] } = useQuery<SubLedger[]>({
+    queryKey: ["/api/sub-ledgers"],
     enabled: isAuthenticated,
   });
 
@@ -857,6 +863,7 @@ export default function Dashboard() {
         }}
         wallets={wallets}
         categories={categories}
+        subLedgers={subLedgers}
         defaultCurrency={user?.defaultCurrency || "MYR"}
         transaction={editingTransaction}
         onDelete={handleDeleteTransaction}
