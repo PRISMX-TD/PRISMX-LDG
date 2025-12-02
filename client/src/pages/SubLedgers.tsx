@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ import { SubLedgerModal } from "@/components/SubLedgerModal";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/components/EmptyState";
-import type { SubLedger, Transaction } from "@shared/schema";
+import type { SubLedger, Transaction, Wallet } from "@shared/schema";
 
 const ICON_LABELS: Record<string, string> = {
   trip: "旅行",
@@ -56,6 +57,7 @@ const ICON_LABELS: Record<string, string> = {
 
 export default function SubLedgers() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [showArchived, setShowArchived] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSubLedger, setEditingSubLedger] = useState<SubLedger | null>(null);
@@ -68,6 +70,23 @@ export default function SubLedgers() {
   const { data: transactions = [] } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
   });
+
+  const { data: wallets = [] } = useQuery<Wallet[]>({
+    queryKey: ["/api/wallets"],
+  });
+
+  // Helper function to convert transaction amount to user's default currency
+  const getConvertedAmount = (t: Transaction): number => {
+    const rawAmount = parseFloat(t.amount);
+    const defaultCurrency = user?.defaultCurrency || "MYR";
+    const wallet = wallets.find((w) => w.id === t.walletId);
+    
+    if (wallet && wallet.currency !== defaultCurrency) {
+      const exchangeRate = parseFloat(wallet.exchangeRateToDefault || "1");
+      return rawAmount * exchangeRate;
+    }
+    return rawAmount;
+  };
 
   const invalidateSubLedgers = () => {
     queryClient.invalidateQueries({ 
@@ -107,7 +126,7 @@ export default function SubLedgers() {
     let income = 0;
     let expense = 0;
     subLedgerTransactions.forEach(t => {
-      const amount = parseFloat(t.amount);
+      const amount = getConvertedAmount(t);
       if (t.type === "income") income += amount;
       else if (t.type === "expense") expense += amount;
     });

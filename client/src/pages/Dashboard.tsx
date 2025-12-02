@@ -391,6 +391,19 @@ export default function Dashboard() {
 
   const recentTransactions = transactions.slice(0, 10);
 
+  // Helper function to convert transaction amount to user's default currency
+  const getConvertedAmount = (t: Transaction): number => {
+    const rawAmount = parseFloat(t.amount || "0");
+    const defaultCurrency = user?.defaultCurrency || "MYR";
+    const wallet = wallets.find((w) => w.id === t.walletId);
+    
+    if (wallet && wallet.currency !== defaultCurrency) {
+      const exchangeRate = parseFloat(wallet.exchangeRateToDefault || "1");
+      return rawAmount * exchangeRate;
+    }
+    return rawAmount;
+  };
+
   const getMonthlyStats = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -405,11 +418,11 @@ export default function Dashboard() {
 
     const income = monthlyTransactions
       .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + parseFloat(t.amount || "0"), 0);
+      .reduce((sum, t) => sum + getConvertedAmount(t), 0);
 
     const expense = monthlyTransactions
       .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + parseFloat(t.amount || "0"), 0);
+      .reduce((sum, t) => sum + getConvertedAmount(t), 0);
 
     return { income, expense };
   };
