@@ -1467,6 +1467,7 @@ export async function registerRoutes(
           showCashflowTrend: true,
           showTopCategories: true,
           showMonthlyComparison: true,
+          showFullAmount: false,
           cardOrder: null,
         });
       }
@@ -1492,6 +1493,7 @@ export async function registerRoutes(
         showCashflowTrend,
         showTopCategories,
         showMonthlyComparison,
+        showFullAmount,
         cardOrder,
       } = req.body;
       
@@ -1506,6 +1508,7 @@ export async function registerRoutes(
       if (showCashflowTrend !== undefined) updateData.showCashflowTrend = showCashflowTrend;
       if (showTopCategories !== undefined) updateData.showTopCategories = showTopCategories;
       if (showMonthlyComparison !== undefined) updateData.showMonthlyComparison = showMonthlyComparison;
+      if (showFullAmount !== undefined) updateData.showFullAmount = showFullAmount;
       if (cardOrder !== undefined) updateData.cardOrder = cardOrder;
       
       const preferences = await storage.upsertAnalyticsPreferences(userId, updateData);
