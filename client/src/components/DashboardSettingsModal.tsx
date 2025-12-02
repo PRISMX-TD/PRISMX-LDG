@@ -428,7 +428,7 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
                     onDragOver={(e) => handleDragOver(e, item.key)}
                     onDragEnd={handleDragEnd}
                     className={`
-                      flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move
+                      flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move no-select
                       ${isDragging ? 'opacity-50 bg-muted' : ''}
                       ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
                     `}
@@ -502,7 +502,7 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
                       onDragStart={() => handleTypeDragStart(type)}
                       onDragOver={(e) => handleTypeDragOver(e, type)}
                       onDragEnd={handleTypeDragEnd}
-                      className="flex items-center gap-2 p-2 cursor-move"
+                      className="flex items-center gap-2 p-2 cursor-move no-select"
                       data-testid={`type-item-${type}`}
                     >
                       <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -551,7 +551,7 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
                               onDragOver={(e) => handleWalletDragOver(e, type, wallet.id)}
                               onDragEnd={handleWalletDragEnd}
                               className={`
-                                flex items-center gap-2 p-2 pl-8 rounded border cursor-move text-sm
+                                flex items-center gap-2 p-2 pl-8 rounded border cursor-move text-sm no-select
                                 ${isDraggingWallet ? 'opacity-50 bg-muted' : ''}
                                 ${isDragOverWallet ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50'}
                               `}

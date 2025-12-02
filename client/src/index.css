@@ -12,13 +12,26 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Apply no-select to all draggable elements */
+/* Apply no-select to all native draggable elements */
 [draggable="true"] {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: pan-y;
+}
+
+/* Apply no-select to @dnd-kit sortable/draggable elements */
+.touch-none,
+[data-testid^="drag-handle-"],
+[data-testid^="card-item-"],
+[data-testid^="nav-item-"],
+[data-testid^="type-group-"],
+[data-testid^="wallet-in-type-"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Re-enable selection for input fields */
