@@ -59,18 +59,27 @@ export default function SubLedgers() {
   const [deleteTarget, setDeleteTarget] = useState<SubLedger | null>(null);
 
   const { data: subLedgers = [], isLoading } = useQuery<SubLedger[]>({
-    queryKey: ["/api/sub-ledgers", { includeArchived: showArchived }],
+    queryKey: [`/api/sub-ledgers?includeArchived=${showArchived}`],
   });
 
   const { data: transactions = [] } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
   });
 
+  const invalidateSubLedgers = () => {
+    queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/sub-ledgers');
+      }
+    });
+  };
+
   const archiveMutation = useMutation({
     mutationFn: ({ id, isArchived }: { id: number; isArchived: boolean }) =>
       apiRequest("PATCH", `/api/sub-ledgers/${id}`, { isArchived }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sub-ledgers"] });
+      invalidateSubLedgers();
       toast({ title: "操作成功" });
     },
     onError: () => {
@@ -81,7 +90,7 @@ export default function SubLedgers() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/sub-ledgers/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sub-ledgers"] });
+      invalidateSubLedgers();
       toast({ title: "子账本已删除" });
       setDeleteTarget(null);
     },

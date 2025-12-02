@@ -85,10 +85,19 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
     }
   }, [subLedger, open]);
 
+  const invalidateSubLedgers = () => {
+    queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/sub-ledgers');
+      }
+    });
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/sub-ledgers", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sub-ledgers"] });
+      invalidateSubLedgers();
       toast({ title: "子账本创建成功" });
       onOpenChange(false);
     },
@@ -100,7 +109,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
   const updateMutation = useMutation({
     mutationFn: (data: any) => apiRequest("PATCH", `/api/sub-ledgers/${subLedger?.id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sub-ledgers"] });
+      invalidateSubLedgers();
       toast({ title: "子账本更新成功" });
       onOpenChange(false);
     },
