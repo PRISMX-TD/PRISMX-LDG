@@ -85,6 +85,7 @@ interface AnalyticsPreferences {
   showCashflowTrend: boolean;
   showTopCategories: boolean;
   showMonthlyComparison: boolean;
+  showFullAmount: boolean;
   cardOrder: string[] | null;
 }
 
@@ -99,6 +100,7 @@ const defaultPreferences: AnalyticsPreferences = {
   showCashflowTrend: true,
   showTopCategories: true,
   showMonthlyComparison: true,
+  showFullAmount: false,
   cardOrder: null,
 };
 
@@ -464,7 +466,7 @@ export default function Analytics() {
     });
   }, [savingsGoals]);
 
-  const formatAmount = (value: number) => {
+  const formatCompactAmount = (value: number) => {
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
     return value.toFixed(0);
@@ -472,6 +474,10 @@ export default function Analytics() {
 
   const formatFullAmount = (value: number) => {
     return value.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const formatAmount = (value: number) => {
+    return preferences.showFullAmount ? formatFullAmount(value) : formatCompactAmount(value);
   };
 
   const togglePreference = (key: keyof AnalyticsPreferences) => {
