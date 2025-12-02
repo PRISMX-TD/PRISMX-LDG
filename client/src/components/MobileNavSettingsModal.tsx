@@ -245,7 +245,7 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
                     onDragOver={(e) => handleDragOver(e, item.key)}
                     onDragEnd={handleDragEnd}
                     className={`
-                      flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move
+                      flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move no-select
                       ${isDragging ? 'opacity-50 bg-muted' : ''}
                       ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
                     `}
