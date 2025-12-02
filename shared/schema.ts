@@ -152,6 +152,7 @@ export const subLedgers = pgTable("sub_ledgers", {
   description: text("description"),
   icon: varchar("icon", { length: 50 }),
   color: varchar("color", { length: 20 }),
+  budgetAmount: decimal("budget_amount", { precision: 15, scale: 2 }), // optional budget for this sub-ledger
   includeInMainAnalytics: boolean("include_in_main_analytics").default(true), // whether to include in main ledger analytics
   isArchived: boolean("is_archived").default(false),
   startDate: timestamp("start_date"),
