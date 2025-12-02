@@ -399,7 +399,7 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg" data-testid="modal-dashboard-settings">
-        <DialogHeader>
+        <DialogHeader className="pb-2">
           <DialogTitle>仪表盘设置</DialogTitle>
           <DialogDescription>
             自定义仪表盘显示内容和顺序

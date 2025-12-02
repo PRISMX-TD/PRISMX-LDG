@@ -207,12 +207,12 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md" data-testid="modal-wallet">
-          <DialogHeader>
+          <DialogHeader className="pb-2">
             <DialogTitle>{isEditing ? "编辑钱包" : "新建钱包"}</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               <FormField
                 control={form.control}
                 name="name"
@@ -369,13 +369,14 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                 )}
               />
 
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+              <div className="flex gap-2 pt-3">
                 {isEditing && (
-                  <div className="flex gap-2 mr-auto">
+                  <>
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="outline"
                       size="icon"
+                      className="h-11 w-11 shrink-0 text-destructive border-destructive/50 hover:bg-destructive/10"
                       onClick={() => setShowDeleteDialog(true)}
                       disabled={wallet?.isDefault === true}
                       data-testid="button-delete-wallet"
@@ -386,7 +387,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        className="h-11"
                         onClick={() => setDefaultMutation.mutate()}
                         disabled={setDefaultMutation.isPending}
                         data-testid="button-set-default"
@@ -394,17 +395,18 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                         设为默认
                       </Button>
                     )}
-                  </div>
+                  </>
                 )}
                 <Button
                   type="submit"
+                  className="flex-1 h-11"
                   disabled={isPending}
                   data-testid="button-submit-wallet"
                 >
                   {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {isEditing ? "保存" : "创建"}
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
           </Form>
         </DialogContent>

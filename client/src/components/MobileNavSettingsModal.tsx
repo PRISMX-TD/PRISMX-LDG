@@ -220,15 +220,15 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto" data-testid="modal-mobile-nav-settings">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md" data-testid="modal-mobile-nav-settings">
+        <DialogHeader className="pb-2">
           <DialogTitle>底部导航设置</DialogTitle>
           <DialogDescription>
             选择显示在底部导航栏的项目（最多4个），其余在"更多"菜单中
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium mb-2 text-muted-foreground">主导航栏（拖拽排序）</h3>
             <div className="space-y-2">

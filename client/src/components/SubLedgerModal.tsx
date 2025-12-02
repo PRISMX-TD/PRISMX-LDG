@@ -151,15 +151,15 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="w-5 h-5" />
             {isEditing ? "编辑子账本" : "创建子账本"}
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="name">名称 *</Label>
             <Input
@@ -346,11 +346,11 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
             />
           </div>
 
-          <div className="flex gap-2 pt-2 sticky bottom-0 bg-card pb-1">
+          <div className="flex gap-2 pt-3">
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-11"
               onClick={() => onOpenChange(false)}
               data-testid="button-cancel-subledger"
             >
@@ -358,7 +358,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
             </Button>
             <Button
               type="submit"
-              className="flex-1"
+              className="flex-1 h-11"
               disabled={isPending}
               data-testid="button-save-subledger"
             >

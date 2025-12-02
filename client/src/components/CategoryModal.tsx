@@ -144,11 +144,11 @@ export function CategoryModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+        <DialogHeader className="pb-2">
           <DialogTitle>{isEdit ? "编辑分类" : "新建分类"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="name">分类名称</Label>
             <Input
@@ -209,11 +209,13 @@ export function CategoryModal({
             </div>
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-3">
             {isEdit && !category?.isDefault && (
               <Button
                 type="button"
-                variant="destructive"
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 shrink-0 text-destructive border-destructive/50 hover:bg-destructive/10"
                 onClick={() => deleteMutation.mutate()}
                 disabled={deleteMutation.isPending}
                 data-testid="button-delete-category"
@@ -229,11 +231,11 @@ export function CategoryModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1"
+              className="flex-1 h-11"
             >
               取消
             </Button>
-            <Button type="submit" disabled={isPending} className="flex-1" data-testid="button-save-category">
+            <Button type="submit" disabled={isPending} className="flex-1 h-11" data-testid="button-save-category">
               {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isEdit ? "保存" : "创建"}
             </Button>

@@ -369,9 +369,9 @@ export function TransactionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" data-testid="modal-transaction" aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl font-semibold">
+      <DialogContent className="sm:max-w-md" data-testid="modal-transaction" aria-describedby={undefined}>
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-center text-lg font-semibold">
             {isEditing ? "编辑交易" : "记一笔"}
           </DialogTitle>
         </DialogHeader>
@@ -398,7 +398,7 @@ export function TransactionModal({
         </Tabs>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             <div className="flex gap-2">
               <FormField
                 control={form.control}
@@ -766,12 +766,13 @@ export function TransactionModal({
               )}
             />
 
-            <div className={`flex gap-3 ${isEditing ? '' : ''}`}>
+            <div className="flex gap-2 pt-2">
               {isEditing && onDelete && (
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-12 px-4 text-destructive border-destructive/50 hover:bg-destructive/10"
+                  size="icon"
+                  className="h-11 w-11 shrink-0 text-destructive border-destructive/50 hover:bg-destructive/10"
                   onClick={() => setShowDeleteConfirm(true)}
                   data-testid="button-delete-transaction"
                 >
@@ -780,7 +781,7 @@ export function TransactionModal({
               )}
               <Button
                 type="submit"
-                className="flex-1 h-12 text-base"
+                className="flex-1 h-11"
                 disabled={mutation.isPending}
                 data-testid="button-submit-transaction"
               >
