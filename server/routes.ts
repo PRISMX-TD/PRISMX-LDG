@@ -1226,7 +1226,7 @@ export async function registerRoutes(
   app.post('/api/sub-ledgers', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { name, description, icon, color, includeInMainAnalytics, startDate, endDate } = req.body;
+      const { name, description, icon, color, budgetAmount, includeInMainAnalytics, startDate, endDate } = req.body;
       
       if (!name || typeof name !== 'string' || !name.trim()) {
         return res.status(400).json({ message: "Name is required" });
@@ -1238,6 +1238,7 @@ export async function registerRoutes(
         description: description?.trim() || null,
         icon: icon || null,
         color: color || '#8B5CF6',
+        budgetAmount: budgetAmount || null,
         includeInMainAnalytics: includeInMainAnalytics ?? true,
         isArchived: false,
         startDate: startDate ? new Date(startDate) : null,
@@ -1254,7 +1255,7 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
-      const { name, description, icon, color, includeInMainAnalytics, isArchived, startDate, endDate } = req.body;
+      const { name, description, icon, color, budgetAmount, includeInMainAnalytics, isArchived, startDate, endDate } = req.body;
       
       const existing = await storage.getSubLedger(id, userId);
       if (!existing) {
@@ -1266,6 +1267,7 @@ export async function registerRoutes(
       if (description !== undefined) updateData.description = description?.trim() || null;
       if (icon !== undefined) updateData.icon = icon;
       if (color !== undefined) updateData.color = color;
+      if (budgetAmount !== undefined) updateData.budgetAmount = budgetAmount || null;
       if (includeInMainAnalytics !== undefined) updateData.includeInMainAnalytics = includeInMainAnalytics;
       if (isArchived !== undefined) updateData.isArchived = isArchived;
       if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;

@@ -32,7 +32,10 @@ import {
   ChartLine,
   Loader2,
   Receipt,
+  Target,
+  AlertTriangle,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { SubLedgerModal } from "@/components/SubLedgerModal";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -256,6 +259,45 @@ export default function SubLedgers() {
                       <p className="text-sm font-mono text-expense">-{stats.expense.toFixed(2)}</p>
                     </div>
                   </div>
+
+                  {subLedger.budgetAmount && parseFloat(subLedger.budgetAmount) > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-border/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Target className="w-3.5 h-3.5" />
+                          <span>预算</span>
+                        </div>
+                        <span className="text-xs font-mono">
+                          {stats.expense.toFixed(0)} / {parseFloat(subLedger.budgetAmount).toFixed(0)}
+                        </span>
+                      </div>
+                      {(() => {
+                        const budget = parseFloat(subLedger.budgetAmount);
+                        const percentage = Math.min((stats.expense / budget) * 100, 100);
+                        const isOverBudget = stats.expense > budget;
+                        return (
+                          <>
+                            <Progress 
+                              value={percentage} 
+                              className={`h-2 ${isOverBudget ? "[&>div]:bg-destructive" : "[&>div]:bg-primary"}`}
+                            />
+                            <div className="flex items-center justify-between text-xs">
+                              <span className={isOverBudget ? "text-destructive flex items-center gap-1" : "text-muted-foreground"}>
+                                {isOverBudget && <AlertTriangle className="w-3 h-3" />}
+                                {isOverBudget 
+                                  ? `超支 ${(stats.expense - budget).toFixed(2)}` 
+                                  : `剩余 ${(budget - stats.expense).toFixed(2)}`
+                                }
+                              </span>
+                              <span className={isOverBudget ? "text-destructive font-medium" : "text-muted-foreground"}>
+                                {((stats.expense / budget) * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 pt-2">
                     <ChartLine className="w-3.5 h-3.5 text-muted-foreground" />
