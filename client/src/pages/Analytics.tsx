@@ -356,6 +356,19 @@ export default function Analytics() {
     queryKey: ["/api/budgets/spending", { month: new Date().getMonth() + 1, year: selectedYear }],
   });
 
+  // Helper function to convert transaction amount to user's default currency
+  const getConvertedAmount = (t: Transaction): number => {
+    const rawAmount = parseFloat(t.amount);
+    const defaultCurrency = user?.defaultCurrency || "MYR";
+    const wallet = wallets.find((w) => w.id === t.walletId);
+    
+    if (wallet && wallet.currency !== defaultCurrency) {
+      const exchangeRate = parseFloat(wallet.exchangeRateToDefault || "1");
+      return rawAmount * exchangeRate;
+    }
+    return rawAmount;
+  };
+
   const filteredTransactions = useMemo(() => {
     if (selectedSubLedgerId === "all") {
       return transactions;
@@ -387,7 +400,7 @@ export default function Analytics() {
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
       const monthIndex = date.getMonth();
-      const amount = parseFloat(t.amount);
+      const amount = getConvertedAmount(t);
       if (t.type === "income") {
         months[monthIndex].income += amount;
       } else if (t.type === "expense") {
@@ -400,7 +413,7 @@ export default function Analytics() {
     });
 
     return months;
-  }, [filteredTransactions, selectedYear]);
+  }, [filteredTransactions, selectedYear, wallets, user]);
 
   const expenseCategoryData = useMemo(() => {
     const categoryTotals: Record<number, { name: string; color: string; total: number }> = {};
@@ -421,13 +434,13 @@ export default function Analytics() {
           total: 0,
         };
       }
-      categoryTotals[categoryId].total += parseFloat(t.amount);
+      categoryTotals[categoryId].total += getConvertedAmount(t);
     });
 
     return Object.values(categoryTotals)
       .sort((a, b) => b.total - a.total)
       .slice(0, 6);
-  }, [filteredTransactions, categories, selectedYear, timePeriod, selectedMonth]);
+  }, [filteredTransactions, categories, selectedYear, timePeriod, selectedMonth, wallets, user]);
 
   const incomeCategoryData = useMemo(() => {
     const categoryTotals: Record<number, { name: string; color: string; total: number }> = {};
@@ -448,13 +461,13 @@ export default function Analytics() {
           total: 0,
         };
       }
-      categoryTotals[categoryId].total += parseFloat(t.amount);
+      categoryTotals[categoryId].total += getConvertedAmount(t);
     });
 
     return Object.values(categoryTotals)
       .sort((a, b) => b.total - a.total)
       .slice(0, 6);
-  }, [filteredTransactions, categories, selectedYear, timePeriod, selectedMonth]);
+  }, [filteredTransactions, categories, selectedYear, timePeriod, selectedMonth, wallets, user]);
 
   const walletData = useMemo(() => {
     return wallets.map((w, i) => ({
@@ -471,7 +484,7 @@ export default function Analytics() {
     filteredTransactions.forEach((t) => {
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
-      const amount = parseFloat(t.amount);
+      const amount = getConvertedAmount(t);
       if (t.type === "income") {
         income += amount;
       } else if (t.type === "expense") {
@@ -480,7 +493,7 @@ export default function Analytics() {
     });
 
     return { income, expense, savings: income - expense };
-  }, [filteredTransactions, selectedYear]);
+  }, [filteredTransactions, selectedYear, wallets, user]);
 
   const currentMonthTotals = useMemo(() => {
     const targetMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
@@ -491,7 +504,7 @@ export default function Analytics() {
       const date = new Date(t.date);
       if (date.getFullYear() !== selectedYear) return;
       if (date.getMonth() !== targetMonth) return;
-      const amount = parseFloat(t.amount);
+      const amount = getConvertedAmount(t);
       if (t.type === "income") {
         income += amount;
       } else if (t.type === "expense") {
@@ -500,7 +513,7 @@ export default function Analytics() {
     });
 
     return { income, expense, savings: income - expense };
-  }, [filteredTransactions, selectedYear, selectedMonth]);
+  }, [filteredTransactions, selectedYear, selectedMonth, wallets, user]);
 
   const displayTotals = useMemo(() => {
     return timePeriod === "month" ? currentMonthTotals : yearlyTotals;

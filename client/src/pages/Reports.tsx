@@ -51,8 +51,20 @@ export default function Reports() {
     const categoryBreakdown: Record<number, { name: string; color: string; income: number; expense: number }> = {};
     const walletBreakdown: Record<number, { name: string; income: number; expense: number }> = {};
 
+    const defaultCurrency = user?.defaultCurrency || "MYR";
+    
     filtered.forEach((t) => {
-      const amount = parseFloat(t.amount);
+      const rawAmount = parseFloat(t.amount);
+      
+      // Convert amount to user's default currency
+      const wallet = wallets.find((w) => w.id === t.walletId);
+      let amount = rawAmount;
+      
+      if (wallet && wallet.currency !== defaultCurrency) {
+        // If wallet currency differs from default currency, convert using exchange rate
+        const exchangeRate = parseFloat(wallet.exchangeRateToDefault || "1");
+        amount = rawAmount * exchangeRate;
+      }
       
       if (t.type === "income") {
         totalIncome += amount;
@@ -79,7 +91,6 @@ export default function Reports() {
 
       if (t.walletId && t.type !== "transfer") {
         if (!walletBreakdown[t.walletId]) {
-          const wallet = wallets.find((w) => w.id === t.walletId);
           walletBreakdown[t.walletId] = {
             name: wallet?.name || "未知钱包",
             income: 0,
@@ -104,7 +115,7 @@ export default function Reports() {
       categoryBreakdown: Object.values(categoryBreakdown).sort((a, b) => (b.income + b.expense) - (a.income + a.expense)),
       walletBreakdown: Object.values(walletBreakdown).sort((a, b) => (b.income + b.expense) - (a.income + a.expense)),
     };
-  }, [transactions, categories, wallets, selectedMonth, selectedYear, reportType]);
+  }, [transactions, categories, wallets, selectedMonth, selectedYear, reportType, user]);
 
   const navigatePeriod = (direction: number) => {
     if (reportType === "monthly") {
