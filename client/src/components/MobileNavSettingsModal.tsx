@@ -227,16 +227,20 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
     },
   });
 
-  const currentPrefs = preferences ?? defaultPreferences;
+  const currentPrefs = useMemo(() => ({
+    mainNavItems: preferences?.mainNavItems ?? defaultPreferences.mainNavItems,
+  }), [preferences]);
   
   const mainNavItems = useMemo(() => {
-    return currentPrefs.mainNavItems
+    const items = currentPrefs.mainNavItems || [];
+    return items
       .map(key => allNavItems.find(item => item.key === key))
       .filter((item): item is NavItem => item !== undefined);
   }, [currentPrefs.mainNavItems]);
 
   const moreMenuItems = useMemo(() => {
-    return allNavItems.filter(item => !currentPrefs.mainNavItems.includes(item.key));
+    const items = currentPrefs.mainNavItems || [];
+    return allNavItems.filter(item => !items.includes(item.key));
   }, [currentPrefs.mainNavItems]);
 
   const handleDragStart = () => {
@@ -246,38 +250,42 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
   const handleDragEnd = (event: DragEndEvent) => {
     setIsDragging(false);
     const { active, over } = event;
+    const items = currentPrefs.mainNavItems || [];
     
     if (over && active.id !== over.id) {
-      const oldIndex = currentPrefs.mainNavItems.indexOf(String(active.id));
-      const newIndex = currentPrefs.mainNavItems.indexOf(String(over.id));
+      const oldIndex = items.indexOf(String(active.id));
+      const newIndex = items.indexOf(String(over.id));
       
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrder = arrayMove([...currentPrefs.mainNavItems], oldIndex, newIndex);
+        const newOrder = arrayMove([...items], oldIndex, newIndex);
         updateMutation.mutate({ mainNavItems: newOrder });
       }
     }
   };
 
   const moveItem = (key: string, direction: 'up' | 'down') => {
-    const currentIndex = currentPrefs.mainNavItems.indexOf(key);
+    const items = currentPrefs.mainNavItems || [];
+    const currentIndex = items.indexOf(key);
     
     if (currentIndex === -1) return;
     if (direction === 'up' && currentIndex === 0) return;
-    if (direction === 'down' && currentIndex === currentPrefs.mainNavItems.length - 1) return;
+    if (direction === 'down' && currentIndex === items.length - 1) return;
     
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    const newOrder = arrayMove([...currentPrefs.mainNavItems], currentIndex, targetIndex);
+    const newOrder = arrayMove([...items], currentIndex, targetIndex);
     
     updateMutation.mutate({ mainNavItems: newOrder });
   };
 
   const handleToggleMain = (key: string) => {
-    const newMainItems = currentPrefs.mainNavItems.filter(k => k !== key);
+    const items = currentPrefs.mainNavItems || [];
+    const newMainItems = items.filter(k => k !== key);
     updateMutation.mutate({ mainNavItems: newMainItems });
   };
 
   const handleAddToMain = (key: string) => {
-    if (currentPrefs.mainNavItems.length >= 4) {
+    const items = currentPrefs.mainNavItems || [];
+    if (items.length >= 4) {
       toast({
         title: "已达到上限",
         description: "底部导航栏最多显示4个项目",
@@ -286,7 +294,7 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
       return;
     }
     
-    const newMainItems = [...currentPrefs.mainNavItems, key];
+    const newMainItems = [...items, key];
     updateMutation.mutate({ mainNavItems: newMainItems });
   };
 
@@ -362,7 +370,7 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
                     <Switch
                       checked={false}
                       onCheckedChange={() => handleAddToMain(item.key)}
-                      disabled={updateMutation.isPending || currentPrefs.mainNavItems.length >= 4}
+                      disabled={updateMutation.isPending || mainNavItems.length >= 4}
                       data-testid={`switch-add-${item.key}`}
                     />
                   </div>
