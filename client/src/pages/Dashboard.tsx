@@ -127,7 +127,7 @@ function SortableWalletCard({ wallet, onClick, isReorderMode }: SortableWalletCa
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative touch-none ${isReorderMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      className={`relative touch-none no-select ${isReorderMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
       {...(isReorderMode ? { ...attributes, ...listeners } : {})}
     >
       {isReorderMode && (
