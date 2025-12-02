@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { WalletCard, WalletCardSkeleton } from "@/components/WalletCard";
@@ -48,6 +49,7 @@ interface DragState {
 export default function Wallets() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -191,9 +193,14 @@ export default function Wallets() {
 
   const handleWalletClick = (wallet: WalletType) => {
     if (!isDragging.current) {
-      setSelectedWallet(wallet);
-      setIsModalOpen(true);
+      navigate(`/wallets/${wallet.id}`);
     }
+  };
+
+  const handleWalletEdit = (e: React.MouseEvent, wallet: WalletType) => {
+    e.stopPropagation();
+    setSelectedWallet(wallet);
+    setIsModalOpen(true);
   };
 
   return (

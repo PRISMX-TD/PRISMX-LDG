@@ -36,6 +36,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supportedCurrencies, type Wallet } from "@shared/schema";
@@ -73,6 +75,7 @@ interface WalletModalProps {
 export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR" }: WalletModalProps) {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteWithTransactions, setDeleteWithTransactions] = useState(false);
   const isEditing = !!wallet;
 
   const form = useForm<WalletFormData>({
@@ -149,13 +152,18 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/wallets/${wallet!.id}`);
+    mutationFn: async (withTransactions: boolean) => {
+      const url = withTransactions 
+        ? `/api/wallets/${wallet!.id}?deleteTransactions=true`
+        : `/api/wallets/${wallet!.id}`;
+      return apiRequest("DELETE", url);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       toast({ title: "钱包已删除" });
       setShowDeleteDialog(false);
+      setDeleteWithTransactions(false);
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -402,25 +410,67 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) setDeleteWithTransactions(false);
+        }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogTitle>删除钱包</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除钱包"{wallet?.name}"吗？此操作无法撤销。
+              请选择删除方式：
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          <RadioGroup
+            value={deleteWithTransactions ? "with-transactions" : "wallet-only"}
+            onValueChange={(value) => setDeleteWithTransactions(value === "with-transactions")}
+            className="space-y-3 py-2"
+          >
+            <div 
+              className="flex items-start gap-3 p-3 rounded-lg hover-elevate cursor-pointer"
+              onClick={() => setDeleteWithTransactions(false)}
+              data-testid="option-delete-wallet-only"
+            >
+              <RadioGroupItem value="wallet-only" id="wallet-only" className="mt-0.5" />
+              <div className="flex-1">
+                <Label htmlFor="wallet-only" className="text-sm font-medium cursor-pointer">
+                  仅删除钱包
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  保留该钱包的所有交易记录，交易将不再关联任何钱包。
+                </p>
+              </div>
+            </div>
+            
+            <div 
+              className="flex items-start gap-3 p-3 rounded-lg hover-elevate cursor-pointer"
+              onClick={() => setDeleteWithTransactions(true)}
+              data-testid="option-delete-with-transactions"
+            >
+              <RadioGroupItem value="with-transactions" id="with-transactions" className="mt-0.5" />
+              <div className="flex-1">
+                <Label htmlFor="with-transactions" className="text-sm font-medium cursor-pointer text-destructive">
+                  删除钱包及所有交易
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  同时删除该钱包的所有交易记录，此操作无法撤销。
+                </p>
+              </div>
+            </div>
+          </RadioGroup>
+
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">取消</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => deleteMutation.mutate(deleteWithTransactions)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete"
             >
               {deleteMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "删除"
+                "确认删除"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -43,7 +43,7 @@ import {
   type InsertUserWalletPreferences,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, gte, lte, between } from "drizzle-orm";
+import { eq, desc, and, or, sql, gte, lte, between } from "drizzle-orm";
 
 // Default categories for new users
 const defaultExpenseCategories = [
@@ -90,6 +90,7 @@ export interface IStorage {
   // Category operations
   getCategories(userId: string): Promise<Category[]>;
   getCategory(id: number, userId: string): Promise<Category | undefined>;
+  getCategoryByName(userId: string, name: string, type: string): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, userId: string, data: Partial<InsertCategory>): Promise<Category | undefined>;
   deleteCategory(id: number, userId: string): Promise<boolean>;
@@ -100,6 +101,7 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransaction(id: number, userId: string, data: Partial<InsertTransaction>): Promise<Transaction | undefined>;
   deleteTransaction(id: number, userId: string): Promise<boolean>;
+  deleteTransactionsByWallet(walletId: number, userId: string): Promise<boolean>;
   getTransactionStats(userId: string, startDate: Date, endDate: Date): Promise<TransactionStats>;
 
   // Budget operations
@@ -302,6 +304,18 @@ export class DatabaseStorage implements IStorage {
     return category;
   }
 
+  async getCategoryByName(userId: string, name: string, type: string): Promise<Category | undefined> {
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(and(
+        eq(categories.userId, userId),
+        eq(categories.name, name),
+        eq(categories.type, type)
+      ));
+    return category;
+  }
+
   async createCategory(category: InsertCategory): Promise<Category> {
     const [newCategory] = await db
       .insert(categories)
@@ -446,6 +460,20 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
       .returning();
     return result.length > 0;
+  }
+
+  async deleteTransactionsByWallet(walletId: number, userId: string): Promise<boolean> {
+    // Delete all transactions where this wallet is the source OR destination
+    await db
+      .delete(transactions)
+      .where(and(
+        eq(transactions.userId, userId),
+        or(
+          eq(transactions.walletId, walletId),
+          eq(transactions.toWalletId, walletId)
+        )
+      ));
+    return true;
   }
 
   async getTransactionStats(userId: string, startDate: Date, endDate: Date): Promise<TransactionStats> {

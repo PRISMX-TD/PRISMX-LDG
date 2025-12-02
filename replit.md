@@ -28,6 +28,8 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 │   │   │   ├── TotalAssetsCard.tsx
 │   │   │   ├── ExpenseChart.tsx
 │   │   │   ├── EmptyState.tsx
+│   │   │   ├── BalanceCorrectionModal.tsx  # 余额校正弹窗
+│   │   │   ├── WalletBalanceChart.tsx      # 钱包余额趋势图表
 │   │   │   ├── DashboardSettingsModal.tsx  # 仪表盘设置弹窗（支持拖拽排序）
 │   │   │   ├── MobileNavSettingsModal.tsx  # 移动端导航设置弹窗
 │   │   │   ├── MobileNavBar.tsx            # 移动端底部导航栏
@@ -46,6 +48,7 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 │   │       ├── Transactions.tsx  # 交易记录
 │   │       ├── Categories.tsx    # 分类管理
 │   │       ├── Wallets.tsx       # 钱包管理
+│   │       ├── WalletDetail.tsx  # 钱包详情页
 │   │       ├── Budgets.tsx       # 预算管理
 │   │       ├── Savings.tsx       # 储蓄目标
 │   │       ├── Recurring.tsx     # 定期交易
@@ -70,6 +73,12 @@ PRISMX Ledger 是一个安全可靠的个人财务跟踪Web应用，支持多用
 2. **多钱包管理**: 支持现金、银行卡、数字钱包等多种支付方式
    - 可灵活调用资金标记: 区分流动资金和长期储蓄/应急资金
    - 按类型分组显示: 仪表盘中钱包按类型分组，支持拖拽排序
+   - **钱包详情页**: 点击钱包进入详情页 (/wallets/:id)
+     - 当前余额展示和编辑入口
+     - 余额趋势图表 (支持每日/每月视图切换)
+     - 最近交易列表
+     - 余额校正功能: 支持差额补记收支、直接调整余额、更改当前余额、设置初始余额
+   - **增强删除功能**: 删除钱包时可选择保留或删除关联交易
 3. **交易管理**: 支持支出、收入、转账三种交易类型
 4. **多币种支持**: 默认MYR (马来西亚林吉特)，支持跨币种交易和自定义汇率
 5. **预算管理**: 按分类设置月度预算，跟踪支出进度

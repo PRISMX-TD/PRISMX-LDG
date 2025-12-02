@@ -25,6 +25,7 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Exchange from "@/pages/Exchange";
 import SubLedgers from "@/pages/SubLedgers";
+import WalletDetail from "@/pages/WalletDetail";
 
 function AuthenticatedLayout() {
   const { user, isLoading } = useAuth();
@@ -64,6 +65,7 @@ function AuthenticatedLayout() {
                   <Route path="/transactions" component={Transactions} />
                   <Route path="/categories" component={Categories} />
                   <Route path="/wallets" component={Wallets} />
+                  <Route path="/wallets/:id" component={WalletDetail} />
                   <Route path="/exchange" component={Exchange} />
                   <Route path="/budgets" component={Budgets} />
                   <Route path="/savings" component={Savings} />
@@ -90,6 +92,7 @@ function AuthenticatedLayout() {
             <Route path="/transactions" component={Transactions} />
             <Route path="/categories" component={Categories} />
             <Route path="/wallets" component={Wallets} />
+            <Route path="/wallets/:id" component={WalletDetail} />
             <Route path="/exchange" component={Exchange} />
             <Route path="/budgets" component={Budgets} />
             <Route path="/savings" component={Savings} />

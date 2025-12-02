@@ -285,6 +285,14 @@ export async function registerRoutes(
         }
       }
       
+      // Check if deleteTransactions flag is set
+      const deleteTransactions = req.query.deleteTransactions === 'true';
+      
+      if (deleteTransactions) {
+        // Delete all transactions associated with this wallet
+        await storage.deleteTransactionsByWallet(id, userId);
+      }
+      
       const deleted = await storage.deleteWallet(id, userId);
       if (deleted) {
         res.status(204).send();
@@ -294,6 +302,87 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting wallet:", error);
       res.status(500).json({ message: "Failed to delete wallet" });
+    }
+  });
+
+  // Balance correction schema
+  const balanceCorrectionSchema = z.object({
+    method: z.enum(['adjust_income_expense', 'adjust_transfer', 'change_current_balance', 'set_initial_balance']),
+    targetBalance: z.union([z.string(), z.number()]).transform(val => String(val)),
+    walletId: z.number().int().positive(),
+  });
+
+  // Balance correction
+  app.post('/api/wallets/balance-correction', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Validate request body with Zod
+      const parseResult = balanceCorrectionSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+      
+      const { method, targetBalance, walletId } = parseResult.data;
+      
+      const wallet = await storage.getWallet(walletId, userId);
+      if (!wallet) {
+        return res.status(404).json({ message: "Wallet not found" });
+      }
+      
+      const currentBalance = parseFloat(wallet.balance || "0");
+      const target = parseFloat(targetBalance);
+      
+      if (isNaN(target)) {
+        return res.status(400).json({ message: "Invalid target balance" });
+      }
+      
+      const difference = target - currentBalance;
+      
+      // If no change needed, just return current wallet
+      if (difference === 0) {
+        return res.json(wallet);
+      }
+      
+      if (method === "adjust_income_expense") {
+        // Create an adjustment transaction and update balance
+        // This counts as real income/expense in analytics
+        const adjustmentCategory = await storage.getCategoryByName(
+          userId, 
+          "其他",
+          difference > 0 ? "income" : "expense"
+        );
+        
+        // Create the transaction record
+        await storage.createTransaction({
+          userId,
+          type: difference > 0 ? "income" : "expense",
+          amount: Math.abs(difference).toFixed(2),
+          currency: wallet.currency || "MYR",
+          walletId: wallet.id,
+          categoryId: adjustmentCategory?.id || null,
+          description: "余额校正",
+          date: new Date(),
+        });
+        
+        // Update wallet balance to target
+        await storage.updateWalletBalance(wallet.id, userId, target.toFixed(2));
+        
+      } else {
+        // For adjust_transfer, change_current_balance, and set_initial_balance:
+        // Just update the balance directly without creating any transactions
+        // This doesn't affect income/expense analytics
+        await storage.updateWalletBalance(wallet.id, userId, target.toFixed(2));
+      }
+      
+      const updatedWallet = await storage.getWallet(wallet.id, userId);
+      res.json(updatedWallet);
+    } catch (error) {
+      console.error("Error correcting balance:", error);
+      res.status(500).json({ message: "Failed to correct balance" });
     }
   });
 
