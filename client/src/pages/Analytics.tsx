@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,24 @@ import {
   CreditCard,
   BookOpen,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { getCurrencyInfo } from "@shared/schema";
 import {
   AreaChart,
@@ -121,6 +139,89 @@ const defaultSettingsItems: SettingsItem[] = [
   { key: "showCashflowTrend", label: "累计现金流", description: "显示累计储蓄趋势" },
 ];
 
+interface SortableSettingsItemProps {
+  item: SettingsItem;
+  isChecked: boolean;
+  onToggle: (key: keyof AnalyticsPreferences) => void;
+  onMove: (key: string, direction: 'up' | 'down') => void;
+  index: number;
+  total: number;
+  isPending: boolean;
+}
+
+function SortableSettingsItem({ item, isChecked, onToggle, onMove, index, total, isPending }: SortableSettingsItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined,
+    touchAction: 'none' as const,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        flex items-center gap-2 p-2.5 rounded-lg border transition-all
+        ${isDragging ? 'bg-muted shadow-lg' : 'border-border/50 hover:border-border'}
+      `}
+      data-testid={`card-item-${item.key}`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
+      >
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <Label className="text-xs font-medium">{item.label}</Label>
+        <p className="text-[10px] text-muted-foreground truncate">{item.description}</p>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <div className="flex flex-col">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMove(item.key, 'up')}
+            disabled={index === 0 || isPending}
+            data-testid={`button-move-up-${item.key}`}
+          >
+            <ChevronUp className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMove(item.key, 'down')}
+            disabled={index === total - 1 || isPending}
+            data-testid={`button-move-down-${item.key}`}
+          >
+            <ChevronDown className="w-3 h-3" />
+          </Button>
+        </div>
+        <Switch
+          checked={isChecked}
+          onCheckedChange={() => onToggle(item.key)}
+          disabled={isPending}
+          data-testid={`switch-${item.key}`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Analytics() {
   const { user } = useAuth();
   const currencyInfo = getCurrencyInfo(user?.defaultCurrency || "MYR");
@@ -129,9 +230,28 @@ export default function Analytics() {
   const [timePeriod, setTimePeriod] = useState<"year" | "month" | "week">("year");
   const [dataView, setDataView] = useState<"overview" | "income" | "expense" | "savings">("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [selectedSubLedgerId, setSelectedSubLedgerId] = useState<string>("all");
+
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isDragging]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const { data: preferences = defaultPreferences } = useQuery<AnalyticsPreferences>({
     queryKey: ["/api/analytics-preferences"],
@@ -159,7 +279,7 @@ export default function Analytics() {
     },
   });
 
-  const orderedItems = useCallback(() => {
+  const orderedItems = useMemo(() => {
     const order = preferences.cardOrder;
     if (!order || order.length === 0) {
       return defaultSettingsItems;
@@ -177,45 +297,35 @@ export default function Analytics() {
     return orderedList;
   }, [preferences.cardOrder]);
 
-  const handleDragStart = (key: string) => {
-    setDraggedItem(key);
+  const handleDragStart = () => {
+    setIsDragging(true);
   };
 
-  const handleDragOver = (e: React.DragEvent, key: string) => {
-    e.preventDefault();
-    if (draggedItem !== key) {
-      setDragOverItem(key);
-    }
-  };
-
-  const handleDragEnd = () => {
-    if (draggedItem && dragOverItem && draggedItem !== dragOverItem) {
-      const items = orderedItems();
-      const currentOrder = items.map(item => item.key);
-      const fromIndex = currentOrder.indexOf(draggedItem as keyof AnalyticsPreferences);
-      const toIndex = currentOrder.indexOf(dragOverItem as keyof AnalyticsPreferences);
-      if (fromIndex !== -1 && toIndex !== -1) {
-        const newOrder = [...currentOrder];
-        newOrder.splice(fromIndex, 1);
-        newOrder.splice(toIndex, 0, draggedItem as keyof AnalyticsPreferences);
-        updatePreferencesMutation.mutate({ cardOrder: newOrder as string[] });
+  const handleDragEnd = (event: DragEndEvent) => {
+    setIsDragging(false);
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const currentOrder = orderedItems.map(item => item.key as string);
+      const oldIndex = currentOrder.indexOf(String(active.id));
+      const newIndex = currentOrder.indexOf(String(over.id));
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
+        updatePreferencesMutation.mutate({ cardOrder: newOrder });
       }
     }
-    setDraggedItem(null);
-    setDragOverItem(null);
   };
 
   const moveItem = (key: string, direction: 'up' | 'down') => {
-    const items = orderedItems();
-    const currentOrder = items.map(item => item.key);
-    const currentIndex = currentOrder.indexOf(key as keyof AnalyticsPreferences);
+    const currentOrder = orderedItems.map(item => item.key as string);
+    const currentIndex = currentOrder.indexOf(key);
     if (currentIndex === -1) return;
     if (direction === 'up' && currentIndex === 0) return;
     if (direction === 'down' && currentIndex === currentOrder.length - 1) return;
-    const newOrder = [...currentOrder];
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
-    updatePreferencesMutation.mutate({ cardOrder: newOrder as string[] });
+    const newOrder = arrayMove(currentOrder, currentIndex, targetIndex);
+    updatePreferencesMutation.mutate({ cardOrder: newOrder });
   };
 
   const { data: transactions = [], isLoading: isTransactionsLoading } = useQuery<Transaction[]>({
@@ -1241,67 +1351,32 @@ export default function Analytics() {
             />
           </div>
           
-          <div className="space-y-2 overflow-y-auto flex-1 pr-1">
-            {orderedItems().map((item, index) => {
-              const isChecked = preferences[item.key] as boolean;
-              const isDragging = draggedItem === item.key;
-              const isDragOver = dragOverItem === item.key;
-              return (
-                <div
-                  key={item.key}
-                  draggable
-                  onDragStart={() => handleDragStart(item.key)}
-                  onDragOver={(e) => handleDragOver(e, item.key)}
-                  onDragEnd={handleDragEnd}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchMove={(e) => e.stopPropagation()}
-                  className={`
-                    flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-move no-select
-                    ${isDragging ? 'opacity-50 bg-muted' : ''}
-                    ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
-                  `}
-                  style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                  data-testid={`card-item-${item.key}`}
-                >
-                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <Label className="text-xs font-medium cursor-move">{item.label}</Label>
-                    <p className="text-[10px] text-muted-foreground truncate">{item.description}</p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <div className="flex flex-col">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5"
-                        onClick={() => moveItem(item.key, 'up')}
-                        disabled={index === 0 || updatePreferencesMutation.isPending}
-                        data-testid={`button-move-up-${item.key}`}
-                      >
-                        <ChevronUp className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5"
-                        onClick={() => moveItem(item.key, 'down')}
-                        disabled={index === orderedItems().length - 1 || updatePreferencesMutation.isPending}
-                        data-testid={`button-move-down-${item.key}`}
-                      >
-                        <ChevronDown className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    <Switch
-                      checked={isChecked}
-                      onCheckedChange={() => togglePreference(item.key)}
-                      disabled={updatePreferencesMutation.isPending}
-                      data-testid={`switch-${item.key}`}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={orderedItems.map(item => item.key)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+                {orderedItems.map((item, index) => {
+                  const isChecked = preferences[item.key] as boolean;
+                  return (
+                    <SortableSettingsItem
+                      key={item.key}
+                      item={item}
+                      isChecked={isChecked}
+                      onToggle={togglePreference}
+                      onMove={moveItem}
+                      index={index}
+                      total={orderedItems.length}
+                      isPending={updatePreferencesMutation.isPending}
                     />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
         </DialogContent>
       </Dialog>
     </div>

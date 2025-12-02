@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -16,6 +16,25 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, GripVertical, ChevronUp, ChevronDown, Wallet } from "lucide-react";
 import type { Wallet as WalletType } from "@shared/schema";
 import { walletTypes, walletTypeLabels } from "@shared/schema";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface DashboardPreferences {
   showTotalAssets: boolean;
@@ -69,14 +88,319 @@ const defaultSettingsItems: SettingsItem[] = [
   { key: "showRecentTransactions", label: "最近交易", description: "显示最近的交易记录" },
 ];
 
+interface SortableCardItemProps {
+  item: SettingsItem;
+  isChecked: boolean;
+  onToggle: (key: string, value: boolean) => void;
+  onMove: (key: string, direction: 'up' | 'down') => void;
+  index: number;
+  total: number;
+  isPending: boolean;
+}
+
+function SortableCardItem({ item, isChecked, onToggle, onMove, index, total, isPending }: SortableCardItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined,
+    touchAction: 'none' as const,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        flex items-center gap-2 p-3 rounded-lg border transition-all
+        ${isDragging ? 'bg-muted shadow-lg' : 'border-border/50 hover:border-border'}
+      `}
+      data-testid={`card-item-${item.key}`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+      </div>
+      
+      <div className="flex-1 min-w-0">
+        <Label className="text-sm font-medium">{item.label}</Label>
+        <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+      </div>
+      
+      <div className="flex items-center gap-1 shrink-0">
+        <div className="flex flex-col">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMove(item.key, 'up')}
+            disabled={index === 0 || isPending}
+            data-testid={`button-move-up-${item.key}`}
+          >
+            <ChevronUp className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMove(item.key, 'down')}
+            disabled={index === total - 1 || isPending}
+            data-testid={`button-move-down-${item.key}`}
+          >
+            <ChevronDown className="w-3 h-3" />
+          </Button>
+        </div>
+        <Switch
+          checked={isChecked}
+          onCheckedChange={(checked) => onToggle(item.key, checked)}
+          disabled={isPending}
+          data-testid={`switch-${item.key}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface SortableTypeItemProps {
+  type: string;
+  walletsInType: WalletType[];
+  walletOrder: Record<string, number[]> | null;
+  typeIndex: number;
+  totalTypes: number;
+  onMoveType: (type: string, direction: 'up' | 'down') => void;
+  onMoveWallet: (type: string, walletId: number, direction: 'up' | 'down') => void;
+  onWalletDragEnd: (type: string, activeId: number, overId: number) => void;
+  isPending: boolean;
+}
+
+function SortableTypeItem({
+  type,
+  walletsInType,
+  typeIndex,
+  totalTypes,
+  onMoveType,
+  onMoveWallet,
+  onWalletDragEnd,
+  isPending,
+}: SortableTypeItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: type });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined,
+    touchAction: 'none' as const,
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleWalletDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      onWalletDragEnd(type, Number(active.id), Number(over.id));
+    }
+  };
+
+  const walletIds = walletsInType.map(w => w.id);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        rounded-lg border transition-all
+        ${isDragging ? 'bg-muted shadow-lg' : 'border-border/50'}
+      `}
+      data-testid={`type-item-${type}`}
+    >
+      <div className="flex items-center gap-2 p-3 border-b border-border/30">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+        </div>
+        <Wallet className="w-4 h-4 text-primary shrink-0" />
+        <span className="flex-1 text-sm font-medium">
+          {walletTypeLabels[type as keyof typeof walletTypeLabels] || type}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {walletsInType.length} 个钱包
+        </span>
+        <div className="flex flex-col">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMoveType(type, 'up')}
+            disabled={typeIndex === 0 || isPending}
+            data-testid={`button-move-type-up-${type}`}
+          >
+            <ChevronUp className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMoveType(type, 'down')}
+            disabled={typeIndex === totalTypes - 1 || isPending}
+            data-testid={`button-move-type-down-${type}`}
+          >
+            <ChevronDown className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+      
+      {walletsInType.length > 0 && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleWalletDragEnd}
+        >
+          <SortableContext items={walletIds} strategy={verticalListSortingStrategy}>
+            <div className="px-2 pb-2 pt-1 space-y-1">
+              {walletsInType.map((wallet, walletIndex) => (
+                <SortableWalletItem
+                  key={wallet.id}
+                  wallet={wallet}
+                  type={type}
+                  walletIndex={walletIndex}
+                  totalWallets={walletsInType.length}
+                  onMove={onMoveWallet}
+                  isPending={isPending}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+    </div>
+  );
+}
+
+interface SortableWalletItemProps {
+  wallet: WalletType;
+  type: string;
+  walletIndex: number;
+  totalWallets: number;
+  onMove: (type: string, walletId: number, direction: 'up' | 'down') => void;
+  isPending: boolean;
+}
+
+function SortableWalletItem({ wallet, type, walletIndex, totalWallets, onMove, isPending }: SortableWalletItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: wallet.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined,
+    touchAction: 'none' as const,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        flex items-center gap-2 p-2 pl-8 rounded border text-sm
+        ${isDragging ? 'bg-muted shadow-lg' : 'border-transparent hover:bg-muted/50'}
+      `}
+      data-testid={`wallet-item-${wallet.id}`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
+      >
+        <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
+      </div>
+      <span 
+        className="w-3 h-3 rounded-full shrink-0" 
+        style={{ backgroundColor: wallet.color || '#8B5CF6' }}
+      />
+      <span className="flex-1 truncate">{wallet.name}</span>
+      <div className="flex flex-col">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-4 w-4"
+          onClick={() => onMove(type, wallet.id, 'up')}
+          disabled={walletIndex === 0 || isPending}
+          data-testid={`button-move-wallet-up-${wallet.id}`}
+        >
+          <ChevronUp className="w-2 h-2" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-4 w-4"
+          onClick={() => onMove(type, wallet.id, 'down')}
+          disabled={walletIndex === totalWallets - 1 || isPending}
+          data-testid={`button-move-wallet-down-${wallet.id}`}
+        >
+          <ChevronDown className="w-2 h-2" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettingsModalProps) {
   const { toast } = useToast();
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
-  const [draggedType, setDraggedType] = useState<string | null>(null);
-  const [dragOverType, setDragOverType] = useState<string | null>(null);
-  const [draggedWallet, setDraggedWallet] = useState<{ type: string; id: number } | null>(null);
-  const [dragOverWallet, setDragOverWallet] = useState<{ type: string; id: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isDragging]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const { data: preferences, isLoading } = useQuery<DashboardPreferences>({
     queryKey: ["/api/dashboard-preferences"],
@@ -158,7 +482,7 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
   const currentPrefs = preferences ?? defaultPreferences;
   const currentWalletPrefs = walletPreferences ?? { walletOrder: null, typeOrder: null, groupByType: true };
   
-  const orderedItems = useCallback(() => {
+  const orderedItems = useMemo(() => {
     const order = currentPrefs.cardOrder;
     if (!order || order.length === 0) {
       return defaultSettingsItems;
@@ -228,81 +552,57 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
     updateMutation.mutate({ [key]: value });
   };
 
-  const handleDragStart = (key: string) => {
-    setDraggedItem(key);
+  const handleCardDragStart = () => {
+    setIsDragging(true);
   };
 
-  const handleDragOver = (e: React.DragEvent, key: string) => {
-    e.preventDefault();
-    if (draggedItem !== key) {
-      setDragOverItem(key);
-    }
-  };
-
-  const handleDragEnd = () => {
-    if (draggedItem && dragOverItem && draggedItem !== dragOverItem) {
-      const items = orderedItems();
-      const currentOrder = items.map(item => item.key);
-      const fromIndex = currentOrder.indexOf(draggedItem);
-      const toIndex = currentOrder.indexOf(dragOverItem);
+  const handleCardDragEnd = (event: DragEndEvent) => {
+    setIsDragging(false);
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const currentOrder = orderedItems.map(item => item.key);
+      const oldIndex = currentOrder.indexOf(String(active.id));
+      const newIndex = currentOrder.indexOf(String(over.id));
       
-      if (fromIndex !== -1 && toIndex !== -1) {
-        const newOrder = [...currentOrder];
-        newOrder.splice(fromIndex, 1);
-        newOrder.splice(toIndex, 0, draggedItem);
-        
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
         updateMutation.mutate({ cardOrder: newOrder });
       }
     }
-    
-    setDraggedItem(null);
-    setDragOverItem(null);
   };
 
   const moveItem = (key: string, direction: 'up' | 'down') => {
-    const items = orderedItems();
-    const currentOrder = items.map(item => item.key);
+    const currentOrder = orderedItems.map(item => item.key);
     const currentIndex = currentOrder.indexOf(key);
     
     if (currentIndex === -1) return;
     if (direction === 'up' && currentIndex === 0) return;
     if (direction === 'down' && currentIndex === currentOrder.length - 1) return;
     
-    const newOrder = [...currentOrder];
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    
-    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
+    const newOrder = arrayMove(currentOrder, currentIndex, targetIndex);
     
     updateMutation.mutate({ cardOrder: newOrder });
   };
 
-  const handleTypeDragStart = (type: string) => {
-    setDraggedType(type);
+  const handleTypeDragStart = () => {
+    setIsDragging(true);
   };
 
-  const handleTypeDragOver = (e: React.DragEvent, type: string) => {
-    e.preventDefault();
-    if (draggedType !== type) {
-      setDragOverType(type);
-    }
-  };
-
-  const handleTypeDragEnd = () => {
-    if (draggedType && dragOverType && draggedType !== dragOverType) {
-      const fromIndex = orderedTypes.indexOf(draggedType);
-      const toIndex = orderedTypes.indexOf(dragOverType);
+  const handleTypeDragEnd = (event: DragEndEvent) => {
+    setIsDragging(false);
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedTypes.indexOf(String(active.id));
+      const newIndex = orderedTypes.indexOf(String(over.id));
       
-      if (fromIndex !== -1 && toIndex !== -1) {
-        const newOrder = [...orderedTypes];
-        newOrder.splice(fromIndex, 1);
-        newOrder.splice(toIndex, 0, draggedType);
-        
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(orderedTypes, oldIndex, newIndex);
         updateWalletMutation.mutate({ typeOrder: newOrder });
       }
     }
-    
-    setDraggedType(null);
-    setDragOverType(null);
   };
 
   const moveType = (type: string, direction: 'up' | 'down') => {
@@ -312,52 +612,29 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
     if (direction === 'up' && currentIndex === 0) return;
     if (direction === 'down' && currentIndex === orderedTypes.length - 1) return;
     
-    const newOrder = [...orderedTypes];
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    
-    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
+    const newOrder = arrayMove([...orderedTypes], currentIndex, targetIndex);
     
     updateWalletMutation.mutate({ typeOrder: newOrder });
   };
 
-  const handleWalletDragStart = (type: string, id: number) => {
-    setDraggedWallet({ type, id });
-  };
-
-  const handleWalletDragOver = (e: React.DragEvent, type: string, id: number) => {
-    e.preventDefault();
-    if (draggedWallet && (draggedWallet.type !== type || draggedWallet.id !== id)) {
-      if (draggedWallet.type === type) {
-        setDragOverWallet({ type, id });
-      }
-    }
-  };
-
-  const handleWalletDragEnd = () => {
-    if (draggedWallet && dragOverWallet && draggedWallet.type === dragOverWallet.type) {
-      const type = draggedWallet.type;
-      const walletsInType = groupedWallets[type] || [];
-      const currentOrder = walletsInType.map(w => w.id);
-      
-      const fromIndex = currentOrder.indexOf(draggedWallet.id);
-      const toIndex = currentOrder.indexOf(dragOverWallet.id);
-      
-      if (fromIndex !== -1 && toIndex !== -1) {
-        const newOrder = [...currentOrder];
-        newOrder.splice(fromIndex, 1);
-        newOrder.splice(toIndex, 0, draggedWallet.id);
-        
-        const updatedWalletOrder = {
-          ...(currentWalletPrefs.walletOrder || {}),
-          [type]: newOrder,
-        };
-        
-        updateWalletMutation.mutate({ walletOrder: updatedWalletOrder });
-      }
-    }
+  const handleWalletDragEnd = (type: string, activeId: number, overId: number) => {
+    const walletsInType = groupedWallets[type] || [];
+    const currentOrder = walletsInType.map(w => w.id);
     
-    setDraggedWallet(null);
-    setDragOverWallet(null);
+    const oldIndex = currentOrder.indexOf(activeId);
+    const newIndex = currentOrder.indexOf(overId);
+    
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
+      
+      const updatedWalletOrder = {
+        ...(currentWalletPrefs.walletOrder || {}),
+        [type]: newOrder,
+      };
+      
+      updateWalletMutation.mutate({ walletOrder: updatedWalletOrder });
+    }
   };
 
   const moveWallet = (type: string, walletId: number, direction: 'up' | 'down') => {
@@ -369,10 +646,8 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
     if (direction === 'up' && currentIndex === 0) return;
     if (direction === 'down' && currentIndex === currentOrder.length - 1) return;
     
-    const newOrder = [...currentOrder];
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    
-    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
+    const newOrder = arrayMove(currentOrder, currentIndex, targetIndex);
     
     const updatedWalletOrder = {
       ...(currentWalletPrefs.walletOrder || {}),
@@ -382,7 +657,7 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
     updateWalletMutation.mutate({ walletOrder: updatedWalletOrder });
   };
 
-  const items = orderedItems();
+  const cardItemIds = orderedItems.map(item => item.key);
 
   if (isLoading) {
     return (
@@ -413,196 +688,66 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
           </TabsList>
           
           <TabsContent value="cards" className="mt-4">
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-              {items.map((item, index) => {
-                const key = item.key as keyof DashboardPreferences;
-                const isChecked = currentPrefs[key] as boolean;
-                const isDragging = draggedItem === item.key;
-                const isDragOver = dragOverItem === item.key;
-                
-                return (
-                  <div
-                    key={item.key}
-                    draggable
-                    onDragStart={() => handleDragStart(item.key)}
-                    onDragOver={(e) => handleDragOver(e, item.key)}
-                    onDragEnd={handleDragEnd}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchMove={(e) => e.stopPropagation()}
-                    className={`
-                      flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move no-select
-                      ${isDragging ? 'opacity-50 bg-muted' : ''}
-                      ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
-                    `}
-                    style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                    data-testid={`card-item-${item.key}`}
-                  >
-                    <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleCardDragStart}
+              onDragEnd={handleCardDragEnd}
+            >
+              <SortableContext items={cardItemIds} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                  {orderedItems.map((item, index) => {
+                    const key = item.key as keyof DashboardPreferences;
+                    const isChecked = currentPrefs[key] as boolean;
                     
-                    <div className="flex-1 min-w-0">
-                      <Label className="text-sm font-medium cursor-move">{item.label}</Label>
-                      <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-1 shrink-0">
-                      <div className="flex flex-col">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => moveItem(item.key, 'up')}
-                          disabled={index === 0 || updateMutation.isPending}
-                          data-testid={`button-move-up-${item.key}`}
-                        >
-                          <ChevronUp className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => moveItem(item.key, 'down')}
-                          disabled={index === items.length - 1 || updateMutation.isPending}
-                          data-testid={`button-move-down-${item.key}`}
-                        >
-                          <ChevronDown className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      
-                      <Switch
-                        checked={isChecked}
-                        onCheckedChange={(checked) => handleToggle(item.key, checked)}
-                        disabled={updateMutation.isPending}
-                        data-testid={`switch-${item.key}`}
+                    return (
+                      <SortableCardItem
+                        key={item.key}
+                        item={item}
+                        isChecked={isChecked}
+                        onToggle={handleToggle}
+                        onMove={moveItem}
+                        index={index}
+                        total={orderedItems.length}
+                        isPending={updateMutation.isPending}
                       />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           </TabsContent>
           
           <TabsContent value="wallets" className="mt-4">
-            <p className="text-xs text-muted-foreground mb-3">
-              拖拽调整钱包类型顺序，或在类型内调整钱包顺序
-            </p>
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-              {orderedTypes.map((type, typeIndex) => {
-                const walletsInType = groupedWallets[type] || [];
-                const isDraggingType = draggedType === type;
-                const isDragOverType = dragOverType === type;
-                
-                return (
-                  <div
-                    key={type}
-                    className={`
-                      rounded-lg border transition-all
-                      ${isDraggingType ? 'opacity-50 bg-muted' : ''}
-                      ${isDragOverType ? 'border-primary bg-primary/5' : 'border-border/50'}
-                    `}
-                  >
-                    <div
-                      draggable
-                      onDragStart={() => handleTypeDragStart(type)}
-                      onDragOver={(e) => handleTypeDragOver(e, type)}
-                      onDragEnd={handleTypeDragEnd}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onTouchMove={(e) => e.stopPropagation()}
-                      className="flex items-center gap-2 p-2 cursor-move no-select"
-                      style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                      data-testid={`type-item-${type}`}
-                    >
-                      <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <Wallet className="w-4 h-4 text-primary shrink-0" />
-                      <span className="flex-1 text-sm font-medium">
-                        {walletTypeLabels[type] || type}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {walletsInType.length} 个钱包
-                      </span>
-                      <div className="flex flex-col">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => moveType(type, 'up')}
-                          disabled={typeIndex === 0 || updateWalletMutation.isPending}
-                          data-testid={`button-move-type-up-${type}`}
-                        >
-                          <ChevronUp className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => moveType(type, 'down')}
-                          disabled={typeIndex === orderedTypes.length - 1 || updateWalletMutation.isPending}
-                          data-testid={`button-move-type-down-${type}`}
-                        >
-                          <ChevronDown className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleTypeDragStart}
+              onDragEnd={handleTypeDragEnd}
+            >
+              <SortableContext items={orderedTypes} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                  {orderedTypes.map((type, typeIndex) => {
+                    const walletsInType = groupedWallets[type] || [];
                     
-                    {walletsInType.length > 0 && (
-                      <div className="px-2 pb-2 space-y-1">
-                        {walletsInType.map((wallet, walletIndex) => {
-                          const isDraggingWallet = draggedWallet?.type === type && draggedWallet?.id === wallet.id;
-                          const isDragOverWallet = dragOverWallet?.type === type && dragOverWallet?.id === wallet.id;
-                          
-                          return (
-                            <div
-                              key={wallet.id}
-                              draggable
-                              onDragStart={() => handleWalletDragStart(type, wallet.id)}
-                              onDragOver={(e) => handleWalletDragOver(e, type, wallet.id)}
-                              onDragEnd={handleWalletDragEnd}
-                              onTouchStart={(e) => e.stopPropagation()}
-                              onTouchMove={(e) => e.stopPropagation()}
-                              className={`
-                                flex items-center gap-2 p-2 pl-8 rounded border cursor-move text-sm no-select
-                                ${isDraggingWallet ? 'opacity-50 bg-muted' : ''}
-                                ${isDragOverWallet ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50'}
-                              `}
-                              style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                              data-testid={`wallet-item-${wallet.id}`}
-                            >
-                              <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <span 
-                                className="w-3 h-3 rounded-full shrink-0" 
-                                style={{ backgroundColor: wallet.color || '#8B5CF6' }}
-                              />
-                              <span className="flex-1 truncate">{wallet.name}</span>
-                              <div className="flex flex-col">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-4 w-4"
-                                  onClick={() => moveWallet(type, wallet.id, 'up')}
-                                  disabled={walletIndex === 0 || updateWalletMutation.isPending}
-                                  data-testid={`button-move-wallet-up-${wallet.id}`}
-                                >
-                                  <ChevronUp className="w-2 h-2" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-4 w-4"
-                                  onClick={() => moveWallet(type, wallet.id, 'down')}
-                                  disabled={walletIndex === walletsInType.length - 1 || updateWalletMutation.isPending}
-                                  data-testid={`button-move-wallet-down-${wallet.id}`}
-                                >
-                                  <ChevronDown className="w-2 h-2" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    return (
+                      <SortableTypeItem
+                        key={type}
+                        type={type}
+                        walletsInType={walletsInType}
+                        walletOrder={currentWalletPrefs.walletOrder}
+                        typeIndex={typeIndex}
+                        totalTypes={orderedTypes.length}
+                        onMoveType={moveType}
+                        onMoveWallet={moveWallet}
+                        onWalletDragEnd={handleWalletDragEnd}
+                        isPending={updateWalletMutation.isPending}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           </TabsContent>
         </Tabs>
       </DialogContent>

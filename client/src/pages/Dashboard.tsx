@@ -157,6 +157,21 @@ export default function Dashboard() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isWalletReorderMode, setIsWalletReorderMode] = useState(false);
   const [localWalletOrder, setLocalWalletOrder] = useState<Record<string, number[]>>({});
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isDragging]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -344,7 +359,12 @@ export default function Dashboard() {
     setLocalWalletOrder({});
   }, []);
 
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
   const handleDragEnd = useCallback((event: DragEndEvent, type: string) => {
+    setIsDragging(false);
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setLocalWalletOrder((prev) => {
@@ -652,6 +672,7 @@ export default function Dashboard() {
                         <DndContext
                           sensors={sensors}
                           collisionDetection={closestCenter}
+                          onDragStart={handleDragStart}
                           onDragEnd={(event) => handleDragEnd(event, type)}
                         >
                           <SortableContext

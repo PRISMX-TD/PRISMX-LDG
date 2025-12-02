@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -30,6 +30,24 @@ import {
   Settings,
   ArrowUpDown,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface MobileNavPreferences {
   mainNavItems: string[];
@@ -66,10 +84,113 @@ interface MobileNavSettingsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface SortableNavItemProps {
+  item: NavItem;
+  index: number;
+  total: number;
+  onMove: (key: string, direction: 'up' | 'down') => void;
+  onToggle: (key: string) => void;
+  isPending: boolean;
+}
+
+function SortableNavItem({ item, index, total, onMove, onToggle, isPending }: SortableNavItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined,
+    touchAction: 'none' as const,
+  };
+
+  const Icon = item.icon;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        flex items-center gap-2 p-3 rounded-lg border transition-all
+        ${isDragging ? 'bg-muted shadow-lg' : 'border-border/50 hover:border-border'}
+      `}
+      data-testid={`nav-item-${item.key}`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+      </div>
+      <Icon className="w-4 h-4 text-primary shrink-0" />
+      <span className="flex-1 text-sm font-medium">{item.label}</span>
+      
+      <div className="flex items-center gap-1 shrink-0">
+        <div className="flex flex-col">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMove(item.key, 'up')}
+            disabled={index === 0 || isPending}
+            data-testid={`button-move-up-${item.key}`}
+          >
+            <ChevronUp className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => onMove(item.key, 'down')}
+            disabled={index === total - 1 || isPending}
+            data-testid={`button-move-down-${item.key}`}
+          >
+            <ChevronDown className="w-3 h-3" />
+          </Button>
+        </div>
+        
+        <Switch
+          checked={true}
+          onCheckedChange={() => onToggle(item.key)}
+          disabled={isPending}
+          data-testid={`switch-${item.key}`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettingsModalProps) {
   const { toast } = useToast();
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isDragging]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const { data: preferences, isLoading } = useQuery<MobileNavPreferences>({
     queryKey: ["/api/mobile-nav-preferences"],
@@ -107,104 +228,67 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
   });
 
   const currentPrefs = preferences ?? defaultPreferences;
-  const currentMainItems = currentPrefs.mainNavItems || defaultPreferences.mainNavItems;
+  
+  const mainNavItems = useMemo(() => {
+    return currentPrefs.mainNavItems
+      .map(key => allNavItems.find(item => item.key === key))
+      .filter((item): item is NavItem => item !== undefined);
+  }, [currentPrefs.mainNavItems]);
 
-  const orderedItems = useCallback(() => {
-    const mainItems = currentMainItems.slice(0, 4);
-    const allKeys = allNavItems.map(item => item.key);
-    
-    const orderedList: NavItem[] = [];
-    mainItems.forEach(key => {
-      const item = allNavItems.find(i => i.key === key);
-      if (item) orderedList.push(item);
-    });
-    
-    allKeys.forEach(key => {
-      if (!mainItems.includes(key)) {
-        const item = allNavItems.find(i => i.key === key);
-        if (item) orderedList.push(item);
-      }
-    });
-    
-    return orderedList;
-  }, [currentMainItems]);
+  const moreMenuItems = useMemo(() => {
+    return allNavItems.filter(item => !currentPrefs.mainNavItems.includes(item.key));
+  }, [currentPrefs.mainNavItems]);
 
-  const handleToggleMain = (key: string) => {
-    const isCurrentlyMain = currentMainItems.includes(key);
-    let newMainItems: string[];
-    
-    if (isCurrentlyMain) {
-      if (currentMainItems.length <= 3) {
-        toast({
-          title: "至少需要3个主导航项",
-          description: "底部导航栏至少需要显示3个项目",
-          variant: "destructive",
-        });
-        return;
-      }
-      newMainItems = currentMainItems.filter(k => k !== key);
-    } else {
-      if (currentMainItems.length >= 4) {
-        toast({
-          title: "最多4个主导航项",
-          description: "底部导航栏最多显示4个项目（加上【更多】按钮）",
-          variant: "destructive",
-        });
-        return;
-      }
-      newMainItems = [...currentMainItems, key];
-    }
-    
-    updateMutation.mutate({ mainNavItems: newMainItems });
+  const handleDragStart = () => {
+    setIsDragging(true);
   };
 
-  const handleDragStart = (key: string) => {
-    if (currentMainItems.includes(key)) {
-      setDraggedItem(key);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent, key: string) => {
-    e.preventDefault();
-    if (draggedItem && currentMainItems.includes(key) && draggedItem !== key) {
-      setDragOverItem(key);
-    }
-  };
-
-  const handleDragEnd = () => {
-    if (draggedItem && dragOverItem && draggedItem !== dragOverItem) {
-      const mainItems = [...currentMainItems];
-      const fromIndex = mainItems.indexOf(draggedItem);
-      const toIndex = mainItems.indexOf(dragOverItem);
+  const handleDragEnd = (event: DragEndEvent) => {
+    setIsDragging(false);
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = currentPrefs.mainNavItems.indexOf(String(active.id));
+      const newIndex = currentPrefs.mainNavItems.indexOf(String(over.id));
       
-      if (fromIndex !== -1 && toIndex !== -1) {
-        mainItems.splice(fromIndex, 1);
-        mainItems.splice(toIndex, 0, draggedItem);
-        updateMutation.mutate({ mainNavItems: mainItems });
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove([...currentPrefs.mainNavItems], oldIndex, newIndex);
+        updateMutation.mutate({ mainNavItems: newOrder });
       }
     }
-    
-    setDraggedItem(null);
-    setDragOverItem(null);
   };
 
   const moveItem = (key: string, direction: 'up' | 'down') => {
-    const mainItems = [...currentMainItems];
-    const currentIndex = mainItems.indexOf(key);
+    const currentIndex = currentPrefs.mainNavItems.indexOf(key);
     
     if (currentIndex === -1) return;
     if (direction === 'up' && currentIndex === 0) return;
-    if (direction === 'down' && currentIndex === mainItems.length - 1) return;
+    if (direction === 'down' && currentIndex === currentPrefs.mainNavItems.length - 1) return;
     
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    [mainItems[currentIndex], mainItems[targetIndex]] = [mainItems[targetIndex], mainItems[currentIndex]];
+    const newOrder = arrayMove([...currentPrefs.mainNavItems], currentIndex, targetIndex);
     
-    updateMutation.mutate({ mainNavItems: mainItems });
+    updateMutation.mutate({ mainNavItems: newOrder });
   };
 
-  const items = orderedItems();
-  const mainNavItems = items.filter(item => currentMainItems.includes(item.key));
-  const moreMenuItems = items.filter(item => !currentMainItems.includes(item.key));
+  const handleToggleMain = (key: string) => {
+    const newMainItems = currentPrefs.mainNavItems.filter(k => k !== key);
+    updateMutation.mutate({ mainNavItems: newMainItems });
+  };
+
+  const handleAddToMain = (key: string) => {
+    if (currentPrefs.mainNavItems.length >= 4) {
+      toast({
+        title: "已达到上限",
+        description: "底部导航栏最多显示4个项目",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const newMainItems = [...currentPrefs.mainNavItems, key];
+    updateMutation.mutate({ mainNavItems: newMainItems });
+  };
 
   if (isLoading) {
     return (
@@ -231,68 +315,28 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
         <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium mb-2 text-muted-foreground">主导航栏（拖拽排序）</h3>
-            <div className="space-y-2">
-              {mainNavItems.map((item, index) => {
-                const isDragging = draggedItem === item.key;
-                const isDragOver = dragOverItem === item.key;
-                const Icon = item.icon;
-                
-                return (
-                  <div
-                    key={item.key}
-                    draggable
-                    onDragStart={() => handleDragStart(item.key)}
-                    onDragOver={(e) => handleDragOver(e, item.key)}
-                    onDragEnd={handleDragEnd}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchMove={(e) => e.stopPropagation()}
-                    className={`
-                      flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move no-select
-                      ${isDragging ? 'opacity-50 bg-muted' : ''}
-                      ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
-                    `}
-                    style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                    data-testid={`nav-item-${item.key}`}
-                  >
-                    <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <Icon className="w-4 h-4 text-primary shrink-0" />
-                    <span className="flex-1 text-sm font-medium">{item.label}</span>
-                    
-                    <div className="flex items-center gap-1 shrink-0">
-                      <div className="flex flex-col">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => moveItem(item.key, 'up')}
-                          disabled={index === 0 || updateMutation.isPending}
-                          data-testid={`button-move-up-${item.key}`}
-                        >
-                          <ChevronUp className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => moveItem(item.key, 'down')}
-                          disabled={index === mainNavItems.length - 1 || updateMutation.isPending}
-                          data-testid={`button-move-down-${item.key}`}
-                        >
-                          <ChevronDown className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      
-                      <Switch
-                        checked={true}
-                        onCheckedChange={() => handleToggleMain(item.key)}
-                        disabled={updateMutation.isPending}
-                        data-testid={`switch-${item.key}`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={currentPrefs.mainNavItems} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {mainNavItems.map((item, index) => (
+                    <SortableNavItem
+                      key={item.key}
+                      item={item}
+                      index={index}
+                      total={mainNavItems.length}
+                      onMove={moveItem}
+                      onToggle={handleToggleMain}
+                      isPending={updateMutation.isPending}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
           
           <div>
@@ -300,21 +344,20 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
             <div className="space-y-2">
               {moreMenuItems.map((item) => {
                 const Icon = item.icon;
-                
                 return (
                   <div
                     key={item.key}
-                    className="flex items-center gap-2 p-3 rounded-lg border border-border/50 hover:border-border transition-all"
-                    data-testid={`nav-item-${item.key}`}
+                    className="flex items-center gap-2 p-3 rounded-lg border border-border/50"
+                    data-testid={`more-item-${item.key}`}
                   >
+                    <div className="w-4" />
                     <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="flex-1 text-sm">{item.label}</span>
-                    
+                    <span className="flex-1 text-sm text-muted-foreground">{item.label}</span>
                     <Switch
                       checked={false}
-                      onCheckedChange={() => handleToggleMain(item.key)}
-                      disabled={updateMutation.isPending || currentMainItems.length >= 4}
-                      data-testid={`switch-${item.key}`}
+                      onCheckedChange={() => handleAddToMain(item.key)}
+                      disabled={updateMutation.isPending || currentPrefs.mainNavItems.length >= 4}
+                      data-testid={`switch-add-${item.key}`}
                     />
                   </div>
                 );
