@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getCurrencyInfo } from "@shared/schema";
+import { PieChartIcon } from "lucide-react";
 
 interface CategoryBreakdown {
   categoryId: number;
@@ -65,68 +65,65 @@ export function ExpenseChart({ data, currency = "MYR", isLoading }: ExpenseChart
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">支出分类</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px] flex items-center justify-center">
-            <div className="animate-pulse text-muted-foreground">加载中...</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2 mb-3">
+          <PieChartIcon className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium">支出分类</span>
+        </div>
+        <div className="h-[200px] flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground text-sm">加载中...</div>
+        </div>
+      </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">支出分类</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-            暂无数据
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2 mb-3">
+          <PieChartIcon className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium">支出分类</span>
+        </div>
+        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+          暂无数据
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center justify-between">
-          支出分类
-          <span className="text-sm font-normal text-muted-foreground">
-            总计: {currencyInfo.symbol}{total.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px]" data-testid="chart-expense-pie">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend content={renderLegend} />
-            </PieChart>
-          </ResponsiveContainer>
+    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <PieChartIcon className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium">支出分类</span>
         </div>
-      </CardContent>
-    </Card>
+        <span className="text-xs text-muted-foreground">
+          总计: {currencyInfo.symbol}{total.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
+        </span>
+      </div>
+      <div className="h-[220px]" data-testid="chart-expense-pie">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={45}
+              outerRadius={70}
+              paddingAngle={2}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+            <Legend content={renderLegend} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
