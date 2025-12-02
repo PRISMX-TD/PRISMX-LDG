@@ -5,39 +5,83 @@
 @tailwind utilities;
 
 /* Prevent Text Selection on Draggable Elements (PWA Long Press Fix) */
-.no-select {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
+.no-select,
+.no-select *,
+.no-select *::before,
+.no-select *::after {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-/* Apply no-select to all native draggable elements */
-[draggable="true"] {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: pan-y;
+/* Apply no-select to all native draggable elements and their children */
+[draggable="true"],
+[draggable="true"] *,
+[draggable="true"] *::before,
+[draggable="true"] *::after {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: none !important;
 }
 
 /* Apply no-select to @dnd-kit sortable/draggable elements */
 .touch-none,
+.touch-none *,
 [data-testid^="drag-handle-"],
+[data-testid^="drag-handle-"] *,
 [data-testid^="card-item-"],
+[data-testid^="card-item-"] *,
 [data-testid^="nav-item-"],
+[data-testid^="nav-item-"] *,
 [data-testid^="type-group-"],
-[data-testid^="wallet-in-type-"] {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
+[data-testid^="type-group-"] *,
+[data-testid^="wallet-in-type-"],
+[data-testid^="wallet-in-type-"] *,
+[data-testid^="sortable-card-"],
+[data-testid^="sortable-card-"] * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Mobile-specific aggressive no-select for draggable containers */
+@media (pointer: coarse), (hover: none) {
+  .no-select,
+  [draggable="true"],
+  .cursor-move,
+  .cursor-grab,
+  .cursor-grabbing {
+    touch-action: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-drag: none !important;
+  }
+  
+  .no-select *,
+  [draggable="true"] *,
+  .cursor-move *,
+  .cursor-grab *,
+  .cursor-grabbing * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
 }
 
 /* Re-enable selection for input fields */
 input, textarea, [contenteditable="true"] {
-  -webkit-user-select: auto;
-  user-select: auto;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+  -webkit-touch-callout: default !important;
 }
 
 /* Mobile Safe Area Support */

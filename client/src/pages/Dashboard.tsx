@@ -126,8 +126,10 @@ function SortableWalletCard({ wallet, onClick, isReorderMode }: SortableWalletCa
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' } as React.CSSProperties}
       className={`relative touch-none no-select ${isReorderMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      onTouchStart={(e) => isReorderMode && e.stopPropagation()}
+      onTouchMove={(e) => isReorderMode && e.stopPropagation()}
       {...(isReorderMode ? { ...attributes, ...listeners } : {})}
     >
       {isReorderMode && (

@@ -1253,11 +1253,14 @@ export default function Analytics() {
                   onDragStart={() => handleDragStart(item.key)}
                   onDragOver={(e) => handleDragOver(e, item.key)}
                   onDragEnd={handleDragEnd}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
                   className={`
                     flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-move no-select
                     ${isDragging ? 'opacity-50 bg-muted' : ''}
                     ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
                   `}
+                  style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                   data-testid={`card-item-${item.key}`}
                 >
                   <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />

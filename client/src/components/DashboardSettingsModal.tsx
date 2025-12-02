@@ -427,11 +427,14 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
                     onDragStart={() => handleDragStart(item.key)}
                     onDragOver={(e) => handleDragOver(e, item.key)}
                     onDragEnd={handleDragEnd}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
                     className={`
                       flex items-center gap-2 p-3 rounded-lg border transition-all cursor-move no-select
                       ${isDragging ? 'opacity-50 bg-muted' : ''}
                       ${isDragOver ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border'}
                     `}
+                    style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                     data-testid={`card-item-${item.key}`}
                   >
                     <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -502,7 +505,10 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
                       onDragStart={() => handleTypeDragStart(type)}
                       onDragOver={(e) => handleTypeDragOver(e, type)}
                       onDragEnd={handleTypeDragEnd}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
                       className="flex items-center gap-2 p-2 cursor-move no-select"
+                      style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                       data-testid={`type-item-${type}`}
                     >
                       <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -550,11 +556,14 @@ export function DashboardSettingsModal({ open, onOpenChange }: DashboardSettings
                               onDragStart={() => handleWalletDragStart(type, wallet.id)}
                               onDragOver={(e) => handleWalletDragOver(e, type, wallet.id)}
                               onDragEnd={handleWalletDragEnd}
+                              onTouchStart={(e) => e.stopPropagation()}
+                              onTouchMove={(e) => e.stopPropagation()}
                               className={`
                                 flex items-center gap-2 p-2 pl-8 rounded border cursor-move text-sm no-select
                                 ${isDraggingWallet ? 'opacity-50 bg-muted' : ''}
                                 ${isDragOverWallet ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50'}
                               `}
+                              style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                               data-testid={`wallet-item-${wallet.id}`}
                             >
                               <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
