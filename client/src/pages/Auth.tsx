@@ -44,11 +44,13 @@ export default function Auth() {
     }
   }
 
+  const defaultTab = (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'register') ? 'register' : 'login';
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6">
         <h1 className="text-2xl font-semibold text-center">登录或注册</h1>
-        <Tabs defaultValue="login">
+        <Tabs defaultValue={defaultTab}>
           <TabsList className="w-full">
             <TabsTrigger value="login" className="flex-1">登录</TabsTrigger>
             <TabsTrigger value="register" className="flex-1">注册</TabsTrigger>

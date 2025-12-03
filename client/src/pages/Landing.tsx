@@ -59,9 +59,14 @@ export default function Landing() {
               <span className="text-xs text-muted-foreground -mt-1">Ledger</span>
             </div>
           </div>
-          <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-login">
-            <a href="/auth">登录</a>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-login">
+              <a href="/auth">登录</a>
+            </Button>
+            <Button asChild variant="outline" className="border-primary/30 hover:bg-primary/10 hover:border-primary/50" data-testid="button-register">
+              <a href="/auth?tab=register">注册</a>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -88,31 +93,7 @@ export default function Landing() {
                 <a href="#features">了解更多</a>
               </Button>
             </div>
-            <div className="mt-8 flex flex-col items-center gap-3">
-              <p className="text-sm text-muted-foreground">支持以下方式登录</p>
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-google">
-                  <SiGoogle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="text-xs text-muted-foreground hidden sm:inline">Google</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-github">
-                  <SiGithub className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="text-xs text-muted-foreground hidden sm:inline">GitHub</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-x">
-                  <RiTwitterXFill className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="text-xs text-muted-foreground hidden sm:inline">X</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-apple">
-                  <SiApple className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="text-xs text-muted-foreground hidden sm:inline">Apple</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted/50 border border-border/50" data-testid="badge-email">
-                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="text-xs text-muted-foreground hidden sm:inline">邮箱</span>
-                </div>
-              </div>
-            </div>
+            {/* 移除第三方登录展示 */}
           </div>
         </section>
 
