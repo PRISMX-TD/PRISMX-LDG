@@ -1970,7 +1970,8 @@ export async function registerRoutes(
       };
 
       const apiKey = process.env.DEEPSEEK_API_KEY;
-      if (!apiKey) {
+      const skipAi = (req.query.skipAi === 'true') || (req.query.mode === 'metrics');
+      if (!apiKey || skipAi) {
         return res.json({ metrics, ai: null, aiEnabled: false, message: '未配置 DEEPSEEK_API_KEY，仅返回确定性体检指标' });
       }
 
@@ -1981,6 +1982,8 @@ export async function registerRoutes(
         '输出 JSON，结构为 {summary, insights: [{title, explanation, relatedMetrics}], actions: [{title, impact, effort, steps}], disclaimer}。',
       ].join('\n');
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -1996,7 +1999,9 @@ export async function registerRoutes(
             { role: 'user', content: JSON.stringify(metrics) },
           ],
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!resp.ok) {
         const text = await resp.text();
@@ -2013,8 +2018,12 @@ export async function registerRoutes(
       }
 
       res.json({ metrics, ai: aiJson, aiEnabled: true });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating AI insights:', error);
+      const aborted = (error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error.message || ''))));
+      if (aborted) {
+        return res.status(504).json({ metrics: undefined, ai: null, aiEnabled: true, message: 'DeepSeek 请求超时' });
+      }
       res.status(500).json({ message: 'Failed to generate AI insights' });
     }
   });
