@@ -62,6 +62,7 @@ function AuthenticatedLayout() {
               </header>
               <main className="flex-1 overflow-auto">
                 <Switch>
+                  <Route path="/auth" component={Dashboard} />
                   <Route path="/" component={Dashboard} />
                   <Route path="/transactions" component={Transactions} />
                   <Route path="/categories" component={Categories} />
@@ -89,6 +90,7 @@ function AuthenticatedLayout() {
         <MobileHeader user={user} />
         <main className="flex-1 overflow-auto pb-20">
           <Switch>
+            <Route path="/auth" component={Dashboard} />
             <Route path="/" component={Dashboard} />
             <Route path="/transactions" component={Transactions} />
             <Route path="/categories" component={Categories} />
