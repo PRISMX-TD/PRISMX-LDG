@@ -7,8 +7,28 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import crypto from "crypto";
 
 const isAuthDisabled = process.env.DISABLE_AUTH === "true";
+const isLocalAuth = process.env.LOCAL_AUTH === "true";
+
+function hashPassword(password: string) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(password, salt, 64);
+  return `scrypt:${salt.toString("hex")}:${hash.toString("hex")}`;
+}
+
+function verifyPassword(password: string, stored: string) {
+  const [method, saltHex, hashHex] = stored.split(":");
+  if (method !== "scrypt" || !saltHex || !hashHex) return false;
+  const salt = Buffer.from(saltHex, "hex");
+  const expected = Buffer.from(hashHex, "hex");
+  const actual = crypto.scryptSync(password, salt, expected.length);
+  return crypto.timingSafeEqual(actual, expected);
+}
 const getOidcConfig = memoize(
   async () => {
     return await client.discovery(
@@ -70,6 +90,52 @@ async function upsertUser(claims: any) {
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
+
+  if (isLocalAuth) {
+    app.use(getSession());
+    app.post("/api/register", async (req, res) => {
+      try {
+        const { email, password, firstName, lastName } = req.body || {};
+        if (!email || !password || typeof email !== "string" || typeof password !== "string") {
+          return res.status(400).json({ message: "Email and password required" });
+        }
+        const existing = await db.select().from(users).where(eq(users.email, email));
+        if (existing.length > 0) {
+          return res.status(409).json({ message: "Email already registered" });
+        }
+        const passwordHash = hashPassword(password);
+        const id = crypto.randomUUID();
+        const [created] = await db.insert(users).values({ id, email, passwordHash, firstName, lastName }).returning();
+        (req as any).session.userId = created.id;
+        res.status(201).json(created);
+      } catch (e) {
+        res.status(500).json({ message: "Registration failed" });
+      }
+    });
+
+    app.post("/api/login", async (req, res) => {
+      try {
+        const { email, password } = req.body || {};
+        if (!email || !password) {
+          return res.status(400).json({ message: "Email and password required" });
+        }
+        const rows = await db.select().from(users).where(eq(users.email, email));
+        const user = rows[0];
+        if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        }
+        (req as any).session.userId = user.id;
+        res.json(user);
+      } catch (e) {
+        res.status(500).json({ message: "Login failed" });
+      }
+    });
+
+    app.post("/api/logout", (req, res) => {
+      (req as any).session?.destroy(() => res.status(204).send());
+    });
+    return;
+  }
 
   if (isAuthDisabled) {
     app.use((req, _res, next) => {
@@ -153,6 +219,12 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (isLocalAuth) {
+    const sid = (req as any).session?.userId;
+    if (!sid) return res.status(401).json({ message: "Unauthorized" });
+    (req as any).user = { claims: { sub: sid } };
+    return next();
+  }
   if (isAuthDisabled) {
     return next();
   }
