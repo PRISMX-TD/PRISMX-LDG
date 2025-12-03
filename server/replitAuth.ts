@@ -99,6 +99,16 @@ export async function setupAuth(app: Express) {
 
   if (isLocalAuth) {
     app.use(getSession());
+    app.get("/api/login", async (req, res) => {
+      const id = (req.header("x-user-id") || "demo-user") as string;
+      try {
+        await storage.upsertUser({ id });
+        (req as any).session.userId = id;
+        res.redirect("/");
+      } catch {
+        res.status(500).json({ message: "Login failed" });
+      }
+    });
     app.post("/api/register", async (req, res) => {
       try {
         const { email, password, firstName, lastName } = req.body || {};
@@ -139,6 +149,9 @@ export async function setupAuth(app: Express) {
 
     app.post("/api/logout", (req, res) => {
       (req as any).session?.destroy(() => res.status(204).send());
+    });
+    app.get("/api/logout", (req, res) => {
+      (req as any).session?.destroy(() => res.redirect("/"));
     });
     return;
   }
