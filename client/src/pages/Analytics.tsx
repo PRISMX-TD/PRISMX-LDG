@@ -86,6 +86,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CHART_COLORS = [
   "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE",
@@ -228,7 +229,7 @@ export default function Analytics() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [timePeriod, setTimePeriod] = useState<"year" | "month" | "week">("year");
-  const [dataView, setDataView] = useState<"overview" | "income" | "expense" | "savings">("overview");
+  const [dataView, setDataView] = useState<"overview" | "income" | "expense" | "savings" | "ai">("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedSubLedgerId, setSelectedSubLedgerId] = useState<string>("all");
@@ -739,6 +740,7 @@ export default function Analytics() {
             { key: "income", label: "收入", icon: TrendingUp },
             { key: "expense", label: "支出", icon: TrendingDown },
             { key: "savings", label: "储蓄", icon: Wallet },
+            { key: "ai", label: "AI 建议", icon: Activity },
           ].map((item) => (
             <TabsTrigger
               key={item.key}
@@ -837,6 +839,8 @@ export default function Analytics() {
       {/* Overview View */}
       {dataView === "overview" && (
         <div className="space-y-4">
+          {/* AI Insights summary slice for overview (mobile-first grid) */}
+          <AiInsightsSection compact />
           {/* Trend Chart */}
           {preferences.showMonthlyTrend && (
             <Card className="border-0 bg-card/50" data-testid="card-monthly-trend">
@@ -1104,6 +1108,13 @@ export default function Analytics() {
               </CardContent>
             </Card>
           )}
+        </div>
+      )}
+
+      {/* AI View */}
+      {dataView === "ai" && (
+        <div className="space-y-4">
+          <AiInsightsSection />
         </div>
       )}
 
@@ -1399,5 +1410,138 @@ export default function Analytics() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+interface AiResponse {
+  metrics: {
+    rangeMonths: number;
+    totalIncome: number;
+    totalExpense: number;
+    avgMonthlyExpense: number;
+    savingsRate: number;
+    emergencyFundMonths: number | null;
+    monthly: Record<string, { income: number; expense: number }>;
+    topExpenseCategories: { categoryId: number; categoryName: string; total: number; color: string }[];
+    budgetDeviations: { categoryId: number; categoryName: string; budget: number; spent: number; deviation: number; color: string }[];
+    topRecurringPayments: { amount: number; months: number; categoryName: string; walletName: string; sampleDate: string | null }[];
+  };
+  ai: {
+    summary?: string;
+    insights?: { title: string; explanation: string; relatedMetrics?: string[] }[];
+    actions?: { title: string; impact?: string; effort?: string; steps?: string[] }[];
+    disclaimer?: string;
+  } | null;
+  aiEnabled: boolean;
+  message?: string;
+}
+
+function AiInsightsSection({ compact = false }: { compact?: boolean }) {
+  const { isAuthenticated } = useAuth();
+  const [rangeMonths, setRangeMonths] = useState<string>("6");
+  const [onlyMetrics, setOnlyMetrics] = useState(false);
+
+  const queryKey = useMemo(() => {
+    return ["/api", "ai", `insights?rangeMonths=${rangeMonths}${onlyMetrics ? "&skipAi=true" : ""}`];
+  }, [rangeMonths, onlyMetrics]);
+
+  const { data, isLoading, refetch } = useQuery<AiResponse>({
+    queryKey,
+    enabled: isAuthenticated,
+  });
+
+  const currency = getCurrencyInfo(undefined as any)?.symbol || "RM";
+
+  return (
+    <Card className="border-0 bg-card/50">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Activity className="w-4 h-4 text-primary" />
+          AI 建议
+        </CardTitle>
+        <div className="flex items-center gap-2">
+          <Select value={rangeMonths} onValueChange={(v) => setRangeMonths(v)}>
+            <SelectTrigger className="w-24 h-8" data-testid="select-ai-range-analytics">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">近3个月</SelectItem>
+              <SelectItem value="6">近6个月</SelectItem>
+              <SelectItem value="12">近12个月</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">仅指标</span>
+            <Switch checked={onlyMetrics} onCheckedChange={setOnlyMetrics} data-testid="switch-only-metrics-analytics" />
+          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-ai-analytics">刷新</Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : !data ? (
+          <p className="text-sm text-muted-foreground">暂无数据</p>
+        ) : (
+          <div className="space-y-4">
+            {data.ai?.summary && (
+              <p className="text-sm leading-relaxed">{data.ai.summary}</p>
+            )}
+            <div className={`grid gap-3 ${compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">关键指标</h3>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <div>储蓄率：{(data.metrics.savingsRate * 100).toFixed(1)}%</div>
+                  <div>应急金月数：{data.metrics.emergencyFundMonths == null ? "未知" : data.metrics.emergencyFundMonths.toFixed(2)}</div>
+                  <div>平均月支出：{currency}{data.metrics.avgMonthlyExpense.toFixed(2)}</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">当月预算偏差 Top</h3>
+                {data.metrics.budgetDeviations.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">暂无偏差</p>
+                ) : (
+                  <ul className="text-xs space-y-1">
+                    {data.metrics.budgetDeviations.map((b) => (
+                      <li key={b.categoryId}>{b.categoryName} 超支 {currency}{b.deviation.toFixed(2)}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            {data.ai?.actions && data.ai.actions.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">可执行建议</h3>
+                <ul className="space-y-2">
+                  {data.ai.actions.map((a, idx) => (
+                    <li key={idx} className="text-sm">
+                      <div className="font-medium">{a.title}</div>
+                      {a.steps && a.steps.length > 0 && (
+                        <ol className="list-decimal ml-5 text-xs text-muted-foreground space-y-1">
+                          {a.steps.map((s, i) => (<li key={i}>{s}</li>))}
+                        </ol>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!onlyMetrics && data.aiEnabled === false && (
+              <p className="text-xs text-muted-foreground">AI 未启用：{data.message || "未配置密钥"}</p>
+            )}
+            {onlyMetrics && (
+              <p className="text-xs text-muted-foreground">当前为仅指标模式</p>
+            )}
+            {data.ai?.disclaimer && (
+              <p className="text-xs text-muted-foreground">{data.ai.disclaimer}</p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
