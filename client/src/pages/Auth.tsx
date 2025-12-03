@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 export default function Auth() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -20,6 +22,7 @@ export default function Auth() {
     try {
       setLoading(true);
       await apiRequest("POST", "/api/login", { email, password });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/");
     } catch (e: any) {
       toast({ title: "登录失败", description: e.message, variant: "destructive" });
@@ -32,6 +35,7 @@ export default function Auth() {
     try {
       setLoading(true);
       await apiRequest("POST", "/api/register", { email, password, firstName, lastName });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/");
     } catch (e: any) {
       toast({ title: "注册失败", description: e.message, variant: "destructive" });
