@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import createMemoryStore from "memorystore";
 import { storage } from "./storage";
 import { db } from "./db";
 import { users } from "@shared/schema";
@@ -45,13 +46,20 @@ export function getSession() {
   }
   
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  let sessionStore: session.Store;
+  const storeType = (process.env.SESSION_STORE || (process.env.LOCAL_AUTH === "true" ? "memory" : "pg")).toLowerCase();
+  if (storeType === "pg" && process.env.DATABASE_URL) {
+    const PgStore = connectPg(session);
+    sessionStore = new PgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    });
+  } else {
+    const MemoryStore = createMemoryStore(session);
+    sessionStore = new MemoryStore({ checkPeriod: sessionTtl });
+  }
   
   const isProduction = process.env.NODE_ENV === "production";
   
