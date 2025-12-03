@@ -6,7 +6,6 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import createMemoryStore from "memorystore";
 import { storage } from "./storage";
 import { db } from "./db";
 import { users } from "@shared/schema";
@@ -57,8 +56,7 @@ export function getSession() {
       tableName: "sessions",
     });
   } else {
-    const MemoryStore = createMemoryStore(session);
-    sessionStore = new MemoryStore({ checkPeriod: sessionTtl });
+    sessionStore = new session.MemoryStore();
   }
   
   const isProduction = process.env.NODE_ENV === "production";
