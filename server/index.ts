@@ -22,6 +22,10 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, port: process.env.PORT, env: process.env.NODE_ENV, authDisabled: process.env.DISABLE_AUTH });
+});
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
