@@ -117,7 +117,6 @@ export async function setupAuth(app: Express) {
         const passwordHash = hashPassword(password);
         const id = crypto.randomUUID();
         const [created] = await db.insert(users).values({ id, email, passwordHash, firstName, lastName }).returning();
-        (req as any).session.userId = created.id;
         res.status(201).json(created);
       } catch (e) {
         res.status(500).json({ message: "Registration failed" });

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
@@ -17,6 +18,7 @@ export default function Auth() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   async function handleLogin() {
     try {
@@ -35,8 +37,11 @@ export default function Auth() {
     try {
       setLoading(true);
       await apiRequest("POST", "/api/register", { email, password, firstName, lastName });
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/");
+      setSuccessOpen(true);
+      setTimeout(() => {
+        setSuccessOpen(false);
+        setLocation("/auth");
+      }, 2000);
     } catch (e: any) {
       toast({ title: "注册失败", description: e.message, variant: "destructive" });
     } finally {
@@ -90,6 +95,16 @@ export default function Auth() {
             <Button className="w-full" disabled={loading} onClick={handleRegister}>注册并登录</Button>
           </TabsContent>
         </Tabs>
+        <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+          <DialogContent className="sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>注册成功</DialogTitle>
+              <DialogDescription>
+                2 秒后将跳转到登录页面，请使用刚注册的邮箱和密码登录
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
         <Button variant="ghost" className="w-full" asChild>
           <a href="/">返回首页</a>
         </Button>
