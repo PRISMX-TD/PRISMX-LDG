@@ -329,7 +329,7 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(categories)
       .set(data)
-      .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+      .where(and(eq(categories.id, id), eq(categories.userId, userId), eq(categories.isDefault, false)))
       .returning();
     return updated;
   }
@@ -337,7 +337,7 @@ export class DatabaseStorage implements IStorage {
   async deleteCategory(id: number, userId: string): Promise<boolean> {
     const result = await db
       .delete(categories)
-      .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+      .where(and(eq(categories.id, id), eq(categories.userId, userId), eq(categories.isDefault, false)))
       .returning();
     return result.length > 0;
   }
@@ -831,50 +831,57 @@ export class DatabaseStorage implements IStorage {
 
   // Initialize default data for new users with idempotent inserts
   async initializeUserDefaults(userId: string, defaultCurrency: string = "MYR"): Promise<void> {
-    // Check if user already has wallets (not a new user)
+    // Ensure default wallets exist
     const existingWallets = await this.getWallets(userId);
-    if (existingWallets.length > 0) {
-      return;
+    if (existingWallets.length === 0) {
+      const walletInserts = defaultWallets.map((wallet) => ({
+        userId,
+        name: wallet.name,
+        type: wallet.type,
+        currency: defaultCurrency,
+        icon: wallet.icon,
+        color: wallet.color,
+        isDefault: wallet.isDefault,
+        balance: "0",
+      }));
+      await db.insert(wallets).values(walletInserts);
     }
 
-    // Create default wallets using batch insert with currency
-    const walletInserts = defaultWallets.map((wallet) => ({
-      userId,
-      name: wallet.name,
-      type: wallet.type,
-      currency: defaultCurrency,
-      icon: wallet.icon,
-      color: wallet.color,
-      isDefault: wallet.isDefault,
-      balance: "0",
-    }));
+    // Ensure default categories exist (insert missing ones only)
+    const existingCategories = await this.getCategories(userId);
+    const existingKey = new Set(
+      existingCategories.map((c) => `${c.type}:${c.name}`)
+    );
 
-    // Insert all wallets at once
-    await db.insert(wallets).values(walletInserts);
+    const missingExpense = defaultExpenseCategories
+      .filter((c) => !existingKey.has(`expense:${c.name}`))
+      .map((category) => ({
+        userId,
+        name: category.name,
+        type: "expense" as const,
+        icon: category.icon,
+        color: category.color,
+        isDefault: true,
+      }));
 
-    // Create default expense categories
-    const expenseCategoryInserts = defaultExpenseCategories.map((category) => ({
-      userId,
-      name: category.name,
-      type: "expense" as const,
-      icon: category.icon,
-      color: category.color,
-      isDefault: true,
-    }));
+    if (missingExpense.length > 0) {
+      await db.insert(categories).values(missingExpense);
+    }
 
-    await db.insert(categories).values(expenseCategoryInserts);
+    const missingIncome = defaultIncomeCategories
+      .filter((c) => !existingKey.has(`income:${c.name}`))
+      .map((category) => ({
+        userId,
+        name: category.name,
+        type: "income" as const,
+        icon: category.icon,
+        color: category.color,
+        isDefault: true,
+      }));
 
-    // Create default income categories
-    const incomeCategoryInserts = defaultIncomeCategories.map((category) => ({
-      userId,
-      name: category.name,
-      type: "income" as const,
-      icon: category.icon,
-      color: category.color,
-      isDefault: true,
-    }));
-
-    await db.insert(categories).values(incomeCategoryInserts);
+    if (missingIncome.length > 0) {
+      await db.insert(categories).values(missingIncome);
+    }
   }
 }
 

@@ -132,6 +132,11 @@ export function CategoryModal({
       return;
     }
 
+    if (isEdit && !!category?.isDefault) {
+      toast({ title: "默认分类不能编辑", variant: "destructive" });
+      return;
+    }
+
     if (isEdit) {
       updateMutation.mutate({ name: name.trim(), icon, color });
     } else {
@@ -151,13 +156,14 @@ export function CategoryModal({
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="name">分类名称</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="输入分类名称"
-              data-testid="input-category-name"
-            />
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="输入分类名称"
+            data-testid="input-category-name"
+            disabled={isEdit && !!category?.isDefault}
+          />
           </div>
 
           {!isEdit && (
@@ -177,7 +183,7 @@ export function CategoryModal({
 
           <div className="space-y-2">
             <Label>图标</Label>
-            <Select value={icon} onValueChange={setIcon}>
+            <Select value={icon} onValueChange={setIcon} disabled={isEdit && !!category?.isDefault}>
               <SelectTrigger data-testid="select-category-icon">
                 <SelectValue />
               </SelectTrigger>
@@ -203,6 +209,7 @@ export function CategoryModal({
                   }`}
                   style={{ backgroundColor: c }}
                   onClick={() => setColor(c)}
+                  disabled={isEdit && !!category?.isDefault}
                   data-testid={`button-color-${c.replace("#", "")}`}
                 />
               ))}
@@ -235,7 +242,7 @@ export function CategoryModal({
             >
               取消
             </Button>
-            <Button type="submit" disabled={isPending} className="flex-1 h-11" data-testid="button-save-category">
+            <Button type="submit" disabled={isPending || (isEdit && !!category?.isDefault)} className="flex-1 h-11" data-testid="button-save-category">
               {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isEdit ? "保存" : "创建"}
             </Button>

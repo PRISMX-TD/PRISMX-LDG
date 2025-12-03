@@ -117,6 +117,7 @@ export async function setupAuth(app: Express) {
         const passwordHash = hashPassword(password);
         const id = crypto.randomUUID();
         const [created] = await db.insert(users).values({ id, email, passwordHash, firstName, lastName }).returning();
+        await storage.initializeUserDefaults(created.id, created.defaultCurrency);
         res.status(201).json(created);
       } catch (e) {
         res.status(500).json({ message: "Registration failed" });
@@ -135,6 +136,7 @@ export async function setupAuth(app: Express) {
           return res.status(401).json({ message: "Invalid credentials" });
         }
         (req as any).session.userId = user.id;
+        await storage.initializeUserDefaults(user.id, user.defaultCurrency);
         res.json(user);
       } catch (e) {
         res.status(500).json({ message: "Login failed" });

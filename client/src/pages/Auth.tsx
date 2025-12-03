@@ -106,7 +106,7 @@ export default function Auth() {
             <DialogHeader>
               <DialogTitle>注册成功</DialogTitle>
               <DialogDescription>
-                2 秒后将跳转到登录页面，请使用刚注册的邮箱和密码登录
+                2 秒后将自动切换到“登录”选项卡，请使用刚注册的邮箱和密码登录
               </DialogDescription>
             </DialogHeader>
           </DialogContent>

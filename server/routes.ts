@@ -448,6 +448,9 @@ export async function registerRoutes(
       if (!existingCategory) {
         return res.status(404).json({ message: "Category not found" });
       }
+      if (existingCategory.isDefault) {
+        return res.status(400).json({ message: "Cannot update default category" });
+      }
       
       const updateData: any = {};
       if (name !== undefined) {
