@@ -19,6 +19,8 @@ export default function Auth() {
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleLogin() {
     try {
@@ -40,10 +42,11 @@ export default function Auth() {
       setSuccessOpen(true);
       setTimeout(() => {
         setSuccessOpen(false);
-        setLocation("/auth");
+        setLocation("/auth?tab=login");
       }, 2000);
     } catch (e: any) {
-      toast({ title: "注册失败", description: e.message, variant: "destructive" });
+      setErrorMessage(e?.message || "注册失败");
+      setErrorOpen(true);
     } finally {
       setLoading(false);
     }
@@ -101,6 +104,18 @@ export default function Auth() {
               <DialogTitle>注册成功</DialogTitle>
               <DialogDescription>
                 2 秒后将跳转到登录页面，请使用刚注册的邮箱和密码登录
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={errorOpen} onOpenChange={setErrorOpen}>
+          <DialogContent className="sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>注册失败</DialogTitle>
+              <DialogDescription>
+                {errorMessage.includes('409') || errorMessage.includes('already registered')
+                  ? '该邮箱已注册，请直接登录'
+                  : errorMessage}
               </DialogDescription>
             </DialogHeader>
           </DialogContent>
