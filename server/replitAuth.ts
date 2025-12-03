@@ -8,6 +8,7 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
+const isAuthDisabled = process.env.DISABLE_AUTH === "true";
 const getOidcConfig = memoize(
   async () => {
     return await client.discovery(
@@ -69,6 +70,20 @@ async function upsertUser(claims: any) {
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
+
+  if (isAuthDisabled) {
+    app.use((req, _res, next) => {
+      (req as any).user = { claims: { sub: req.header("x-user-id") || "demo-user" } };
+      (req as any).isAuthenticated = () => true;
+      next();
+    });
+
+    app.get("/api/login", (_req, res) => res.redirect("/"));
+    app.get("/api/callback", (_req, res) => res.redirect("/"));
+    app.get("/api/logout", (_req, res) => res.redirect("/"));
+    return;
+  }
+
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
@@ -138,6 +153,9 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (isAuthDisabled) {
+    return next();
+  }
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {

@@ -28,7 +28,10 @@ export async function registerRoutes(
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
+      if (!user && process.env.DISABLE_AUTH === 'true') {
+        user = await storage.upsertUser({ id: userId });
+      }
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
