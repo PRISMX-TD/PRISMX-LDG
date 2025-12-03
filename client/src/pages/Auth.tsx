@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +42,8 @@ export default function Auth() {
       setSuccessOpen(true);
       setTimeout(() => {
         setSuccessOpen(false);
-        setLocation("/auth?tab=login");
+        setTab("login");
+        loginPasswordRef.current?.focus();
       }, 2000);
     } catch (e: any) {
       setErrorMessage(e?.message || "注册失败");
@@ -53,12 +54,14 @@ export default function Auth() {
   }
 
   const defaultTab = (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'register') ? 'register' : 'login';
+  const [tab, setTab] = useState(defaultTab);
+  const loginPasswordRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6">
         <h1 className="text-2xl font-semibold text-center">登录或注册</h1>
-        <Tabs defaultValue={defaultTab}>
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="w-full">
             <TabsTrigger value="login" className="flex-1">登录</TabsTrigger>
             <TabsTrigger value="register" className="flex-1">注册</TabsTrigger>
@@ -71,7 +74,7 @@ export default function Auth() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="login-password">密码</Label>
-              <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} ref={loginPasswordRef} />
             </div>
             <Button className="w-full" disabled={loading} onClick={handleLogin}>登录</Button>
           </TabsContent>
