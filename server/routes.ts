@@ -1867,5 +1867,157 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/ai/insights', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const rangeMonths = req.query.rangeMonths ? Math.max(1, Math.min(24, parseInt(req.query.rangeMonths))) : 6;
+
+      const endDate = new Date();
+      const startDate = new Date(endDate);
+      startDate.setMonth(startDate.getMonth() - rangeMonths + 1);
+      startDate.setDate(1);
+
+      const transactions = await storage.getTransactions(userId, { startDate, endDate });
+      const walletsList = await storage.getWallets(userId);
+      const now = new Date();
+      const budgetsSpending = await storage.getBudgetSpending(userId, now.getMonth() + 1, now.getFullYear());
+
+      // Monthly aggregates
+      const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const monthly: Record<string, { income: number; expense: number }> = {};
+      let totalIncome = 0;
+      let totalExpense = 0;
+      for (const t of transactions) {
+        const amt = parseFloat(t.amount);
+        const key = monthKey(new Date(t.date));
+        if (!monthly[key]) monthly[key] = { income: 0, expense: 0 };
+        if (t.type === 'income') {
+          monthly[key].income += amt;
+          totalIncome += amt;
+        } else if (t.type === 'expense') {
+          monthly[key].expense += amt;
+          totalExpense += amt;
+        }
+      }
+      const distinctMonths = Object.keys(monthly).length || 1;
+      const avgMonthlyExpense = totalExpense / distinctMonths;
+      const savingsRate = totalIncome > 0 ? (totalIncome - totalExpense) / totalIncome : 0;
+
+      // Expense category breakdown
+      const stats = await storage.getTransactionStats(userId, startDate, endDate);
+      const topExpenseCategories = stats.categoryBreakdown.slice(0, 5);
+
+      // Emergency fund months: sum of flexible wallets converted to default currency / avg monthly expense
+      let flexibleTotal = 0;
+      for (const w of walletsList) {
+        const bal = parseFloat(w.balance || '0');
+        const rate = parseFloat(w.exchangeRateToDefault || '1');
+        if (w.isFlexible) {
+          flexibleTotal += bal * (isNaN(rate) ? 1 : rate);
+        }
+      }
+      const emergencyFundMonths = avgMonthlyExpense > 0 ? flexibleTotal / avgMonthlyExpense : null;
+
+      // Budget deviations for current month
+      const budgetDeviations = budgetsSpending.map((b) => ({
+        categoryId: b.categoryId,
+        categoryName: (b as any).categoryName,
+        budget: parseFloat(b.amount as any),
+        spent: (b as any).spent,
+        deviation: (b as any).spent - parseFloat(b.amount as any),
+        color: (b as any).categoryColor,
+      })).sort((a, b) => b.deviation - a.deviation).slice(0, 5);
+
+      // Heuristic recurring payments: same amount on 3+ different months within range
+      const recurringCandidates: Record<string, { amount: number; countMonths: number; sample: any }> = {};
+      const seenByMonthAmount: Record<string, Set<string>> = {};
+      for (const t of transactions) {
+        if (t.type !== 'expense') continue;
+        const amt = parseFloat(t.amount);
+        if (amt <= 0) continue;
+        const keyMonth = monthKey(new Date(t.date));
+        const amtKey = `${Math.round(amt * 100) / 100}`;
+        if (!seenByMonthAmount[keyMonth]) seenByMonthAmount[keyMonth] = new Set();
+        if (!seenByMonthAmount[keyMonth].has(amtKey)) {
+          seenByMonthAmount[keyMonth].add(amtKey);
+          if (!recurringCandidates[amtKey]) recurringCandidates[amtKey] = { amount: amt, countMonths: 0, sample: t };
+          recurringCandidates[amtKey].countMonths += 1;
+        }
+      }
+      const topRecurring = Object.values(recurringCandidates)
+        .filter(r => r.countMonths >= 3)
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5)
+        .map(r => ({
+          amount: r.amount,
+          months: r.countMonths,
+          categoryName: r.sample?.category?.name || '未知分类',
+          walletName: r.sample?.wallet?.name || '未知钱包',
+          sampleDate: r.sample ? new Date(r.sample.date).toISOString() : null,
+        }));
+
+      const metrics = {
+        rangeMonths,
+        totalIncome: parseFloat(totalIncome.toFixed(2)),
+        totalExpense: parseFloat(totalExpense.toFixed(2)),
+        avgMonthlyExpense: parseFloat(avgMonthlyExpense.toFixed(2)),
+        savingsRate: parseFloat(savingsRate.toFixed(4)),
+        emergencyFundMonths: emergencyFundMonths === null ? null : parseFloat(emergencyFundMonths.toFixed(2)),
+        monthly,
+        topExpenseCategories,
+        budgetDeviations,
+        topRecurringPayments: topRecurring,
+      };
+
+      const apiKey = process.env.DEEPSEEK_API_KEY;
+      if (!apiKey) {
+        return res.json({ metrics, ai: null, aiEnabled: false, message: '未配置 DEEPSEEK_API_KEY，仅返回确定性体检指标' });
+      }
+
+      const systemPrompt = [
+        '你是一个客观中立的个人财务分析助手。',
+        '请基于提供的聚合指标进行分析，不要编造未提供的数据。',
+        '不要推荐具体股票/基金产品，建议需可执行、量化、并给出依据。',
+        '输出 JSON，结构为 {summary, insights: [{title, explanation, relatedMetrics}], actions: [{title, impact, effort, steps}], disclaimer}。',
+      ].join('\n');
+
+      const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: JSON.stringify(metrics) },
+          ],
+        }),
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        return res.status(502).json({ metrics, ai: null, aiEnabled: true, message: `DeepSeek 调用失败: ${resp.status} ${text}` });
+      }
+
+      const data = await resp.json();
+      const content = data?.choices?.[0]?.message?.content || '';
+      let aiJson: any = null;
+      try {
+        aiJson = JSON.parse(content);
+      } catch {
+        aiJson = { summary: content };
+      }
+
+      res.json({ metrics, ai: aiJson, aiEnabled: true });
+    } catch (error) {
+      console.error('Error generating AI insights:', error);
+      res.status(500).json({ message: 'Failed to generate AI insights' });
+    }
+  });
+
   return httpServer;
 }
