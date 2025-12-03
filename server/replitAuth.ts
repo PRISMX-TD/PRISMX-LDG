@@ -99,15 +99,8 @@ export async function setupAuth(app: Express) {
 
   if (isLocalAuth) {
     app.use(getSession());
-    app.get("/api/login", async (req, res) => {
-      const id = (req.header("x-user-id") || "demo-user") as string;
-      try {
-        await storage.upsertUser({ id });
-        (req as any).session.userId = id;
-        res.redirect("/");
-      } catch {
-        res.status(500).json({ message: "Login failed" });
-      }
+    app.get("/api/login", (_req, res) => {
+      res.redirect("/auth");
     });
     app.post("/api/register", async (req, res) => {
       try {
@@ -239,10 +232,9 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   if (isLocalAuth) {
-    let sid = (req as any).session?.userId;
+    const sid = (req as any).session?.userId;
     if (!sid) {
-      sid = (req.header("x-user-id") || "demo-user") as string;
-      (req as any).session.userId = sid;
+      return res.status(401).json({ message: "Unauthorized" });
     }
     (req as any).user = { claims: { sub: sid } };
     return next();

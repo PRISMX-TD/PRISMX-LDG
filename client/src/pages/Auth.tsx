@@ -1,0 +1,93 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+export default function Auth() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    try {
+      setLoading(true);
+      await apiRequest("POST", "/api/login", { email, password });
+      setLocation("/");
+    } catch (e: any) {
+      toast({ title: "登录失败", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegister() {
+    try {
+      setLoading(true);
+      await apiRequest("POST", "/api/register", { email, password, firstName, lastName });
+      setLocation("/");
+    } catch (e: any) {
+      toast({ title: "注册失败", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-6">
+        <h1 className="text-2xl font-semibold text-center">登录或注册</h1>
+        <Tabs defaultValue="login">
+          <TabsList className="w-full">
+            <TabsTrigger value="login" className="flex-1">登录</TabsTrigger>
+            <TabsTrigger value="register" className="flex-1">注册</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="login" className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-email">邮箱</Label>
+              <Input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">密码</Label>
+              <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <Button className="w-full" disabled={loading} onClick={handleLogin}>登录</Button>
+          </TabsContent>
+
+          <TabsContent value="register" className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="reg-email">邮箱</Label>
+              <Input id="reg-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reg-password">密码</Label>
+              <Input id="reg-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="reg-first">名</Label>
+                <Input id="reg-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reg-last">姓</Label>
+                <Input id="reg-last" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+            </div>
+            <Button className="w-full" disabled={loading} onClick={handleRegister}>注册并登录</Button>
+          </TabsContent>
+        </Tabs>
+        <Button variant="ghost" className="w-full" asChild>
+          <a href="/">返回首页</a>
+        </Button>
+      </div>
+    </div>
+  );
+}

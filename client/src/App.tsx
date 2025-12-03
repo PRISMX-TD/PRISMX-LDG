@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
+import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Transactions from "@/pages/Transactions";
 import Categories from "@/pages/Categories";
@@ -126,6 +127,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/auth" component={Auth} />
         <Route component={Landing} />
       </Switch>
     );

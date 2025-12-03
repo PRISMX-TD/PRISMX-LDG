@@ -44,7 +44,10 @@ self.addEventListener('fetch', event => {
   }
 
   const url = new URL(event.request.url);
-  
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(event.request));
   } else if (event.request.destination === 'image') {
@@ -59,13 +62,17 @@ async function networkFirst(request) {
     const response = await fetch(request);
     
     if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
+      const isHttp = request.url.startsWith('http://') || request.url.startsWith('https://');
+      if (isHttp) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(request, response.clone());
+      }
     }
     
     return response;
   } catch (error) {
-    const cachedResponse = await caches.match(request);
+    const isHttp = request.url.startsWith('http://') || request.url.startsWith('https://');
+    const cachedResponse = isHttp ? await caches.match(request) : undefined;
     
     if (cachedResponse) {
       return cachedResponse;
@@ -90,8 +97,11 @@ async function cacheFirst(request) {
     const response = await fetch(request);
     
     if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
+      const isHttp = request.url.startsWith('http://') || request.url.startsWith('https://');
+      if (isHttp) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(request, response.clone());
+      }
     }
     
     return response;
