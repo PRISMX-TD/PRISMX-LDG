@@ -20,6 +20,8 @@ import { SavingsGoalCard } from "@/components/SavingsGoalCard";
 import { DashboardSettingsModal } from "@/components/DashboardSettingsModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DndContext,
@@ -836,6 +838,8 @@ export default function Dashboard() {
           </Button>
         </div>
 
+        <AiInsightsSection />
+
         {orderedCardKeys.map((key, index) => {
           const isSummaryCard = summaryCardKeys.includes(key);
           const isBudgetOrSavings = key === "showBudgets" || key === "showSavingsGoals";
@@ -917,5 +921,141 @@ export default function Dashboard() {
         onOpenChange={setIsSettingsOpen}
       />
     </div>
+  );
+}
+
+interface AiResponse {
+  metrics: {
+    rangeMonths: number;
+    totalIncome: number;
+    totalExpense: number;
+    avgMonthlyExpense: number;
+    savingsRate: number;
+    emergencyFundMonths: number | null;
+    monthly: Record<string, { income: number; expense: number }>;
+    topExpenseCategories: { categoryId: number; categoryName: string; total: number; color: string }[];
+    budgetDeviations: { categoryId: number; categoryName: string; budget: number; spent: number; deviation: number; color: string }[];
+    topRecurringPayments: { amount: number; months: number; categoryName: string; walletName: string; sampleDate: string | null }[];
+  };
+  ai: {
+    summary?: string;
+    insights?: { title: string; explanation: string; relatedMetrics?: string[] }[];
+    actions?: { title: string; impact?: string; effort?: string; steps?: string[] }[];
+    disclaimer?: string;
+  } | null;
+  aiEnabled: boolean;
+  message?: string;
+}
+
+function AiInsightsSection() {
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [rangeMonths, setRangeMonths] = useState<string>("6");
+  const [onlyMetrics, setOnlyMetrics] = useState(false);
+
+  const queryKey = useMemo(() => {
+    const base = `/api/ai/insights?rangeMonths=${rangeMonths}${onlyMetrics ? "&skipAi=true" : ""}`;
+    return ["/api", "ai", `insights?rangeMonths=${rangeMonths}${onlyMetrics ? "&skipAi=true" : ""}`];
+  }, [rangeMonths, onlyMetrics]);
+
+  const { data, isLoading, refetch } = useQuery<AiResponse>({
+    queryKey,
+    enabled: isAuthenticated,
+  });
+
+  const currency = getCurrencyInfo(undefined as any)?.symbol || "RM";
+
+  return (
+    <section>
+      <Card className="glass-card">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            AI 建议
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Select value={rangeMonths} onValueChange={(v) => setRangeMonths(v)}>
+              <SelectTrigger className="w-24" data-testid="select-ai-range">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">近3个月</SelectItem>
+                <SelectItem value="6">近6个月</SelectItem>
+                <SelectItem value="12">近12个月</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">仅指标</span>
+              <Switch checked={onlyMetrics} onCheckedChange={setOnlyMetrics} data-testid="switch-only-metrics" />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-ai">刷新</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : !data ? (
+            <p className="text-sm text-muted-foreground">暂无数据</p>
+          ) : (
+            <div className="space-y-4">
+              {data.ai?.summary && (
+                <p className="text-sm leading-relaxed">{data.ai.summary}</p>
+              )}
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">关键指标</h3>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <div>储蓄率：{(data.metrics.savingsRate * 100).toFixed(1)}%</div>
+                    <div>应急金月数：{data.metrics.emergencyFundMonths == null ? "未知" : data.metrics.emergencyFundMonths.toFixed(2)}</div>
+                    <div>平均月支出：{currency}{data.metrics.avgMonthlyExpense.toFixed(2)}</div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">当月预算偏差 Top</h3>
+                  {data.metrics.budgetDeviations.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">暂无偏差</p>
+                  ) : (
+                    <ul className="text-xs space-y-1">
+                      {data.metrics.budgetDeviations.map((b) => (
+                        <li key={b.categoryId}>{b.categoryName} 超支 {currency}{b.deviation.toFixed(2)}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+              {data.ai?.actions && data.ai.actions.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">可执行建议</h3>
+                  <ul className="space-y-2">
+                    {data.ai.actions.map((a, idx) => (
+                      <li key={idx} className="text-sm">
+                        <div className="font-medium">{a.title}</div>
+                        {a.steps && a.steps.length > 0 && (
+                          <ol className="list-decimal ml-5 text-xs text-muted-foreground space-y-1">
+                            {a.steps.map((s, i) => (<li key={i}>{s}</li>))}
+                          </ol>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {!onlyMetrics && data.aiEnabled === false && (
+                <p className="text-xs text-muted-foreground">AI 未启用：{data.message || "未配置密钥"}</p>
+              )}
+              {onlyMetrics && (
+                <p className="text-xs text-muted-foreground">当前为仅指标模式</p>
+              )}
+              {data.ai?.disclaimer && (
+                <p className="text-xs text-muted-foreground">{data.ai.disclaimer}</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
