@@ -226,50 +226,51 @@ export default function Split() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((g) => (
-            <Card
-              key={g.id}
-              className="glass-card hover-elevate cursor-pointer"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2" onClick={() => setLoc(`/split/${g.id}`)}>
-                  <div>
-                    <CardTitle className="text-base hover:underline">{g.title}</CardTitle>
-                    <Badge variant="secondary" className="text-xs mt-1">{g.currency}</Badge>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); setLoc(`/split/${g.id}`); }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(g.id); }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent onClick={() => setLoc(`/split/${g.id}`)}>
-                {g.payload?.computed?.settlements?.length ? (
-                  <div className="text-sm space-y-1">
-                    {g.payload.computed.settlements.slice(0, 3).map((s: any, idx: number) => (
-                      <div key={idx} className="flex justify-between">
-                        <span>{(g.payload.members || []).find((m: any) => m.id === s.fromId)?.name} → {(g.payload.members || []).find((m: any) => m.id === s.toId)?.name}</span>
-                        <span className="font-mono">{s.amount.toFixed ? s.amount.toFixed(2) : Number(s.amount).toFixed(2)} {g.currency}</span>
+            <Link key={g.id} href={`/split/${g.id}`}>
+              <a className="block">
+                <Card className="glass-card hover-elevate">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-base">{g.title}</CardTitle>
+                        <Badge variant="secondary" className="text-xs mt-1">{g.currency}</Badge>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">暂无计算结果</p>
-                )}
-              </CardContent>
-            </Card>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => { e.preventDefault(); }}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={(e) => { e.preventDefault(); deleteMutation.mutate(g.id); }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {g.payload?.computed?.settlements?.length ? (
+                      <div className="text-sm space-y-1">
+                        {g.payload.computed.settlements.slice(0, 3).map((s: any, idx: number) => (
+                          <div key={idx} className="flex justify-between">
+                            <span>{(g.payload.members || []).find((m: any) => m.id === s.fromId)?.name} → {(g.payload.members || []).find((m: any) => m.id === s.toId)?.name}</span>
+                            <span className="font-mono">{s.amount.toFixed ? s.amount.toFixed(2) : Number(s.amount).toFixed(2)} {g.currency}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">暂无计算结果</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </a>
+            </Link>
           ))}
         </div>
       )}
