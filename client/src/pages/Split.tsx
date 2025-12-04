@@ -36,8 +36,8 @@ export default function Split() {
   const [currency, setCurrency] = useState<string>(supportedCurrencies[0].code);
   const [, params] = useRoute("/split/:id");
   const [loc, setLoc] = useLocation();
-  const initialId = params?.id ? parseInt(params.id) : null;
-  const [editingId, setEditingId] = useState<number | null>(initialId);
+  const routeId = params?.id ? parseInt(params.id) : null;
+  const [editingId, setEditingId] = useState<number | null>(routeId);
   const [current, setCurrent] = useState<GroupPayload | null>(null);
   const firstLoad = useRef(true);
 
@@ -554,3 +554,6 @@ export default function Split() {
     </div>
   );
 }
+  useEffect(() => {
+    setEditingId(routeId);
+  }, [routeId]);
