@@ -1969,9 +1969,28 @@ export async function registerRoutes(
         topRecurringPayments: topRecurring,
       };
 
+      // Rate limit & cache: 1 hour per account
+      const cooldownMs = 60 * 60 * 1000;
+      const latest = await storage.getLatestAiInsights(userId);
+      if (latest) {
+        const lastTs = new Date(latest.createdAt).getTime();
+        const elapsed = Date.now() - lastTs;
+        const remaining = cooldownMs - elapsed;
+        if (remaining > 0) {
+          return res.json({
+            metrics,
+            ai: latest.payload,
+            aiEnabled: true,
+            fromCache: true,
+            cachedAt: new Date(lastTs).toISOString(),
+            nextAllowedAt: new Date(lastTs + cooldownMs).toISOString(),
+            cooldownRemainingMs: remaining,
+          });
+        }
+      }
+
       const apiKey = process.env.DEEPSEEK_API_KEY;
-      const skipAi = (req.query.skipAi === 'true') || (req.query.mode === 'metrics');
-      if (!apiKey || skipAi) {
+      if (!apiKey) {
         return res.json({ metrics, ai: null, aiEnabled: false, message: '未配置 DEEPSEEK_API_KEY，仅返回确定性体检指标' });
       }
 
@@ -2017,7 +2036,9 @@ export async function registerRoutes(
         aiJson = { summary: content };
       }
 
-      res.json({ metrics, ai: aiJson, aiEnabled: true });
+      // Save cache
+      try { await storage.saveAiInsights(userId, aiJson); } catch {}
+      res.json({ metrics, ai: aiJson, aiEnabled: true, fromCache: false, cachedAt: new Date().toISOString(), nextAllowedAt: new Date(Date.now() + cooldownMs).toISOString(), cooldownRemainingMs: cooldownMs });
     } catch (error: any) {
       console.error('Error generating AI insights:', error);
       const aborted = (error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error.message || ''))));

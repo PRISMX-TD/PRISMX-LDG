@@ -1435,16 +1435,19 @@ interface AiResponse {
   } | null;
   aiEnabled: boolean;
   message?: string;
+  fromCache?: boolean;
+  cooldownRemainingMs?: number;
+  cachedAt?: string;
+  nextAllowedAt?: string;
 }
 
 function AiInsightsSection({ compact = false }: { compact?: boolean }) {
   const { isAuthenticated } = useAuth();
   const [rangeMonths, setRangeMonths] = useState<string>("6");
-  const [onlyMetrics, setOnlyMetrics] = useState(false);
 
   const queryKey = useMemo(() => {
-    return ["/api", "ai", `insights?rangeMonths=${rangeMonths}${onlyMetrics ? "&skipAi=true" : ""}`];
-  }, [rangeMonths, onlyMetrics]);
+    return ["/api", "ai", `insights?rangeMonths=${rangeMonths}`];
+  }, [rangeMonths]);
 
   const { data, isLoading, refetch } = useQuery<AiResponse>({
     queryKey,
@@ -1471,11 +1474,7 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
               <SelectItem value="12">近12个月</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">仅指标</span>
-            <Switch checked={onlyMetrics} onCheckedChange={setOnlyMetrics} data-testid="switch-only-metrics-analytics" />
-          </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-ai-analytics">刷新</Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-ai-analytics" disabled={!!data && !!data.fromCache && (data.cooldownRemainingMs ?? 0) > 0}>刷新</Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -1562,11 +1561,11 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
                 </Accordion>
               </div>
             )}
-            {!onlyMetrics && data.aiEnabled === false && (
+            {data.aiEnabled === false && (
               <p className="text-xs text-muted-foreground">AI 未启用：{data.message || "未配置密钥"}</p>
             )}
-            {onlyMetrics && (
-              <p className="text-xs text-muted-foreground">当前为仅指标模式</p>
+            {data.fromCache && (data.cooldownRemainingMs ?? 0) > 0 && (
+              <p className="text-xs text-muted-foreground">冷却中：约 {Math.ceil((data.cooldownRemainingMs || 0)/60000)} 分钟后可重新分析</p>
             )}
             {!compact && data.ai?.disclaimer && (
               <p className="text-xs text-muted-foreground">{data.ai.disclaimer}</p>

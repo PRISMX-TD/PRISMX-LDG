@@ -41,9 +41,10 @@ import {
   type InsertUserMobileNavPreferences,
   type UserWalletPreferences,
   type InsertUserWalletPreferences,
+  aiInsights,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, sql, gte, lte, between } from "drizzle-orm";
+import { eq, desc, and, or } from "drizzle-orm";
 
 // Default categories for new users
 const defaultExpenseCategories = [
@@ -275,6 +276,22 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(wallets.id, id), eq(wallets.userId, userId)))
       .returning();
     return result.length > 0;
+  }
+
+  // AI insights cache operations
+  async getLatestAiInsights(userId: string): Promise<{ payload: any; createdAt: Date } | undefined> {
+    const [row] = await db
+      .select()
+      .from(aiInsights)
+      .where(eq(aiInsights.userId, userId))
+      .orderBy(desc(aiInsights.createdAt))
+      .limit(1);
+    if (!row) return undefined;
+    return { payload: row.payload, createdAt: row.createdAt as Date };
+  }
+
+  async saveAiInsights(userId: string, payload: any): Promise<void> {
+    await db.insert(aiInsights).values({ userId, payload });
   }
 
   async setDefaultWallet(id: number, userId: string): Promise<Wallet | undefined> {

@@ -469,3 +469,13 @@ export type CurrencyCode = typeof supportedCurrencies[number]['code'];
 export function getCurrencyInfo(code: string) {
   return supportedCurrencies.find(c => c.code === code) || supportedCurrencies[0];
 }
+
+// AI insights cache table - store last AI output per user with timestamp
+export const aiInsights = pgTable("ai_insights", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AiInsight = typeof aiInsights.$inferSelect;
