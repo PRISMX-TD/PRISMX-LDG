@@ -378,16 +378,19 @@ export class DatabaseStorage implements IStorage {
         walletId: transactions.walletId,
         toWalletId: transactions.toWalletId,
         categoryId: transactions.categoryId,
+        subLedgerId: transactions.subLedgerId,
         description: transactions.description,
         tags: transactions.tags,
         date: transactions.date,
         createdAt: transactions.createdAt,
         category: categories,
         wallet: wallets,
+        subLedger: subLedgers,
       })
       .from(transactions)
       .leftJoin(categories, eq(transactions.categoryId, categories.id))
       .leftJoin(wallets, eq(transactions.walletId, wallets.id))
+      .leftJoin(subLedgers, eq(transactions.subLedgerId, subLedgers.id))
       .where(eq(transactions.userId, userId))
       .orderBy(desc(transactions.date))
       .$dynamic();
@@ -440,12 +443,14 @@ export class DatabaseStorage implements IStorage {
           walletId: t.walletId,
           toWalletId: t.toWalletId,
           categoryId: t.categoryId,
+          subLedgerId: t.subLedgerId,
           description: t.description,
           tags: t.tags,
           date: t.date,
           createdAt: t.createdAt,
           category: t.category,
           wallet: t.wallet,
+          subLedger: t.subLedger,
           toWallet,
         };
       })

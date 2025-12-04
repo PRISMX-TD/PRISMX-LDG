@@ -1868,6 +1868,7 @@ export async function registerRoutes(
   });
 
   app.get('/api/ai/insights', isAuthenticated, async (req: any, res) => {
+    let metrics: any = null;
     try {
       const userId = req.user.claims.sub;
       const rangeMonths = req.query.rangeMonths ? Math.max(1, Math.min(24, parseInt(req.query.rangeMonths))) : 6;
@@ -1956,7 +1957,7 @@ export async function registerRoutes(
           sampleDate: r.sample ? new Date(r.sample.date).toISOString() : null,
         }));
 
-      const metrics = {
+      metrics = {
         rangeMonths,
         totalIncome: parseFloat(totalIncome.toFixed(2)),
         totalExpense: parseFloat(totalExpense.toFixed(2)),
