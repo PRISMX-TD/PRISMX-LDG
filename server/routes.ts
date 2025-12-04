@@ -2043,9 +2043,9 @@ export async function registerRoutes(
       console.error('Error generating AI insights:', error);
       const aborted = (error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error.message || ''))));
       if (aborted) {
-        return res.status(504).json({ metrics: undefined, ai: null, aiEnabled: true, message: 'DeepSeek 请求超时' });
+        return res.status(504).json({ metrics, ai: null, aiEnabled: true, message: 'DeepSeek 请求超时' });
       }
-      res.status(500).json({ message: 'Failed to generate AI insights' });
+      return res.json({ metrics, ai: null, aiEnabled: false, message: 'AI 生成失败：' + String(error?.message || '未知错误') });
     }
   });
 

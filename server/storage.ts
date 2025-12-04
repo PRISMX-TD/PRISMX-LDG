@@ -280,18 +280,26 @@ export class DatabaseStorage implements IStorage {
 
   // AI insights cache operations
   async getLatestAiInsights(userId: string): Promise<{ payload: any; createdAt: Date } | undefined> {
-    const [row] = await db
-      .select()
-      .from(aiInsights)
-      .where(eq(aiInsights.userId, userId))
-      .orderBy(desc(aiInsights.createdAt))
-      .limit(1);
-    if (!row) return undefined;
-    return { payload: row.payload, createdAt: row.createdAt as Date };
+    try {
+      const [row] = await db
+        .select()
+        .from(aiInsights)
+        .where(eq(aiInsights.userId, userId))
+        .orderBy(desc(aiInsights.createdAt))
+        .limit(1);
+      if (!row) return undefined;
+      return { payload: row.payload, createdAt: row.createdAt as Date };
+    } catch (e) {
+      return undefined;
+    }
   }
 
   async saveAiInsights(userId: string, payload: any): Promise<void> {
-    await db.insert(aiInsights).values({ userId, payload });
+    try {
+      await db.insert(aiInsights).values({ userId, payload });
+    } catch (e) {
+      // ignore when table not exist; caller will still get AI response
+    }
   }
 
   async setDefaultWallet(id: number, userId: string): Promise<Wallet | undefined> {
