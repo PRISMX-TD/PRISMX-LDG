@@ -135,6 +135,15 @@ input, textarea, [contenteditable="true"] {
   }
 }
 
+/* Hide sidebar scrollbar */
+[data-slot="sidebar-content"] {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+[data-slot="sidebar-content"]::-webkit-scrollbar {
+  display: none;
+}
+
 /* LIGHT MODE - Purple Theme */
 :root {
   --button-outline: rgba(0,0,0, .10);

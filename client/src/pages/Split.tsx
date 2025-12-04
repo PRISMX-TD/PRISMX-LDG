@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calculator, Trash2, Pencil, Users, Loader2 } from "lucide-react";
+import { Plus, Calculator, Trash2, Pencil, Users, Loader2, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { supportedCurrencies } from "@shared/schema";
@@ -107,7 +107,7 @@ export default function Split() {
     const participants = current.members.map(m => m.id);
     const amount = 0;
     const shares = participants.map(pid => ({ memberId: pid, type: "equal" as ExpenseShareType, value: 1 }));
-    const e: Expense = { id, payerId, amount, participants, shares };
+    const e: Expense = { id, payerId, amount, participants, shares, note: "", originalCurrency: current.currency, exchangeRate: 1 };
     setCurrent({ ...current, expenses: [...current.expenses, e] });
   };
 
@@ -325,8 +325,9 @@ export default function Split() {
             <div className="space-y-3">
               <div className="space-y-2">
                 {current.expenses.map((e, idx) => (
-                  <div key={e.id} className="grid md:grid-cols-4 gap-3 items-start p-3 border rounded-lg">
+                  <div key={e.id} className="grid md:grid-cols-5 gap-3 items-start p-3 border rounded-lg">
                     <div>
+                      <Label className="mb-1 block">付款人</Label>
                         <Select value={e.payerId} onValueChange={(v) => {
                           const expenses = [...current.expenses];
                           expenses[idx] = { ...e, payerId: v };
@@ -343,13 +344,15 @@ export default function Split() {
                         </Select>
                     </div>
                     <div>
-                        <Input type="number" value={e.amount} onChange={(ev) => {
+                        <Label className="mb-1 block">金额（{current.currency}）</Label>
+                        <Input type="number" placeholder={`例如 100.00`} value={e.amount} onChange={(ev) => {
                           const expenses = [...current.expenses];
                           expenses[idx] = { ...e, amount: parseFloat(ev.target.value || "0") };
                           setCurrent({ ...current, expenses });
                         }} />
                     </div>
                     <div>
+                        <Label className="mb-1 block">分摊方式</Label>
                         <Select value={e.shares.every(s => s.type === "equal") ? "equal" : e.shares[0]?.type || "equal"} onValueChange={(v: ExpenseShareType) => {
                           const expenses = [...current.expenses];
                           const participants = e.participants;
@@ -392,6 +395,7 @@ export default function Split() {
                         )}
                     </div>
                     <div>
+                        <Label className="mb-1 block">参与者</Label>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                           {current.members.map(m => (
                             <Button key={m.id} variant={e.participants.includes(m.id) ? "secondary" : "outline"} onClick={() => {
@@ -415,48 +419,89 @@ export default function Split() {
                           </Button>
                         </div>
                     </div>
+                    <div>
+                      <Label className="mb-1 block">备注 / 原币与汇率</Label>
+                      <Input placeholder="备注（可选）" value={e.note || ""} onChange={(ev) => {
+                        const expenses = [...current.expenses];
+                        expenses[idx] = { ...e, note: ev.target.value };
+                        setCurrent({ ...current, expenses });
+                      }} />
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <Select value={e.originalCurrency || current.currency} onValueChange={(v) => {
+                          const expenses = [...current.expenses];
+                          expenses[idx] = { ...e, originalCurrency: v };
+                          setCurrent({ ...current, expenses });
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {supportedCurrencies.map(c => (
+                              <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input type="number" placeholder="汇率（原币→活动币）" value={e.exchangeRate ?? 1} onChange={(ev) => {
+                          const rate = parseFloat(ev.target.value || "1");
+                          const expenses = [...current.expenses];
+                          expenses[idx] = { ...e, exchangeRate: isNaN(rate) ? 1 : rate };
+                          setCurrent({ ...current, expenses });
+                        }} />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="text-sm">
-                {Object.entries(compute.net).length > 0 ? (
-                  <div className="space-y-1">
-                    {current.members.map(m => (
-                      <div key={m.id} className="flex justify-between">
-                        <span>{m.name}</span>
-                        <span className="font-mono">{(compute.net[m.id] || 0).toFixed(2)} {current.currency}</span>
+            <div className="flex items-start justify-between gap-4">
+              <Card className="flex-1">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Info className="w-4 h-4" />结果说明
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  {Object.entries(compute.net).length > 0 ? (
+                    <>
+                      <div className="text-muted-foreground">净值：正数=应收，负数=应付</div>
+                      <div className="space-y-1">
+                        {current.members.map(m => (
+                          <div key={m.id} className="flex justify-between">
+                            <span>{m.name}</span>
+                            <span className="font-mono">{(compute.net[m.id] || 0).toFixed(2)} {current.currency}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">添加费用后可计算净值</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
+                      <div className="pt-2 border-t border-border/50">
+                        <div className="font-medium">清算建议（最少笔数）</div>
+                        {compute.settlements.length > 0 ? (
+                          <div className="space-y-1">
+                            {compute.settlements.map((s, i) => (
+                              <div key={i} className="flex justify-between">
+                                <span>{current.members.find(m => m.id === s.fromId)?.name} → {current.members.find(m => m.id === s.toId)?.name}</span>
+                                <span className="font-mono">{s.amount.toFixed(2)} {current.currency}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">暂无清算建议</div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-muted-foreground">添加费用后可计算净值与清算建议</div>
+                  )}
+                </CardContent>
+              </Card>
+              <div className="flex items-center">
                 <Button onClick={saveComputed}>
                   <Calculator className="w-4 h-4 mr-1" />计算并保存
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="text-sm font-medium">清算建议</div>
-              {compute.settlements.length > 0 ? (
-                <div className="space-y-1">
-                  {compute.settlements.map((s, i) => (
-                    <div key={i} className="flex justify-between">
-                      <span>{current.members.find(m => m.id === s.fromId)?.name} → {current.members.find(m => m.id === s.toId)?.name}</span>
-                      <span className="font-mono">{s.amount.toFixed(2)} {current.currency}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">暂无清算建议</p>
-              )}
-            </div>
+            
           </CardContent>
         </Card>
       )}
