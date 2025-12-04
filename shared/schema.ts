@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -471,11 +472,15 @@ export function getCurrencyInfo(code: string) {
 }
 
 // AI insights cache table - store last AI output per user with timestamp
-export const aiInsights = pgTable("ai_insights", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  payload: jsonb("payload").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const aiInsights = pgTable(
+  "ai_insights",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    payload: jsonb("payload").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => [uniqueIndex("uniq_ai_insights_user").on(t.userId)]
+);
 
 export type AiInsight = typeof aiInsights.$inferSelect;

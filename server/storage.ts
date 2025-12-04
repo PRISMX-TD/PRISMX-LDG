@@ -296,7 +296,10 @@ export class DatabaseStorage implements IStorage {
 
   async saveAiInsights(userId: string, payload: any): Promise<void> {
     try {
-      await db.insert(aiInsights).values({ userId, payload });
+      await db
+        .insert(aiInsights)
+        .values({ userId, payload })
+        .onConflictDoUpdate({ target: aiInsights.userId, set: { payload, createdAt: new Date() } });
     } catch (e) {
       // ignore when table not exist; caller will still get AI response
     }
