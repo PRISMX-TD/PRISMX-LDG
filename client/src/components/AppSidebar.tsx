@@ -31,6 +31,7 @@ import {
   Target,
   ArrowUpDown,
   BookOpen,
+  Users,
 } from "lucide-react";
 import type { User, BillReminder } from "@shared/schema";
 
@@ -69,6 +70,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
     { href: "/wallets", icon: Wallet, label: "钱包管理" },
     { href: "/exchange", icon: ArrowUpDown, label: "交易所" },
     { href: "/categories", icon: Tags, label: "分类管理" },
+    { href: "/split", icon: Users, label: "费用分摊" },
   ];
 
   const financeNavItems = [

@@ -27,6 +27,7 @@ import Settings from "@/pages/Settings";
 import Exchange from "@/pages/Exchange";
 import SubLedgers from "@/pages/SubLedgers";
 import WalletDetail from "@/pages/WalletDetail";
+import Split from "@/pages/Split";
 
 function AuthenticatedLayout() {
   const { user, isLoading } = useAuth();
@@ -76,6 +77,7 @@ function AuthenticatedLayout() {
                   <Route path="/analytics" component={Analytics} />
                   <Route path="/reports" component={Reports} />
                   <Route path="/sub-ledgers" component={SubLedgers} />
+                  <Route path="/split" component={Split} />
                   <Route path="/settings" component={Settings} />
                   <Route component={NotFound} />
                 </Switch>
@@ -104,6 +106,7 @@ function AuthenticatedLayout() {
             <Route path="/analytics" component={Analytics} />
             <Route path="/reports" component={Reports} />
             <Route path="/sub-ledgers" component={SubLedgers} />
+            <Route path="/split" component={Split} />
             <Route path="/settings" component={Settings} />
             <Route component={NotFound} />
           </Switch>

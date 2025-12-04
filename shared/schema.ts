@@ -484,3 +484,22 @@ export const aiInsights = pgTable(
 );
 
 export type AiInsight = typeof aiInsights.$inferSelect;
+
+export const groupActivities = pgTable("group_activities", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 120 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull().default("MYR"),
+  payload: jsonb("payload"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type GroupActivity = typeof groupActivities.$inferSelect;
+export type InsertGroupActivity = typeof groupActivities.$inferInsert;
+
+export const insertGroupActivitySchema = createInsertSchema(groupActivities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});

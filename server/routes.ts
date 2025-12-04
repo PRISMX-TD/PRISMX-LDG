@@ -1038,6 +1038,102 @@ export async function registerRoutes(
     }
   });
 
+  // Group activities routes
+  app.get('/api/groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groups = await storage.getGroupActivities(userId);
+      res.json(groups);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch groups' });
+    }
+  });
+
+  app.get('/api/groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const group = await storage.getGroupActivity(id, userId);
+      if (!group) {
+        return res.status(404).json({ message: 'Group not found' });
+      }
+      res.json(group);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch group' });
+    }
+  });
+
+  app.post('/api/groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { title, currency, payload } = req.body;
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({ message: 'Title is required' });
+      }
+      const data = {
+        userId,
+        title: title.trim(),
+        currency: typeof currency === 'string' && currency.length > 0 ? currency : 'MYR',
+        payload: payload || null,
+      };
+      const created = await storage.createGroupActivity(data);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to create group' });
+    }
+  });
+
+  app.patch('/api/groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const existing = await storage.getGroupActivity(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: 'Group not found' });
+      }
+      const updateData: any = {};
+      if (req.body.title !== undefined) {
+        const t = typeof req.body.title === 'string' ? req.body.title.trim() : '';
+        if (t.length === 0) {
+          return res.status(400).json({ message: 'Title cannot be empty' });
+        }
+        updateData.title = t;
+      }
+      if (req.body.currency !== undefined) {
+        updateData.currency = req.body.currency;
+      }
+      if (req.body.payload !== undefined) {
+        updateData.payload = req.body.payload;
+      }
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: 'No valid fields to update' });
+      }
+      const updated = await storage.updateGroupActivity(id, userId, updateData);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update group' });
+    }
+  });
+
+  app.delete('/api/groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const existing = await storage.getGroupActivity(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: 'Group not found' });
+      }
+      const deleted = await storage.deleteGroupActivity(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(500).json({ message: 'Failed to delete group' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete group' });
+    }
+  });
+
   // Savings goal routes
   app.get('/api/savings-goals', isAuthenticated, async (req: any, res) => {
     try {

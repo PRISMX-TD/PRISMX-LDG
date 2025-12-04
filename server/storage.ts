@@ -42,6 +42,9 @@ import {
   type UserWalletPreferences,
   type InsertUserWalletPreferences,
   aiInsights,
+  groupActivities,
+  type GroupActivity,
+  type InsertGroupActivity,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or } from "drizzle-orm";
@@ -167,6 +170,13 @@ export interface IStorage {
 
   // Initialization
   initializeUserDefaults(userId: string, defaultCurrency?: string): Promise<void>;
+
+  // Group activities operations
+  getGroupActivities(userId: string): Promise<GroupActivity[]>;
+  getGroupActivity(id: number, userId: string): Promise<GroupActivity | undefined>;
+  createGroupActivity(activity: InsertGroupActivity): Promise<GroupActivity>;
+  updateGroupActivity(id: number, userId: string, data: Partial<InsertGroupActivity>): Promise<GroupActivity | undefined>;
+  deleteGroupActivity(id: number, userId: string): Promise<boolean>;
 }
 
 // Types for filters and stats
@@ -858,6 +868,44 @@ export class DatabaseStorage implements IStorage {
   async deleteSubLedger(id: number, userId: string): Promise<boolean> {
     const result = await db.delete(subLedgers)
       .where(and(eq(subLedgers.id, id), eq(subLedgers.userId, userId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getGroupActivities(userId: string): Promise<GroupActivity[]> {
+    try {
+      return db.select().from(groupActivities).where(eq(groupActivities.userId, userId)).orderBy(desc(groupActivities.createdAt));
+    } catch {
+      return [];
+    }
+  }
+
+  async getGroupActivity(id: number, userId: string): Promise<GroupActivity | undefined> {
+    try {
+      const [activity] = await db.select().from(groupActivities)
+        .where(and(eq(groupActivities.id, id), eq(groupActivities.userId, userId)));
+      return activity;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async createGroupActivity(activity: InsertGroupActivity): Promise<GroupActivity> {
+    const [created] = await db.insert(groupActivities).values(activity).returning();
+    return created;
+  }
+
+  async updateGroupActivity(id: number, userId: string, data: Partial<InsertGroupActivity>): Promise<GroupActivity | undefined> {
+    const [updated] = await db.update(groupActivities)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(groupActivities.id, id), eq(groupActivities.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteGroupActivity(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(groupActivities)
+      .where(and(eq(groupActivities.id, id), eq(groupActivities.userId, userId)))
       .returning();
     return result.length > 0;
   }
