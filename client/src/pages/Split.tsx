@@ -226,22 +226,31 @@ export default function Split() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((g) => (
-            <Card key={g.id} className="glass-card">
+            <Card
+              key={g.id}
+              className="glass-card hover-elevate cursor-pointer"
+              onClick={() => setLoc(`/split/${g.id}`)}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <Link href={`/split/${g.id}`}>
-                      <CardTitle className="text-base cursor-pointer hover:underline">{g.title}</CardTitle>
-                    </Link>
+                    <CardTitle className="text-base">{g.title}</CardTitle>
                     <Badge variant="secondary" className="text-xs mt-1">{g.currency}</Badge>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Link href={`/split/${g.id}`}>
-                      <Button variant="ghost" size="icon">
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(g.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => { e.stopPropagation(); setLoc(`/split/${g.id}`); }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(g.id); }}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
