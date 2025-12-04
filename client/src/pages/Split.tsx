@@ -229,12 +229,11 @@ export default function Split() {
             <Card
               key={g.id}
               className="glass-card hover-elevate cursor-pointer"
-              onClick={() => setLoc(`/split/${g.id}`)}
             >
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2" onClick={() => setLoc(`/split/${g.id}`)}>
                   <div>
-                    <CardTitle className="text-base">{g.title}</CardTitle>
+                    <CardTitle className="text-base hover:underline">{g.title}</CardTitle>
                     <Badge variant="secondary" className="text-xs mt-1">{g.currency}</Badge>
                   </div>
                   <div className="flex items-center gap-1">
@@ -256,7 +255,7 @@ export default function Split() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent onClick={() => setLoc(`/split/${g.id}`)}>
                 {g.payload?.computed?.settlements?.length ? (
                   <div className="text-sm space-y-1">
                     {g.payload.computed.settlements.slice(0, 3).map((s: any, idx: number) => (
