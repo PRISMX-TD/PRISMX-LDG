@@ -78,6 +78,7 @@ function AuthenticatedLayout() {
                   <Route path="/reports" component={Reports} />
                   <Route path="/sub-ledgers" component={SubLedgers} />
                   <Route path="/split" component={Split} />
+                  <Route path="/split/:id" component={Split} />
                   <Route path="/settings" component={Settings} />
                   <Route component={NotFound} />
                 </Switch>
@@ -107,6 +108,7 @@ function AuthenticatedLayout() {
             <Route path="/reports" component={Reports} />
             <Route path="/sub-ledgers" component={SubLedgers} />
             <Route path="/split" component={Split} />
+            <Route path="/split/:id" component={Split} />
             <Route path="/settings" component={Settings} />
             <Route component={NotFound} />
           </Switch>

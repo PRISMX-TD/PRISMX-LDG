@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useRoute, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { supportedCurrencies } from "@shared/schema";
 type Member = { id: string; name: string; weight?: number };
 type ExpenseShareType = "equal" | "ratio" | "fixed" | "weight";
 type ExpenseShare = { memberId: string; type: ExpenseShareType; value: number };
-type Expense = { id: string; payerId: string; amount: number; originalCurrency?: string; exchangeRate?: number; note?: string; participants: string[]; shares: ExpenseShare[] };
+type Expense = { id: string; payerId: string; amount: number; date?: string; originalCurrency?: string; exchangeRate?: number; note?: string; participants: string[]; shares: ExpenseShare[] };
 
 type GroupPayload = {
   members: Member[];
@@ -33,8 +34,12 @@ export default function Split() {
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [currency, setCurrency] = useState<string>(supportedCurrencies[0].code);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [, params] = useRoute("/split/:id");
+  const [loc, setLoc] = useLocation();
+  const initialId = params?.id ? parseInt(params.id) : null;
+  const [editingId, setEditingId] = useState<number | null>(initialId);
   const [current, setCurrent] = useState<GroupPayload | null>(null);
+  const firstLoad = useRef(true);
 
   const { data: groups = [], isLoading } = useQuery<any[]>({ queryKey: ["/api/groups"] });
 
@@ -43,6 +48,7 @@ export default function Split() {
       apiRequest("GET", `/api/groups/${editingId}`).then((g: any) => {
         const payload: GroupPayload = g.payload || { members: [], expenses: [], currency: g.currency };
         setCurrent({ members: payload.members || [], expenses: payload.expenses || [], currency: g.currency, computed: payload.computed });
+        firstLoad.current = false;
       });
     } else {
       setCurrent(null);
@@ -55,11 +61,15 @@ export default function Split() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/groups", data),
-    onSuccess: () => {
+    onSuccess: (created: any) => {
       invalidateGroups();
       setCreateOpen(false);
       setTitle("");
       toast({ title: "活动已创建" });
+      if (created?.id) {
+        setEditingId(created.id);
+        setLoc(`/split/${created.id}`);
+      }
     },
     onError: () => toast({ title: "创建失败", variant: "destructive" }),
   });
@@ -72,6 +82,22 @@ export default function Split() {
     },
     onError: () => toast({ title: "保存失败", variant: "destructive" }),
   });
+
+  // Debounced auto-save of payload while editing
+  useEffect(() => {
+    if (!editingId || !current) return;
+    if (firstLoad.current) return;
+    const handle = setTimeout(() => {
+      const payload: GroupPayload = {
+        members: current.members,
+        expenses: current.expenses,
+        currency: current.currency,
+        computed: current.computed,
+      };
+      updateMutation.mutate({ payload });
+    }, 700);
+    return () => clearTimeout(handle);
+  }, [editingId, current]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/groups/${id}`),
@@ -107,7 +133,7 @@ export default function Split() {
     const participants = current.members.map(m => m.id);
     const amount = 0;
     const shares = participants.map(pid => ({ memberId: pid, type: "equal" as ExpenseShareType, value: 1 }));
-    const e: Expense = { id, payerId, amount, participants, shares, note: "", originalCurrency: current.currency, exchangeRate: 1 };
+    const e: Expense = { id, payerId, amount, date: new Date().toISOString(), participants, shares, note: "", originalCurrency: current.currency, exchangeRate: 1 };
     setCurrent({ ...current, expenses: [...current.expenses, e] });
   };
 
@@ -204,13 +230,17 @@ export default function Split() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <CardTitle className="text-base">{g.title}</CardTitle>
+                    <Link href={`/split/${g.id}`}>
+                      <CardTitle className="text-base cursor-pointer hover:underline">{g.title}</CardTitle>
+                    </Link>
                     <Badge variant="secondary" className="text-xs mt-1">{g.currency}</Badge>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setEditingId(g.id)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
+                    <Link href={`/split/${g.id}`}>
+                      <Button variant="ghost" size="icon">
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </Link>
                     <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(g.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -350,6 +380,15 @@ export default function Split() {
                           expenses[idx] = { ...e, amount: parseFloat(ev.target.value || "0") };
                           setCurrent({ ...current, expenses });
                         }} />
+                        <div className="mt-2">
+                          <Label className="mb-1 block">日期</Label>
+                          <Input type="datetime-local" value={e.date ? new Date(e.date).toISOString().slice(0,16) : ""} onChange={(ev) => {
+                            const expenses = [...current.expenses];
+                            const iso = ev.target.value ? new Date(ev.target.value).toISOString() : new Date().toISOString();
+                            expenses[idx] = { ...e, date: iso };
+                            setCurrent({ ...current, expenses });
+                          }} />
+                        </div>
                     </div>
                     <div>
                         <Label className="mb-1 block">分摊方式</Label>
