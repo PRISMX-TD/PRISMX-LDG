@@ -1351,7 +1351,7 @@ export default function Analytics() {
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col" data-testid="modal-analytics-settings">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col" data-testid="modal-analytics-settings" aria-describedby={undefined}>
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2 text-base">
               <Settings2 className="w-4 h-4" />

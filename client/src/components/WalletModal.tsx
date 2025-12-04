@@ -206,7 +206,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md" data-testid="modal-wallet">
+        <DialogContent className="sm:max-w-md" data-testid="modal-wallet" aria-describedby={undefined}>
           <DialogHeader className="pb-2">
             <DialogTitle>{isEditing ? "编辑钱包" : "新建钱包"}</DialogTitle>
           </DialogHeader>

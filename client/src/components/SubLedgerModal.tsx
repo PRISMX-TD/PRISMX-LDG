@@ -151,7 +151,7 @@ export function SubLedgerModal({ open, onOpenChange, subLedger }: SubLedgerModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="w-5 h-5" />
