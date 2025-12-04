@@ -87,6 +87,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const CHART_COLORS = [
   "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE",
@@ -1487,47 +1488,78 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
         ) : !data ? (
           <p className="text-sm text-muted-foreground">暂无数据</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {data.ai?.summary && (
-              <p className="text-sm leading-relaxed">{data.ai.summary}</p>
+              <div className="p-3 rounded-lg bg-primary/10 text-sm leading-relaxed">
+                {data.ai.summary}
+              </div>
             )}
-            <div className={`grid gap-3 ${compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">关键指标</h3>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <div>储蓄率：{(data.metrics.savingsRate * 100).toFixed(1)}%</div>
-                  <div>应急金月数：{data.metrics.emergencyFundMonths == null ? "未知" : data.metrics.emergencyFundMonths.toFixed(2)}</div>
-                  <div>平均月支出：{currency}{data.metrics.avgMonthlyExpense.toFixed(2)}</div>
+            <div className={`grid gap-3 ${compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
+              <Card className="glass-card">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-xs">储蓄率</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-mono">{(data.metrics.savingsRate * 100).toFixed(1)}%</p>
+                </CardContent>
+              </Card>
+              <Card className="glass-card">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-xs">应急金月数</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-mono">{data.metrics.emergencyFundMonths == null ? "未知" : data.metrics.emergencyFundMonths.toFixed(2)}</p>
+                </CardContent>
+              </Card>
+              <Card className="glass-card">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-xs">平均月支出</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-mono">{currency}{data.metrics.avgMonthlyExpense.toFixed(2)}</p>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">当月预算偏差 Top</h3>
+              {data.metrics.budgetDeviations.length === 0 ? (
+                <p className="text-xs text-muted-foreground">暂无偏差</p>
+              ) : (
+                <div className="space-y-2">
+                  {data.metrics.budgetDeviations.map((b) => {
+                    const percent = b.budget > 0 ? Math.min(100, (b.spent / b.budget) * 100) : 0;
+                    return (
+                      <div key={b.categoryId} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground truncate">{b.categoryName}</span>
+                          <span className="text-xs font-mono">{currency}{b.deviation.toFixed(2)}</span>
+                        </div>
+                        <Progress value={percent} />
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">当月预算偏差 Top</h3>
-                {data.metrics.budgetDeviations.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">暂无偏差</p>
-                ) : (
-                  <ul className="text-xs space-y-1">
-                    {data.metrics.budgetDeviations.map((b) => (
-                      <li key={b.categoryId}>{b.categoryName} 超支 {currency}{b.deviation.toFixed(2)}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              )}
             </div>
             {data.ai?.actions && data.ai.actions.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-sm font-medium">可执行建议</h3>
-                <ul className="space-y-2">
-                  {data.ai.actions.map((a, idx) => (
-                    <li key={idx} className="text-sm">
-                      <div className="font-medium">{a.title}</div>
-                      {a.steps && a.steps.length > 0 && (
-                        <ol className="list-decimal ml-5 text-xs text-muted-foreground space-y-1">
-                          {a.steps.map((s, i) => (<li key={i}>{s}</li>))}
-                        </ol>
-                      )}
-                    </li>
+                <Accordion type="single" collapsible className="w-full">
+                  {(compact ? (data.ai.actions || []).slice(0, 2) : (data.ai.actions || [])).map((a, idx) => (
+                    <AccordionItem key={idx} value={`item-${idx}`}>
+                      <AccordionTrigger className="text-sm">{a.title}</AccordionTrigger>
+                      <AccordionContent>
+                        {a.steps && a.steps.length > 0 ? (
+                          <ol className="list-decimal ml-5 text-xs text-muted-foreground space-y-1">
+                            {a.steps.map((s, i) => (<li key={i}>{s}</li>))}
+                          </ol>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">无具体步骤</p>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
                   ))}
-                </ul>
+                </Accordion>
               </div>
             )}
             {!onlyMetrics && data.aiEnabled === false && (
@@ -1536,7 +1568,7 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
             {onlyMetrics && (
               <p className="text-xs text-muted-foreground">当前为仅指标模式</p>
             )}
-            {data.ai?.disclaimer && (
+            {!compact && data.ai?.disclaimer && (
               <p className="text-xs text-muted-foreground">{data.ai.disclaimer}</p>
             )}
           </div>
