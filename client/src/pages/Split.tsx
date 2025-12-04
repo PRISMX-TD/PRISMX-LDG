@@ -554,6 +554,3 @@ export default function Split() {
     </div>
   );
 }
-  useEffect(() => {
-    setEditingId(routeId);
-  }, [routeId]);
