@@ -17,6 +17,7 @@ import {
   LogOut,
   ArrowUpDown,
   BookOpen,
+  Users,
 } from "lucide-react";
 import {
   Sheet,
@@ -44,6 +45,7 @@ const allNavItems = [
   { key: "analytics", href: "/analytics", icon: BarChart3, label: "分析" },
   { key: "exchange", href: "/exchange", icon: ArrowUpDown, label: "交易所" },
   { key: "sub-ledgers", href: "/sub-ledgers", icon: BookOpen, label: "子账本" },
+  { key: "split", href: "/split", icon: Users, label: "分摊" },
   { key: "categories", href: "/categories", icon: Tags, label: "分类" },
   { key: "budgets", href: "/budgets", icon: TrendingUp, label: "预算" },
   { key: "savings", href: "/savings", icon: PiggyBank, label: "储蓄" },

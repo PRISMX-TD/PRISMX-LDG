@@ -226,8 +226,7 @@ export default function Split() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((g) => (
-            <Link key={g.id} href={`/split/${g.id}`}>
-              <a className="block">
+            <Link key={g.id} href={`/split/${g.id}`} className="block">
                 <Card className="glass-card hover-elevate">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2">
@@ -239,7 +238,7 @@ export default function Split() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={(e) => { e.preventDefault(); }}
+                          onClick={(e) => { e.preventDefault(); setLoc(`/split/${g.id}`); }}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -269,7 +268,6 @@ export default function Split() {
                     )}
                   </CardContent>
                 </Card>
-              </a>
             </Link>
           ))}
         </div>
