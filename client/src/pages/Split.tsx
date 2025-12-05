@@ -342,10 +342,10 @@ export default function Split() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">编辑活动</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              <div className="md:col-span-8 space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>币种</Label>
                     <Select value={current.currency} onValueChange={(v) => setCurrent({ ...current, currency: v })}>
@@ -387,8 +387,8 @@ export default function Split() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-3">
+                <div className="space-y-5">
+                  <div className="space-y-4">
                   {current.expenses.map((e, idx) => (
                     <div key={e.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-start p-3 border rounded-lg">
                       <div className="space-y-2">
@@ -528,7 +528,7 @@ export default function Split() {
                   </div>
                 </div>
               </div>
-              <div className="md:col-span-4 space-y-4 md:sticky md:top-4">
+              <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-4">
                 <Card className="flex-1">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
