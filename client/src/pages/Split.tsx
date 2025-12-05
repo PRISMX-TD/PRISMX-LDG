@@ -40,6 +40,7 @@ export default function Split() {
   const [editingId, setEditingId] = useState<number | null>(routeId);
   const [current, setCurrent] = useState<GroupPayload | null>(null);
   const firstLoad = useRef(true);
+  const [newMemberName, setNewMemberName] = useState("");
 
   const { data: groups = [], isLoading } = useQuery<any[]>({ queryKey: ["/api/groups"] });
 
@@ -76,9 +77,11 @@ export default function Split() {
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => apiRequest("PATCH", `/api/groups/${editingId}`, data),
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       invalidateGroups();
-      toast({ title: "已保存" });
+      if (!variables?.__silent) {
+        toast({ title: "已保存" });
+      }
     },
     onError: () => toast({ title: "保存失败", variant: "destructive" }),
   });
@@ -94,7 +97,7 @@ export default function Split() {
         currency: current.currency,
         computed: current.computed,
       };
-      updateMutation.mutate({ payload });
+      updateMutation.mutate({ payload, __silent: true });
     }, 700);
     return () => clearTimeout(handle);
   }, [editingId, current]);
@@ -111,8 +114,13 @@ export default function Split() {
 
   const addMember = (name: string) => {
     if (!current) return;
+    const n = name.trim();
+    if (!n) return;
     const id = Math.random().toString(36).slice(2);
-    setCurrent({ ...current, members: [...current.members, { id, name }] });
+    const updated = { ...current, members: [...current.members, { id, name: n }] };
+    setCurrent(updated);
+    setNewMemberName("");
+    updateMutation.mutate({ payload: updated, __silent: true });
   };
 
   const removeMember = (id: string) => {
@@ -123,7 +131,9 @@ export default function Split() {
       participants: e.participants.filter(pid => pid !== id),
       shares: e.shares.filter(s => s.memberId !== id),
     }));
-    setCurrent({ ...current, members, expenses });
+    const updated = { ...current, members, expenses };
+    setCurrent(updated);
+    updateMutation.mutate({ payload: updated, __silent: true });
   };
 
   const addExpense = () => {
@@ -330,12 +340,8 @@ export default function Split() {
               <div className="space-y-2">
                 <Label>添加成员</Label>
                 <div className="flex items-center gap-2">
-                  <Input placeholder="姓名" id="memberName" />
-                  <Button onClick={() => {
-                    const el = document.getElementById("memberName") as HTMLInputElement;
-                    const val = el?.value?.trim();
-                    if (val) { addMember(val); el.value = ""; }
-                  }}>添加</Button>
+                  <Input placeholder="姓名" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} />
+                  <Button onClick={() => addMember(newMemberName)}>添加</Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {current.members.map(m => (
