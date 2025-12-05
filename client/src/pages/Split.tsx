@@ -46,11 +46,21 @@ export default function Split() {
 
   useEffect(() => {
     if (editingId) {
-      apiRequest("GET", `/api/groups/${editingId}`).then((g: any) => {
-        const payload: GroupPayload = g.payload || { members: [], expenses: [], currency: g.currency };
-        setCurrent({ members: payload.members || [], expenses: payload.expenses || [], currency: g.currency, computed: payload.computed });
-        firstLoad.current = false;
-      });
+      apiRequest("GET", `/api/groups/${editingId}`)
+        .then((g: any) => {
+          const payload: GroupPayload = g.payload || { members: [], expenses: [], currency: g.currency };
+          setCurrent({ members: payload.members || [], expenses: payload.expenses || [], currency: g.currency, computed: payload.computed });
+          firstLoad.current = false;
+        })
+        .catch((err: any) => {
+          const msg = (err && err.message) ? err.message : String(err || "");
+          if (msg.toLowerCase().includes("unauthorized")) {
+            toast({ title: "请登录后使用", variant: "destructive" });
+          } else {
+            toast({ title: "活动不存在或已删除", variant: "destructive" });
+          }
+          setLoc("/split");
+        });
     } else {
       setCurrent(null);
     }
