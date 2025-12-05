@@ -42,6 +42,15 @@ export default function Split() {
   const firstLoad = useRef(true);
   const [newMemberName, setNewMemberName] = useState("");
 
+  useEffect(() => {
+    if (routeId && routeId !== editingId) {
+      setEditingId(routeId);
+    }
+    if (!routeId && editingId) {
+      setEditingId(null);
+    }
+  }, [routeId]);
+
   const { data: groups = [], isLoading } = useQuery<any[]>({ queryKey: ["/api/groups"] });
 
   useEffect(() => {
