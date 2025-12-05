@@ -237,7 +237,7 @@ export default function Split() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="hidden md:flex text-2xl font-bold items-center gap-2">
           <Users className="w-6 h-6" />
@@ -254,10 +254,10 @@ export default function Split() {
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {groups.map((g) => (
             <Link key={g.id} href={`/split/${g.id}`} className="block">
-                <Card className="glass-card hover-elevate">
+                <Card className="glass-card hover-elevate h-full">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -342,71 +342,73 @@ export default function Split() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">编辑活动</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>币种</Label>
-                <Select value={current.currency} onValueChange={(v) => setCurrent({ ...current, currency: v })}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {supportedCurrencies.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>添加成员</Label>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="姓名" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} />
-                  <Button onClick={() => addMember(newMemberName)}>添加</Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {current.members.map(m => (
-                    <Badge key={m.id} variant="secondary" className="flex items-center gap-1">
-                      {m.name}
-                      <Button variant="ghost" size="icon" className="h-4 w-4 p-0" onClick={() => removeMember(m.id)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>操作</Label>
-                <div className="flex gap-2">
-                  <Button onClick={() => updateMutation.mutate({ payload: { members: current.members, expenses: current.expenses, currency: current.currency, computed: current.computed } })}>保存草稿</Button>
-                  <Button variant="outline" onClick={addExpense}>
-                    <Plus className="w-4 h-4 mr-1" />添加费用
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-2">
-                {current.expenses.map((e, idx) => (
-                  <div key={e.id} className="grid md:grid-cols-5 gap-3 items-start p-3 border rounded-lg">
-                    <div>
-                      <Label className="mb-1 block">付款人</Label>
-                        <Select value={e.payerId} onValueChange={(v) => {
-                          const expenses = [...current.expenses];
-                          expenses[idx] = { ...e, payerId: v };
-                          setCurrent({ ...current, expenses });
-                        }}>
-                          <SelectTrigger className="w-40">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {current.members.map(m => (
-                              <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <div className="md:col-span-8 space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>币种</Label>
+                    <Select value={current.currency} onValueChange={(v) => setCurrent({ ...current, currency: v })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {supportedCurrencies.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>添加成员</Label>
+                    <div className="flex items-center gap-2">
+                      <Input placeholder="姓名" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} />
+                      <Button onClick={() => addMember(newMemberName)}>添加</Button>
                     </div>
-                    <div>
+                    <div className="flex flex-wrap gap-2">
+                      {current.members.map(m => (
+                        <Badge key={m.id} variant="secondary" className="flex items-center gap-1">
+                          {m.name}
+                          <Button variant="ghost" size="icon" className="h-4 w-4 p-0" onClick={() => removeMember(m.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>操作</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" onClick={() => updateMutation.mutate({ payload: { members: current.members, expenses: current.expenses, currency: current.currency, computed: current.computed } })}>保存草稿</Button>
+                      <Button variant="ghost" onClick={addExpense}>
+                        <Plus className="w-4 h-4 mr-1" />添加费用
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                  {current.expenses.map((e, idx) => (
+                    <div key={e.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-start p-3 border rounded-lg">
+                      <div className="space-y-2">
+                        <Label className="mb-1 block">付款人</Label>
+                          <Select value={e.payerId} onValueChange={(v) => {
+                            const expenses = [...current.expenses];
+                            expenses[idx] = { ...e, payerId: v };
+                            setCurrent({ ...current, expenses });
+                          }}>
+                            <SelectTrigger className="w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {current.members.map(m => (
+                                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                      </div>
+                      <div className="space-y-2">
                         <Label className="mb-1 block">金额（{current.currency}）</Label>
                         <Input type="number" placeholder={`例如 100.00`} value={e.amount} onChange={(ev) => {
                           const expenses = [...current.expenses];
@@ -422,8 +424,8 @@ export default function Split() {
                             setCurrent({ ...current, expenses });
                           }} />
                         </div>
-                    </div>
-                    <div>
+                      </div>
+                      <div className="space-y-2">
                         <Label className="mb-1 block">分摊方式</Label>
                         <Select value={e.shares.every(s => s.type === "equal") ? "equal" : e.shares[0]?.type || "equal"} onValueChange={(v: ExpenseShareType) => {
                           const expenses = [...current.expenses];
@@ -465,8 +467,8 @@ export default function Split() {
                             })}
                           </div>
                         )}
-                    </div>
-                    <div>
+                      </div>
+                      <div className="space-y-2">
                         <Label className="mb-1 block">参与者</Label>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                           {current.members.map(m => (
@@ -490,44 +492,44 @@ export default function Split() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                    </div>
-                    <div>
-                      <Label className="mb-1 block">备注 / 原币与汇率</Label>
-                      <Input placeholder="备注（可选）" value={e.note || ""} onChange={(ev) => {
-                        const expenses = [...current.expenses];
-                        expenses[idx] = { ...e, note: ev.target.value };
-                        setCurrent({ ...current, expenses });
-                      }} />
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <Select value={e.originalCurrency || current.currency} onValueChange={(v) => {
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="mb-1 block">备注 / 原币与汇率</Label>
+                        <Input placeholder="备注（可选）" value={e.note || ""} onChange={(ev) => {
                           const expenses = [...current.expenses];
-                          expenses[idx] = { ...e, originalCurrency: v };
-                          setCurrent({ ...current, expenses });
-                        }}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {supportedCurrencies.map(c => (
-                              <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input type="number" placeholder="汇率（原币→活动币）" value={e.exchangeRate ?? 1} onChange={(ev) => {
-                          const rate = parseFloat(ev.target.value || "1");
-                          const expenses = [...current.expenses];
-                          expenses[idx] = { ...e, exchangeRate: isNaN(rate) ? 1 : rate };
+                          expenses[idx] = { ...e, note: ev.target.value };
                           setCurrent({ ...current, expenses });
                         }} />
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <Select value={e.originalCurrency || current.currency} onValueChange={(v) => {
+                            const expenses = [...current.expenses];
+                            expenses[idx] = { ...e, originalCurrency: v };
+                            setCurrent({ ...current, expenses });
+                          }}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {supportedCurrencies.map(c => (
+                                <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input type="number" placeholder="汇率（原币→活动币）" value={e.exchangeRate ?? 1} onChange={(ev) => {
+                            const rate = parseFloat(ev.target.value || "1");
+                            const expenses = [...current.expenses];
+                            expenses[idx] = { ...e, exchangeRate: isNaN(rate) ? 1 : rate };
+                            setCurrent({ ...current, expenses });
+                          }} />
+                        </div>
                       </div>
                     </div>
+                  ))}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-start justify-between gap-4">
-              <Card className="flex-1">
+              <div className="md:col-span-4 space-y-4 md:sticky md:top-4">
+                <Card className="flex-1">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Info className="w-4 h-4" />结果说明
@@ -565,11 +567,12 @@ export default function Split() {
                     <div className="text-muted-foreground">添加费用后可计算净值与清算建议</div>
                   )}
                 </CardContent>
-              </Card>
-              <div className="flex items-center">
-                <Button onClick={saveComputed}>
-                  <Calculator className="w-4 h-4 mr-1" />计算并保存
-                </Button>
+                </Card>
+                <div className="flex md:items-center">
+                  <Button onClick={saveComputed} className="w-full md:w-auto">
+                    <Calculator className="w-4 h-4 mr-1" />计算并保存
+                  </Button>
+                </div>
               </div>
             </div>
 
