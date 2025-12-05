@@ -47,6 +47,7 @@ export default function Split() {
   useEffect(() => {
     if (editingId) {
       apiRequest("GET", `/api/groups/${editingId}`)
+        .then((res) => res.json())
         .then((g: any) => {
           const payload: GroupPayload = g.payload || { members: [], expenses: [], currency: g.currency };
           setCurrent({ members: payload.members || [], expenses: payload.expenses || [], currency: g.currency, computed: payload.computed });
@@ -71,7 +72,7 @@ export default function Split() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/groups", data),
+    mutationFn: (data: any) => apiRequest("POST", "/api/groups", data).then((res) => res.json()),
     onSuccess: (created: any) => {
       invalidateGroups();
       setCreateOpen(false);
@@ -86,7 +87,7 @@ export default function Split() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("PATCH", `/api/groups/${editingId}`, data),
+    mutationFn: (data: any) => apiRequest("PATCH", `/api/groups/${editingId}`, data).then((res) => res.json()),
     onSuccess: (_res, variables) => {
       invalidateGroups();
       if (!variables?.__silent) {
@@ -113,7 +114,7 @@ export default function Split() {
   }, [editingId, current]);
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/groups/${id}`),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/groups/${id}`).then((res) => ({ ok: res.ok })),
     onSuccess: () => {
       invalidateGroups();
       if (editingId) setEditingId(null);
