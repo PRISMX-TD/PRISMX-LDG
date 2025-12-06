@@ -52,8 +52,6 @@ export const wallets = pgTable("wallets", {
   color: varchar("color", { length: 20 }), // hex color for card display
   isDefault: boolean("is_default").default(false),
   isFlexible: boolean("is_flexible").default(true), // true = flexible funds (可灵活调用), false = long-term/emergency savings
-  isArchived: boolean("is_archived").default(false),
-  archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

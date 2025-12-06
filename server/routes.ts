@@ -330,8 +330,9 @@ export async function registerRoutes(
         await storage.updateWalletBalance(wallet.id, userId, '0.00');
       }
 
-      const archived = await storage.updateWallet(id, userId, { isArchived: true as any, archivedAt: new Date() as any });
-      res.json(archived);
+      const newName = wallet.name.endsWith(' (归档)') ? wallet.name : `${wallet.name} (归档)`;
+      const archived = await storage.updateWallet(id, userId, { isFlexible: false as any, name: newName });
+      res.json({ ...archived, isArchived: true });
     } catch (error) {
       console.error("Error archiving wallet:", error);
       res.status(500).json({ message: "Failed to archive wallet" });
