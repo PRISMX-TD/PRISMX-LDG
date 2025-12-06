@@ -274,6 +274,7 @@ export function TransactionModal({
   }, [needsCurrencyConversion]);
 
   useEffect(() => {
+    if (conversionPref !== "byRate") return;
     if (needsCurrencyConversion && watchAmount && watchExchangeRate) {
       const amount = parseFloat(watchAmount);
       const rate = parseFloat(watchExchangeRate);
@@ -284,7 +285,7 @@ export function TransactionModal({
         }
       }
     }
-  }, [watchAmount, watchExchangeRate, needsCurrencyConversion, form, watchConvertedAmount]);
+  }, [watchAmount, watchExchangeRate, needsCurrencyConversion, form, watchConvertedAmount, conversionPref]);
 
   const handleConvertedAmountChange = (value: string) => {
     const num = parseFloat(value);
