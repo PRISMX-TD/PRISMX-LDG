@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -71,8 +71,22 @@ const transactionSchema = z.object({
     "请输入有效金额"
   ),
   currency: z.string().min(1, "请选择币种"),
-  exchangeRate: z.string().optional(),
-  convertedAmount: z.string().optional(),
+  exchangeRate: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    }, "汇率必须为正数"),
+  convertedAmount: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    }, "转换后金额必须为非负数"),
   walletId: z.string().min(1, "请选择钱包"),
   toWalletId: z.string().optional(),
   toWalletAmount: z.string().optional(),
@@ -108,6 +122,15 @@ export function TransactionModal({
 
   const [isLoadingRate, setIsLoadingRate] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
+  const [conversionPref, setConversionPref] = useState<"byRate" | "byConverted">(() => {
+    try {
+      const saved = localStorage.getItem("tx_conversion_pref");
+      return saved === "byConverted" ? "byConverted" : "byRate";
+    } catch {
+      return "byRate";
+    }
+  });
+  const originalSnapshot = useRef<{ amount?: string; rate?: string; converted?: string }>({});
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
@@ -237,6 +260,20 @@ export function TransactionModal({
   }, [watchCurrency, selectedWallet, form, fetchExchangeRate, isEditing]);
 
   useEffect(() => {
+    if (needsCurrencyConversion) {
+      if (!originalSnapshot.current.amount) {
+        originalSnapshot.current = {
+          amount: watchAmount || "",
+          rate: watchExchangeRate || "1",
+          converted: watchConvertedAmount || "",
+        };
+      }
+    } else {
+      originalSnapshot.current = {};
+    }
+  }, [needsCurrencyConversion]);
+
+  useEffect(() => {
     if (needsCurrencyConversion && watchAmount && watchExchangeRate) {
       const amount = parseFloat(watchAmount);
       const rate = parseFloat(watchExchangeRate);
@@ -250,13 +287,39 @@ export function TransactionModal({
   }, [watchAmount, watchExchangeRate, needsCurrencyConversion, form, watchConvertedAmount]);
 
   const handleConvertedAmountChange = (value: string) => {
-    form.setValue("convertedAmount", value);
-    if (watchAmount && value) {
+    const num = parseFloat(value);
+    if (isNaN(num) || num < 0) {
+      form.setValue("convertedAmount", value);
+      return;
+    }
+    const rounded = num.toFixed(2);
+    form.setValue("convertedAmount", rounded, { shouldValidate: true });
+    setConversionPref("byConverted");
+    try { localStorage.setItem("tx_conversion_pref", "byConverted"); } catch {}
+    if (watchAmount) {
       const amount = parseFloat(watchAmount);
-      const converted = parseFloat(value);
-      if (!isNaN(amount) && !isNaN(converted) && amount > 0) {
-        const newRate = (converted / amount).toFixed(4);
-        form.setValue("exchangeRate", newRate);
+      if (!isNaN(amount) && amount > 0) {
+        const newRate = (parseFloat(rounded) / amount).toFixed(4);
+        form.setValue("exchangeRate", newRate, { shouldValidate: true });
+      }
+    }
+  };
+
+  const handleRateChange = (value: string) => {
+    const num = parseFloat(value);
+    if (isNaN(num) || num <= 0) {
+      form.setValue("exchangeRate", value);
+      return;
+    }
+    const rounded = num.toFixed(4);
+    form.setValue("exchangeRate", rounded, { shouldValidate: true });
+    setConversionPref("byRate");
+    try { localStorage.setItem("tx_conversion_pref", "byRate"); } catch {}
+    if (watchAmount) {
+      const amount = parseFloat(watchAmount);
+      if (!isNaN(amount) && amount > 0) {
+        const converted = (amount * parseFloat(rounded)).toFixed(2);
+        form.setValue("convertedAmount", converted, { shouldValidate: true });
       }
     }
   };
@@ -282,7 +345,12 @@ export function TransactionModal({
 
       if (isCrossCurrency) {
         requestData.currency = data.currency;
-        requestData.exchangeRate = parseFloat(data.exchangeRate || "1");
+        const rate = parseFloat(data.exchangeRate || "1");
+        const original = parseFloat(data.amount);
+        const converted = parseFloat(data.convertedAmount || "0");
+        requestData.exchangeRate = rate;
+        requestData.originalAmount = original;
+        requestData.amount = converted; // 保存为钱包币种金额
       }
 
       if (isTransferCrossCurrency && data.toWalletAmount) {
@@ -488,10 +556,12 @@ export function TransactionModal({
                       </FormLabel>
                       <FormControl>
                         <Input
-                          {...field}
                           type="number"
                           step="0.0001"
                           min="0.0001"
+                          value={field.value || ""}
+                          onChange={(e) => handleRateChange(e.target.value)}
+                          onBlur={(e) => handleRateChange(e.target.value)}
                           placeholder="1.0000"
                           className="font-mono"
                           data-testid="input-exchange-rate"
@@ -500,6 +570,7 @@ export function TransactionModal({
                       {rateError && (
                         <p className="text-xs text-yellow-600 dark:text-yellow-500">{rateError}</p>
                       )}
+                      <p className="text-xs text-muted-foreground">可直接编辑汇率，系统会同步更新转换后金额</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -520,15 +591,29 @@ export function TransactionModal({
                         min="0"
                         value={watchConvertedAmount || ""}
                         onChange={(e) => handleConvertedAmountChange(e.target.value)}
+                        onBlur={(e) => handleConvertedAmountChange(e.target.value)}
                         placeholder="0.00"
                         className="pl-10 font-mono"
                         data-testid="input-converted-amount"
                       />
                     </div>
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    此金额将记入钱包，可手动修改
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">此金额将记入钱包，可直接编辑，系统会同步更新汇率</p>
+                    {needsCurrencyConversion && (
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2"
+                        onClick={() => {
+                          const snap = originalSnapshot.current;
+                          if (snap) {
+                            if (typeof snap.amount === "string") form.setValue("amount", snap.amount);
+                            if (typeof snap.rate === "string") form.setValue("exchangeRate", snap.rate);
+                            if (typeof snap.converted === "string") form.setValue("convertedAmount", snap.converted);
+                          }
+                          setRateError(null);
+                        }}
+                      >重置</Button>
+                    )}
+                  </div>
                 </FormItem>
               </div>
             )}
