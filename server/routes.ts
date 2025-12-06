@@ -272,6 +272,47 @@ export async function registerRoutes(
     }
   });
 
+  // Archive wallet with optional balance handling
+  app.post('/api/wallets/:id/archive', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { action, targetWalletId, rate } = req.body || {};
+      const wallet = await storage.getWallet(id, userId);
+      if (!wallet) return res.status(404).json({ message: "Wallet not found" });
+
+      const balance = parseFloat(wallet.balance || "0");
+      if (isNaN(balance)) return res.status(400).json({ message: "Invalid wallet balance" });
+
+      if (balance !== 0) {
+        if (action === 'transfer') {
+          if (!targetWalletId) return res.status(400).json({ message: "targetWalletId required for transfer" });
+          const target = await storage.getWallet(parseInt(targetWalletId), userId);
+          if (!target) return res.status(404).json({ message: "Target wallet not found" });
+          let addAmount = balance;
+          if ((wallet.currency || 'MYR') !== (target.currency || 'MYR')) {
+            const r = typeof rate === 'number' ? rate : parseFloat(rate);
+            if (isNaN(r) || r <= 0) return res.status(400).json({ message: "Valid exchange rate required for cross-currency transfer" });
+            addAmount = parseFloat((balance * r).toFixed(2));
+          }
+          const targetNew = parseFloat(target.balance || '0') + addAmount;
+          await storage.updateWalletBalance(target.id, userId, targetNew.toFixed(2));
+        } else if (action === 'destroy') {
+          // no-op: simply zero out, optionally could create an adjustment transaction
+        } else {
+          return res.status(400).json({ message: "Invalid action" });
+        }
+        await storage.updateWalletBalance(wallet.id, userId, '0.00');
+      }
+
+      const archived = await storage.updateWallet(id, userId, { isArchived: true as any, archivedAt: new Date() as any });
+      res.json(archived);
+    } catch (error) {
+      console.error("Error archiving wallet:", error);
+      res.status(500).json({ message: "Failed to archive wallet" });
+    }
+  });
+
   // Delete wallet
   app.delete('/api/wallets/:id', isAuthenticated, async (req: any, res) => {
     try {

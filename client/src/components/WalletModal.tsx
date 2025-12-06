@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supportedCurrencies, type Wallet } from "@shared/schema";
 import { Loader2, Trash2 } from "lucide-react";
+import { ArrowRightLeft } from "lucide-react";
 
 const walletTypes = [
   { value: "cash", label: "现金" },
@@ -76,7 +77,12 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteWithTransactions, setDeleteWithTransactions] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [archiveAction, setArchiveAction] = useState<'transfer'|'destroy'>('transfer');
+  const [archiveTargetId, setArchiveTargetId] = useState<string>("");
+  const [archiveRate, setArchiveRate] = useState<string>("");
   const isEditing = !!wallet;
+  const { data: allWallets = [] } = useQuery<Wallet[]>({ queryKey: ["/api/wallets"] });
 
   const form = useForm<WalletFormData>({
     defaultValues: {
@@ -202,6 +208,34 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      if (!wallet) return Promise.resolve();
+      const body: any = { action: archiveAction };
+      if (archiveAction === 'transfer') {
+        body.targetWalletId = parseInt(archiveTargetId);
+        const target = allWallets.find((w)=>String(w.id)===archiveTargetId);
+        if (target && (wallet.currency || defaultCurrency) !== (target.currency || defaultCurrency)) {
+          body.rate = parseFloat(archiveRate);
+        }
+      }
+      return apiRequest("POST", `/api/wallets/${wallet!.id}/archive`, body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      setShowArchiveDialog(false);
+      onOpenChange(false);
+      setArchiveAction('transfer');
+      setArchiveTargetId("");
+      setArchiveRate("");
+      toast({ title: "钱包已归档" });
+    },
+    onError: (error: any) => {
+      toast({ title: "归档失败", description: error.message || "请检查目标钱包与汇率", variant: "destructive" });
+    }
+  });
 
   return (
     <>
@@ -383,6 +417,15 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11"
+                      onClick={() => setShowArchiveDialog(true)}
+                      disabled={wallet?.isDefault === true}
+                    >
+                      归档
+                    </Button>
                     {!wallet?.isDefault && (
                       <Button
                         type="button"
@@ -475,6 +518,56 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                 "确认删除"
               )}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>归档钱包</AlertDialogTitle>
+            <AlertDialogDescription>归档后该钱包将从列表隐藏。当前余额：{wallet ? parseFloat(wallet.balance || '0').toFixed(2) : '0.00'} {wallet?.currency}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <RadioGroup value={archiveAction} onValueChange={(v:any)=>setArchiveAction(v)} className="space-y-2">
+              <div className="flex items-start gap-3 p-3 rounded-lg hover-elevate cursor-pointer" onClick={()=>setArchiveAction('transfer')}>
+                <RadioGroupItem value="transfer" id="archive-transfer" className="mt-0.5" />
+                <div className="flex-1">
+                  <Label htmlFor="archive-transfer" className="text-sm font-medium cursor-pointer flex items-center gap-1"><ArrowRightLeft className="w-3.5 h-3.5"/>转入其他钱包</Label>
+                  <div className="mt-2 space-y-2">
+                    <Select value={archiveTargetId} onValueChange={setArchiveTargetId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择目标钱包" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allWallets.filter(w=> (!wallet || w.id !== wallet.id) && !w.isArchived).map((w)=> (
+                          <SelectItem key={w.id} value={String(w.id)}>
+                            {w.name} ({w.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(() => {
+                      const target = allWallets.find((w)=>String(w.id)===archiveTargetId);
+                      return wallet && target && wallet.currency !== target.currency;
+                    })() && (
+                      <Input placeholder="跨币种汇率（源→目标）" value={archiveRate} onChange={(e)=>setArchiveRate(e.target.value)} />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg hover-elevate cursor-pointer" onClick={()=>setArchiveAction('destroy')}>
+                <RadioGroupItem value="destroy" id="archive-destroy" className="mt-0.5" />
+                <div className="flex-1">
+                  <Label htmlFor="archive-destroy" className="text-sm font-medium cursor-pointer text-destructive">销毁余额</Label>
+                  <p className="text-xs text-muted-foreground">将余额清零，不生成交易记录</p>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={()=>archiveMutation.mutate()}>{archiveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin"/> : '确认归档'}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

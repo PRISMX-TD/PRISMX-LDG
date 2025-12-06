@@ -78,7 +78,7 @@ export default function Wallets() {
     const groups: Record<string, WalletType[]> = {};
     const customOrder = walletPreferences?.walletOrder as Record<string, number[]> | null;
 
-    wallets.forEach((wallet) => {
+    wallets.filter(w => !w.isArchived).forEach((wallet) => {
       const type = wallet.type || 'other';
       if (!groups[type]) {
         groups[type] = [];
@@ -231,7 +231,7 @@ export default function Wallets() {
       </div>
 
       <TotalAssetsCard
-        wallets={wallets}
+        wallets={wallets.filter(w=>!w.isArchived)}
         defaultCurrency={user?.defaultCurrency || "MYR"}
         isLoading={isLoading}
       />
