@@ -21,17 +21,42 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Auth middleware with fallback
-  try {
-    await setupAuth(app);
-  } catch (err) {
-    console.error("Auth setup failed, enabling open access fallback:", err);
+  // Auth middleware with fallback or explicit disable
+  if (process.env.DISABLE_AUTH === 'true') {
     app.use((req: any, _res, next) => {
       req.user = { claims: { sub: req.header("x-user-id") || "demo-user" } };
       req.isAuthenticated = () => true;
       next();
     });
+  } else {
+    try {
+      await setupAuth(app);
+    } catch (err) {
+      console.error("Auth setup failed, enabling open access fallback:", err);
+      app.use((req: any, _res, next) => {
+        req.user = { claims: { sub: req.header("x-user-id") || "demo-user" } };
+        req.isAuthenticated = () => true;
+        next();
+      });
+    }
   }
+
+  // Ensure user record exists for any authenticated request (including fallback mode)
+  app.use(async (req: any, _res, next) => {
+    try {
+      if (req.path.startsWith('/api/') && req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        if (!user) {
+          await storage.upsertUser({ id: userId });
+          await storage.initializeUserDefaults(userId, 'MYR');
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    next();
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
