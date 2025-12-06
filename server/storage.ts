@@ -187,6 +187,8 @@ export interface TransactionFilters {
   walletId?: number;
   type?: string;
   search?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface TransactionStats {
@@ -437,9 +439,12 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Get toWallet data for transfers
+    const start = filters?.offset ? Math.max(0, filters.offset) : 0;
+    const end = filters?.limit ? start + Math.max(0, filters.limit) : undefined;
+    const paged = end !== undefined ? filtered.slice(start, end) : filtered;
+
     const transactionsWithToWallet = await Promise.all(
-      filtered.map(async (t) => {
+      paged.map(async (t) => {
         let toWallet = null;
         if (t.toWalletId) {
           const [tw] = await db

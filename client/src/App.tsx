@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,24 +11,24 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
-import NotFound from "@/pages/not-found";
-import Landing from "@/pages/Landing";
-import Auth from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import Transactions from "@/pages/Transactions";
-import Categories from "@/pages/Categories";
-import Wallets from "@/pages/Wallets";
-import Budgets from "@/pages/Budgets";
-import Savings from "@/pages/Savings";
-import Recurring from "@/pages/Recurring";
-import Reminders from "@/pages/Reminders";
-import Analytics from "@/pages/Analytics";
-import Reports from "@/pages/Reports";
-import Settings from "@/pages/Settings";
-import Exchange from "@/pages/Exchange";
-import SubLedgers from "@/pages/SubLedgers";
-import WalletDetail from "@/pages/WalletDetail";
-import Split from "@/pages/Split";
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Landing = lazy(() => import("@/pages/Landing"));
+const Auth = lazy(() => import("@/pages/Auth"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Transactions = lazy(() => import("@/pages/Transactions"));
+const Categories = lazy(() => import("@/pages/Categories"));
+const Wallets = lazy(() => import("@/pages/Wallets"));
+const Budgets = lazy(() => import("@/pages/Budgets"));
+const Savings = lazy(() => import("@/pages/Savings"));
+const Recurring = lazy(() => import("@/pages/Recurring"));
+const Reminders = lazy(() => import("@/pages/Reminders"));
+const Analytics = lazy(() => import("@/pages/Analytics"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const Exchange = lazy(() => import("@/pages/Exchange"));
+const SubLedgers = lazy(() => import("@/pages/SubLedgers"));
+const WalletDetail = lazy(() => import("@/pages/WalletDetail"));
+const Split = lazy(() => import("@/pages/Split"));
 
 function AuthenticatedLayout() {
   const { user, isLoading } = useAuth();
@@ -63,24 +64,96 @@ function AuthenticatedLayout() {
               </header>
               <main className="flex-1 overflow-auto">
                 <Switch>
-                  <Route path="/auth" component={Dashboard} />
-                  <Route path="/" component={Dashboard} />
-                  <Route path="/transactions" component={Transactions} />
-                  <Route path="/categories" component={Categories} />
-                  <Route path="/wallets" component={Wallets} />
-                  <Route path="/wallets/:id" component={WalletDetail} />
-                  <Route path="/exchange" component={Exchange} />
-                  <Route path="/budgets" component={Budgets} />
-                  <Route path="/savings" component={Savings} />
-                  <Route path="/recurring" component={Recurring} />
-                  <Route path="/reminders" component={Reminders} />
-                  <Route path="/analytics" component={Analytics} />
-                  <Route path="/reports" component={Reports} />
-                  <Route path="/sub-ledgers" component={SubLedgers} />
-                  <Route path="/split" component={Split} />
-                  <Route path="/split/:id" component={Split} />
-                  <Route path="/settings" component={Settings} />
-                  <Route component={NotFound} />
+                  <Route path="/auth" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Dashboard />
+                    </Suspense>
+                  )} />
+                  <Route path="/" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Dashboard />
+                    </Suspense>
+                  )} />
+                  <Route path="/transactions" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Transactions />
+                    </Suspense>
+                  )} />
+                  <Route path="/categories" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Categories />
+                    </Suspense>
+                  )} />
+                  <Route path="/wallets" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Wallets />
+                    </Suspense>
+                  )} />
+                  <Route path="/wallets/:id" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <WalletDetail />
+                    </Suspense>
+                  )} />
+                  <Route path="/exchange" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Exchange />
+                    </Suspense>
+                  )} />
+                  <Route path="/budgets" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Budgets />
+                    </Suspense>
+                  )} />
+                  <Route path="/savings" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Savings />
+                    </Suspense>
+                  )} />
+                  <Route path="/recurring" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Recurring />
+                    </Suspense>
+                  )} />
+                  <Route path="/reminders" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Reminders />
+                    </Suspense>
+                  )} />
+                  <Route path="/analytics" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Analytics />
+                    </Suspense>
+                  )} />
+                  <Route path="/reports" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Reports />
+                    </Suspense>
+                  )} />
+                  <Route path="/sub-ledgers" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <SubLedgers />
+                    </Suspense>
+                  )} />
+                  <Route path="/split" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Split />
+                    </Suspense>
+                  )} />
+                  <Route path="/split/:id" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Split />
+                    </Suspense>
+                  )} />
+                  <Route path="/settings" component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <Settings />
+                    </Suspense>
+                  )} />
+                  <Route component={() => (
+                    <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                      <NotFound />
+                    </Suspense>
+                  )} />
                 </Switch>
               </main>
             </SidebarInset>
@@ -93,24 +166,96 @@ function AuthenticatedLayout() {
         <MobileHeader user={user} />
         <main className="flex-1 overflow-auto pb-20">
           <Switch>
-            <Route path="/auth" component={Dashboard} />
-            <Route path="/" component={Dashboard} />
-            <Route path="/transactions" component={Transactions} />
-            <Route path="/categories" component={Categories} />
-            <Route path="/wallets" component={Wallets} />
-            <Route path="/wallets/:id" component={WalletDetail} />
-            <Route path="/exchange" component={Exchange} />
-            <Route path="/budgets" component={Budgets} />
-            <Route path="/savings" component={Savings} />
-            <Route path="/recurring" component={Recurring} />
-            <Route path="/reminders" component={Reminders} />
-            <Route path="/analytics" component={Analytics} />
-            <Route path="/reports" component={Reports} />
-            <Route path="/sub-ledgers" component={SubLedgers} />
-            <Route path="/split" component={Split} />
-            <Route path="/split/:id" component={Split} />
-            <Route path="/settings" component={Settings} />
-            <Route component={NotFound} />
+            <Route path="/auth" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Dashboard />
+              </Suspense>
+            )} />
+            <Route path="/" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Dashboard />
+              </Suspense>
+            )} />
+            <Route path="/transactions" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Transactions />
+              </Suspense>
+            )} />
+            <Route path="/categories" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Categories />
+              </Suspense>
+            )} />
+            <Route path="/wallets" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Wallets />
+              </Suspense>
+            )} />
+            <Route path="/wallets/:id" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <WalletDetail />
+              </Suspense>
+            )} />
+            <Route path="/exchange" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Exchange />
+              </Suspense>
+            )} />
+            <Route path="/budgets" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Budgets />
+              </Suspense>
+            )} />
+            <Route path="/savings" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Savings />
+              </Suspense>
+            )} />
+            <Route path="/recurring" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Recurring />
+              </Suspense>
+            )} />
+            <Route path="/reminders" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Reminders />
+              </Suspense>
+            )} />
+            <Route path="/analytics" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Analytics />
+              </Suspense>
+            )} />
+            <Route path="/reports" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Reports />
+              </Suspense>
+            )} />
+            <Route path="/sub-ledgers" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <SubLedgers />
+              </Suspense>
+            )} />
+            <Route path="/split" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Split />
+              </Suspense>
+            )} />
+            <Route path="/split/:id" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Split />
+              </Suspense>
+            )} />
+            <Route path="/settings" component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <Settings />
+              </Suspense>
+            )} />
+            <Route component={() => (
+              <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-primary" />}> 
+                <NotFound />
+              </Suspense>
+            )} />
           </Switch>
         </main>
         <MobileNavBar user={user} />

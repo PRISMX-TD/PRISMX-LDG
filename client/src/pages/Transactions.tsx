@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
@@ -61,14 +61,25 @@ export default function Transactions() {
     return params.toString();
   }, [filters]);
 
-  const { data: transactions = [], isLoading: isTransactionsLoading } = useQuery<TransactionWithRelations[]>({
+  const PAGE_SIZE = 50;
+  const {
+    data: transactionsPages,
+    isLoading: isTransactionsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch: refetchTransactions,
+  } = useInfiniteQuery<TransactionWithRelations[]>({
     queryKey: ["/api/transactions", queryParams],
-    queryFn: async () => {
-      const res = await fetch(`/api/transactions${queryParams ? `?${queryParams}` : ""}`, {
-        credentials: "include",
-      });
+    queryFn: async ({ pageParam = 0 }) => {
+      const url = `/api/transactions${queryParams ? `?${queryParams}&` : "?"}limit=${PAGE_SIZE}&offset=${pageParam}`;
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const nextOffset = (allPages.reduce((sum, p) => sum + p.length, 0));
+      return lastPage.length === PAGE_SIZE ? nextOffset : undefined;
     },
     enabled: isAuthenticated,
   });
@@ -225,7 +236,7 @@ export default function Transactions() {
                     <TransactionItemSkeleton key={i} />
                   ))}
                 </div>
-              ) : transactions.length === 0 ? (
+              ) : (transactionsPages?.pages?.flat().length || 0) === 0 ? (
                 <div className="py-12">
                   <EmptyState
                     icon={Receipt}
@@ -237,7 +248,7 @@ export default function Transactions() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {transactions.map((transaction) => (
+                  {transactionsPages?.pages?.flat().map((transaction) => (
                     <TransactionItem
                       key={transaction.id}
                       transaction={transaction}
@@ -250,6 +261,13 @@ export default function Transactions() {
                       }}
                     />
                   ))}
+                  {hasNextPage && (
+                    <div className="flex justify-center pt-2">
+                      <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                        {isFetchingNextPage ? "加载中..." : "加载更多"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -594,6 +594,14 @@ export async function registerRoutes(
       if (req.query.search) {
         filters.search = req.query.search;
       }
+      if (req.query.limit) {
+        const l = parseInt(req.query.limit);
+        if (!isNaN(l) && l > 0) filters.limit = l;
+      }
+      if (req.query.offset) {
+        const o = parseInt(req.query.offset);
+        if (!isNaN(o) && o >= 0) filters.offset = o;
+      }
       
       const transactions = await storage.getTransactions(userId, Object.keys(filters).length > 0 ? filters : undefined);
       res.json(transactions);
