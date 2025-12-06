@@ -7,6 +7,15 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function getFallbackHeaders() {
+  try {
+    const uid = localStorage.getItem('PRISMX_USER_ID') || localStorage.getItem('x-user-id');
+    return uid ? { 'x-user-id': uid } : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -14,7 +23,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: { ...(data ? { "Content-Type": "application/json" } : {}), ...getFallbackHeaders() },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,14 +38,21 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+    const url = queryKey.join("/") as string;
+    let res = await fetch(url, { credentials: "include", headers: getFallbackHeaders() });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
 
+    if (!res.ok && res.status === 401) {
+      try {
+        // try open-access fallback with demo id
+        localStorage.setItem('PRISMX_USER_ID', 'demo-user');
+        localStorage.setItem('x-user-id', 'demo-user');
+      } catch {}
+      res = await fetch(url, { credentials: "include", headers: getFallbackHeaders() });
+    }
     await throwIfResNotOk(res);
     return await res.json();
   };

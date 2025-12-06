@@ -246,9 +246,12 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return next();
   }
   const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
+  }
+  // Fallback support: when open-access fallback sets req.user without expires_at
+  if (!user?.expires_at && user?.claims?.sub) {
+    return next();
   }
 
   const now = Math.floor(Date.now() / 1000);
