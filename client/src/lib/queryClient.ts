@@ -16,14 +16,25 @@ function getFallbackHeaders() {
   }
 }
 
+function getCsrfToken(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const cookie = document.cookie || '';
+  const parts = cookie.split(';').map(c => c.trim());
+  for (const p of parts) {
+    if (p.startsWith('XSRF-TOKEN=')) return decodeURIComponent(p.slice('XSRF-TOKEN='.length));
+  }
+  return undefined;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const csrf = method === 'GET' ? undefined : getCsrfToken();
   const res = await fetch(url, {
     method,
-    headers: { ...(data ? { "Content-Type": "application/json" } : {}), ...getFallbackHeaders() },
+    headers: { ...(data ? { "Content-Type": "application/json" } : {}), ...(csrf ? { 'x-csrf-token': csrf } : {}), ...getFallbackHeaders() },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

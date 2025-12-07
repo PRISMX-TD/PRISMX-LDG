@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -21,6 +22,73 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Security headers
+app.use((req, res, next) => {
+  const isProd = process.env.NODE_ENV === "production";
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader(
+    "Permissions-Policy",
+    "geolocation=(), microphone=(), camera=(), fullscreen=(self)"
+  );
+  const csp = [
+    "default-src 'self'",
+    "img-src 'self' data:",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "script-src 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+  res.setHeader("Content-Security-Policy", csp);
+  if (isProd && req.protocol === "https") {
+    res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+  }
+  next();
+});
+
+// CSRF (double-submit cookie)
+const CSRF_COOKIE = "XSRF-TOKEN";
+function getCookie(req: Request, name: string): string | undefined {
+  const cookie = req.headers.cookie || "";
+  const parts = cookie.split(";").map((c) => c.trim());
+  for (const p of parts) {
+    if (p.startsWith(name + "=")) return decodeURIComponent(p.substring(name.length + 1));
+  }
+  return undefined;
+}
+
+app.use((req, res, next) => {
+  const isProd = process.env.NODE_ENV === "production";
+  const existing = getCookie(req, CSRF_COOKIE);
+  if (!existing) {
+    const token = crypto.randomBytes(20).toString("hex");
+    // exposed to client JS by design (double submit), keep HttpOnly false
+    (res as any).cookie?.(CSRF_COOKIE, token, {
+      httpOnly: false,
+      sameSite: "lax",
+      secure: isProd,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60,
+    }) || res.setHeader(
+      "Set-Cookie",
+      `${CSRF_COOKIE}=${token}; Path=/; SameSite=Lax${isProd ? "; Secure" : ""}`
+    );
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/") && ["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const header = (req.headers["x-csrf-token"] || "") as string;
+    const cookieVal = getCookie(req, CSRF_COOKIE);
+    if (!header || !cookieVal || header !== cookieVal) {
+      return res.status(403).json({ message: "CSRF token invalid" });
+    }
+  }
+  next();
+});
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, port: process.env.PORT, env: process.env.NODE_ENV, authDisabled: process.env.DISABLE_AUTH });

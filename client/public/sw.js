@@ -63,7 +63,8 @@ async function networkFirst(request) {
     
     if (response.ok) {
       const isHttp = request.url.startsWith('http://') || request.url.startsWith('https://');
-      if (isHttp) {
+      const isApi = new URL(request.url).pathname.startsWith('/api/');
+      if (isHttp && !isApi) {
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, response.clone());
       }
@@ -72,7 +73,8 @@ async function networkFirst(request) {
     return response;
   } catch (error) {
     const isHttp = request.url.startsWith('http://') || request.url.startsWith('https://');
-    const cachedResponse = isHttp ? await caches.match(request) : undefined;
+    const isApi = new URL(request.url).pathname.startsWith('/api/');
+    const cachedResponse = isHttp && !isApi ? await caches.match(request) : undefined;
     
     if (cachedResponse) {
       return cachedResponse;

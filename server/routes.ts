@@ -33,9 +33,13 @@ export async function registerRoutes(
       await setupAuth(app);
     } catch (err) {
       console.error("Auth setup failed, enabling open access fallback:", err);
-      app.use((req: any, _res, next) => {
+      const isProd = process.env.NODE_ENV === 'production';
+      app.use((req: any, res, next) => {
         req.user = { claims: { sub: req.header("x-user-id") || "demo-user" } };
         req.isAuthenticated = () => true;
+        if (isProd && req.path.startsWith('/api/') && req.method !== 'GET' && req.method !== 'HEAD') {
+          return res.status(403).json({ message: 'Read-only mode' });
+        }
         next();
       });
     }
