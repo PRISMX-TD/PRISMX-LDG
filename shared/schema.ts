@@ -358,72 +358,72 @@ export type InsertSubLedger = typeof subLedgers.$inferInsert;
 export type SubLedger = typeof subLedgers.$inferSelect;
 
 // Zod schemas for validation
-export const insertWalletSchema = createInsertSchema(wallets).omit({
+export const insertWalletSchema = (createInsertSchema(wallets) as any).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertCategorySchema = createInsertSchema(categories).omit({
+export const insertCategorySchema = (createInsertSchema(categories) as any).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertTransactionSchema = createInsertSchema(transactions).omit({
+export const insertTransactionSchema = (createInsertSchema(transactions) as any).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertBudgetSchema = createInsertSchema(budgets).omit({
+export const insertBudgetSchema = (createInsertSchema(budgets) as any).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertSavingsGoalSchema = createInsertSchema(savingsGoals).omit({
+export const insertSavingsGoalSchema = (createInsertSchema(savingsGoals) as any).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertRecurringTransactionSchema = createInsertSchema(recurringTransactions).omit({
+export const insertRecurringTransactionSchema = (createInsertSchema(recurringTransactions) as any).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertBillReminderSchema = createInsertSchema(billReminders).omit({
+export const insertBillReminderSchema = (createInsertSchema(billReminders) as any).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertExchangeCredentialSchema = createInsertSchema(exchangeCredentials).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertUserDashboardPreferencesSchema = createInsertSchema(userDashboardPreferences).omit({
+export const insertExchangeCredentialSchema = (createInsertSchema(exchangeCredentials) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertUserAnalyticsPreferencesSchema = createInsertSchema(userAnalyticsPreferences).omit({
+export const insertUserDashboardPreferencesSchema = (createInsertSchema(userDashboardPreferences) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertUserMobileNavPreferencesSchema = createInsertSchema(userMobileNavPreferences).omit({
+export const insertUserAnalyticsPreferencesSchema = (createInsertSchema(userAnalyticsPreferences) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertUserWalletPreferencesSchema = createInsertSchema(userWalletPreferences).omit({
+export const insertUserMobileNavPreferencesSchema = (createInsertSchema(userMobileNavPreferences) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertSubLedgerSchema = createInsertSchema(subLedgers).omit({
+export const insertUserWalletPreferencesSchema = (createInsertSchema(userWalletPreferences) as any).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSubLedgerSchema = (createInsertSchema(subLedgers) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

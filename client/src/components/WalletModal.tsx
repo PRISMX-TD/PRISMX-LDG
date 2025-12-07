@@ -540,7 +540,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                         <SelectValue placeholder="选择目标钱包" />
                       </SelectTrigger>
                       <SelectContent>
-                        {allWallets.filter(w=> (!wallet || w.id !== wallet.id) && !w.isArchived).map((w)=> (
+                        {allWallets.filter(w=> (!wallet || w.id !== wallet.id)).map((w)=> (
                           <SelectItem key={w.id} value={String(w.id)}>
                             {w.name} ({w.currency})
                           </SelectItem>
