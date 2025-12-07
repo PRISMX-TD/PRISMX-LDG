@@ -33,12 +33,14 @@ app.use((req, res, next) => {
     "Permissions-Policy",
     "geolocation=(), microphone=(), camera=(), fullscreen=(self)"
   );
+  const scriptSrc = isProd ? "script-src 'self'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
   const csp = [
     "default-src 'self'",
+    "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
     "img-src 'self' data:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "script-src 'self'",
+    scriptSrc,
     "frame-ancestors 'none'",
   ].join("; ");
   res.setHeader("Content-Security-Policy", csp);
