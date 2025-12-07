@@ -7,12 +7,12 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-function getFallbackHeaders() {
+function getFallbackHeaders(): Record<string, string> {
   try {
     const uid = localStorage.getItem('PRISMX_USER_ID') || localStorage.getItem('x-user-id');
-    return uid ? { 'x-user-id': uid } : {};
+    return uid ? { 'x-user-id': uid } : {} as Record<string, string>;
   } catch {
-    return {};
+    return {} as Record<string, string>;
   }
 }
 
@@ -32,9 +32,13 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const csrf = method === 'GET' ? undefined : getCsrfToken();
+  const headers: Record<string, string> = {};
+  if (data) headers["Content-Type"] = "application/json";
+  if (csrf) headers['x-csrf-token'] = csrf;
+  Object.assign(headers, getFallbackHeaders());
   const res = await fetch(url, {
     method,
-    headers: { ...(data ? { "Content-Type": "application/json" } : {}), ...(csrf ? { 'x-csrf-token': csrf } : {}), ...getFallbackHeaders() },
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

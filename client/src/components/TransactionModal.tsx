@@ -341,7 +341,7 @@ export function TransactionModal({
       
       const requestData: Record<string, unknown> = {
         type: data.type,
-        amount: data.amount,
+        amount: parseFloat(data.amount),
         walletId: parseInt(data.walletId),
         toWalletId: data.toWalletId ? parseInt(data.toWalletId) : null,
         categoryId: data.categoryId ? parseInt(data.categoryId) : null,
@@ -353,11 +353,8 @@ export function TransactionModal({
       if (isCrossCurrency) {
         requestData.currency = data.currency;
         const rate = parseFloat(data.exchangeRate || "1");
-        const original = parseFloat(data.amount);
-        const converted = parseFloat(data.convertedAmount || "0");
         requestData.exchangeRate = rate;
-        requestData.originalAmount = original;
-        requestData.amount = converted; // 保存为钱包币种金额
+        // 保持 amount 为原币种金额，服务器根据 exchangeRate 计算钱包金额
       }
 
       if (isTransferCrossCurrency && data.toWalletAmount) {
