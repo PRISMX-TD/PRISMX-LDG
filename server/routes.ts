@@ -21,6 +21,21 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const txCreateSchema = z.object({
+    type: z.enum(["expense","income","transfer"]),
+    amount: z.number().positive(),
+    currency: z.string().min(1).optional(),
+    exchangeRate: z.number().positive().optional(),
+    toWalletAmount: z.number().positive().optional(),
+    toExchangeRate: z.number().positive().optional(),
+    walletId: z.number().int().positive(),
+    toWalletId: z.number().int().positive().optional(),
+    categoryId: z.number().int().positive().optional(),
+    subLedgerId: z.number().int().positive().optional(),
+    description: z.string().nullable().optional(),
+    date: z.string().min(1),
+  }).strict();
+  const txUpdateSchema = txCreateSchema;
   // Auth middleware with fallback or explicit disable
   if (process.env.DISABLE_AUTH === 'true') {
     app.use((req: any, _res, next) => {
@@ -680,13 +695,17 @@ export async function registerRoutes(
   app.post('/api/transactions', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const parsed = txCreateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      const body = parsed.data as any;
       
-      // Get currency-related fields from request
-      const inputCurrency = req.body.currency || null; // null means use wallet currency
-      const inputAmount = parseFloat(req.body.amount);
-      const exchangeRate = req.body.exchangeRate ? parseFloat(req.body.exchangeRate) : null;
-      const toWalletAmount = req.body.toWalletAmount ? parseFloat(req.body.toWalletAmount) : null;
-      const toExchangeRate = req.body.toExchangeRate ? parseFloat(req.body.toExchangeRate) : null;
+      const inputCurrency = body.currency || null;
+      const inputAmount = body.amount;
+      const exchangeRate = body.exchangeRate ?? null;
+      const toWalletAmount = body.toWalletAmount ?? null;
+      const toExchangeRate = body.toExchangeRate ?? null;
 
       // Validate amount
       if (isNaN(inputAmount) || inputAmount <= 0) {
@@ -694,12 +713,12 @@ export async function registerRoutes(
       }
 
       // Validate transaction type
-      if (!['expense', 'income', 'transfer'].includes(req.body.type)) {
+      if (!['expense', 'income', 'transfer'].includes(body.type)) {
         return res.status(400).json({ message: "Invalid transaction type" });
       }
 
       // Verify wallet ownership
-      const wallet = await storage.getWallet(req.body.walletId, userId);
+      const wallet = await storage.getWallet(body.walletId, userId);
       if (!wallet) {
         return res.status(400).json({ message: "Invalid wallet" });
       }
@@ -727,15 +746,15 @@ export async function registerRoutes(
       // Always store currency (default to wallet currency)
       const transactionData: any = {
         userId,
-        type: req.body.type,
+        type: body.type,
         amount: walletAmount.toFixed(2),
         currency: isCrosssCurrency ? transactionCurrency : walletCurrency,
-        walletId: req.body.walletId,
-        toWalletId: req.body.toWalletId || null,
-        categoryId: req.body.categoryId || null,
-        subLedgerId: req.body.subLedgerId || null,
-        description: req.body.description || null,
-        date: new Date(req.body.date),
+        walletId: body.walletId,
+        toWalletId: body.toWalletId || null,
+        categoryId: body.categoryId || null,
+        subLedgerId: body.subLedgerId || null,
+        description: body.description || null,
+        date: new Date(body.date),
       };
 
       // Only store originalAmount and exchangeRate when there's actual conversion
@@ -812,6 +831,11 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const transactionId = parseInt(req.params.id);
+      const parsed = txUpdateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      const body = parsed.data as any;
       
       // Get the existing transaction
       const existingTransaction = await storage.getTransaction(transactionId, userId);
@@ -820,10 +844,10 @@ export async function registerRoutes(
       }
 
       // Get currency-related fields from request
-      const inputCurrency = req.body.currency || null;
-      const inputAmount = parseFloat(req.body.amount);
-      const exchangeRate = req.body.exchangeRate ? parseFloat(req.body.exchangeRate) : null;
-      const toWalletAmount = req.body.toWalletAmount ? parseFloat(req.body.toWalletAmount) : null;
+      const inputCurrency = body.currency || null;
+      const inputAmount = body.amount;
+      const exchangeRate = body.exchangeRate ?? null;
+      const toWalletAmount = body.toWalletAmount ?? null;
 
       // Validate amount
       if (isNaN(inputAmount) || inputAmount <= 0) {
@@ -831,12 +855,12 @@ export async function registerRoutes(
       }
 
       // Validate transaction type
-      if (!['expense', 'income', 'transfer'].includes(req.body.type)) {
+      if (!['expense', 'income', 'transfer'].includes(body.type)) {
         return res.status(400).json({ message: "Invalid transaction type" });
       }
 
       // Verify new wallet ownership
-      const newWallet = await storage.getWallet(req.body.walletId, userId);
+      const newWallet = await storage.getWallet(body.walletId, userId);
       if (!newWallet) {
         return res.status(400).json({ message: "Invalid wallet" });
       }
@@ -893,15 +917,15 @@ export async function registerRoutes(
 
       // Build transaction update data
       const transactionData: any = {
-        type: req.body.type,
+        type: body.type,
         amount: walletAmount.toFixed(2),
         currency: isCrossCurrency ? transactionCurrency : walletCurrency,
-        walletId: req.body.walletId,
-        toWalletId: req.body.toWalletId || null,
-        categoryId: req.body.categoryId || null,
-        subLedgerId: req.body.subLedgerId || null,
-        description: req.body.description || null,
-        date: new Date(req.body.date),
+        walletId: body.walletId,
+        toWalletId: body.toWalletId || null,
+        categoryId: body.categoryId || null,
+        subLedgerId: body.subLedgerId || null,
+        description: body.description || null,
+        date: new Date(body.date),
       };
 
       // Only store originalAmount and exchangeRate when there's actual conversion
@@ -1056,7 +1080,17 @@ export async function registerRoutes(
   app.post('/api/budgets', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { categoryId, amount, month, year } = req.body;
+      const budgetSchema = z.object({
+        categoryId: z.number().int().positive(),
+        amount: z.number().positive(),
+        month: z.number().int().min(1).max(12),
+        year: z.number().int().min(1970).max(3000),
+      }).strict();
+      const parsed = budgetSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      const { categoryId, amount, month, year } = parsed.data as any;
       
       if (!categoryId || !amount || !month || !year) {
         return res.status(400).json({ message: "Category, amount, month, and year are required" });
@@ -1067,13 +1101,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid category" });
       }
       
-      const budget = await storage.createBudget({
-        userId,
-        categoryId,
-        amount: amount.toString(),
-        month: parseInt(month),
-        year: parseInt(year),
-      });
+      const budget = await storage.createBudget({ userId, categoryId, amount: amount.toString(), month, year });
       res.status(201).json(budget);
     } catch (error) {
       console.error("Error creating budget:", error);

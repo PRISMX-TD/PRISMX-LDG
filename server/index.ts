@@ -90,6 +90,44 @@ app.use((req, res, next) => {
   next();
 });
 
+const rateMap = new Map<string, number[]>();
+function checkRate(key: string, max: number) {
+  const now = Date.now();
+  const windowMs = 60000;
+  const list = rateMap.get(key) || [];
+  const filtered = list.filter((t) => now - t < windowMs);
+  filtered.push(now);
+  rateMap.set(key, filtered);
+  return filtered.length <= max;
+}
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/") && ["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const key = `${req.headers["x-user-id"] || "anon"}:${req.ip}`;
+    if (!checkRate(key, 120)) {
+      return res.status(429).json({ message: "Too many requests" });
+    }
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/login") || req.path.startsWith("/api/register")) {
+    const key = `auth:${req.ip}`;
+    if (!checkRate(key, 20)) {
+      return res.status(429).json({ message: "Too many auth attempts" });
+    }
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    res.setHeader("Cache-Control", "no-store");
+  }
+  next();
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, port: process.env.PORT, env: process.env.NODE_ENV, authDisabled: process.env.DISABLE_AUTH });
 });
