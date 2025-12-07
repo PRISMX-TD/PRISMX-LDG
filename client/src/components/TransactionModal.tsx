@@ -343,12 +343,19 @@ export function TransactionModal({
         type: data.type,
         amount: parseFloat(data.amount),
         walletId: parseInt(data.walletId),
-        toWalletId: data.toWalletId ? parseInt(data.toWalletId) : null,
-        categoryId: data.categoryId ? parseInt(data.categoryId) : null,
-        subLedgerId: data.subLedgerId ? parseInt(data.subLedgerId) : null,
         description: data.description || null,
         date: data.date.toISOString(),
       };
+
+      if (data.toWalletId) {
+        requestData.toWalletId = parseInt(data.toWalletId);
+      }
+      if (data.categoryId) {
+        requestData.categoryId = parseInt(data.categoryId);
+      }
+      if (data.subLedgerId) {
+        requestData.subLedgerId = parseInt(data.subLedgerId);
+      }
 
       if (isCrossCurrency) {
         requestData.currency = data.currency;
