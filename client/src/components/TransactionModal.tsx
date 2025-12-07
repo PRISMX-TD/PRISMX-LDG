@@ -287,41 +287,47 @@ export function TransactionModal({
     }
   }, [watchAmount, watchExchangeRate, needsCurrencyConversion, form, watchConvertedAmount, conversionPref]);
 
-  const handleConvertedAmountChange = (value: string) => {
+  const handleConvertedInputChange = (value: string) => {
+    form.setValue("convertedAmount", value, { shouldValidate: false });
+  };
+
+  const handleConvertedInputBlur = (value: string) => {
     const num = parseFloat(value);
     if (isNaN(num) || num < 0) {
-      form.setValue("convertedAmount", value);
+      form.setValue("convertedAmount", value, { shouldValidate: true });
       return;
     }
     const rounded = num.toFixed(2);
     form.setValue("convertedAmount", rounded, { shouldValidate: true });
     setConversionPref("byConverted");
     try { localStorage.setItem("tx_conversion_pref", "byConverted"); } catch {}
-    if (watchAmount) {
-      const amount = parseFloat(watchAmount);
-      if (!isNaN(amount) && amount > 0) {
-        const newRate = (parseFloat(rounded) / amount).toFixed(4);
-        form.setValue("exchangeRate", newRate, { shouldValidate: true });
-      }
+    const amountStr = form.getValues("amount");
+    const amount = parseFloat(amountStr);
+    if (!isNaN(amount) && amount > 0) {
+      const newRate = (num / amount).toFixed(4);
+      form.setValue("exchangeRate", newRate, { shouldValidate: true });
     }
   };
 
-  const handleRateChange = (value: string) => {
+  const handleRateInputChange = (value: string) => {
+    form.setValue("exchangeRate", value, { shouldValidate: false });
+  };
+
+  const handleRateInputBlur = (value: string) => {
     const num = parseFloat(value);
     if (isNaN(num) || num <= 0) {
-      form.setValue("exchangeRate", value);
+      form.setValue("exchangeRate", value, { shouldValidate: true });
       return;
     }
     const rounded = num.toFixed(4);
     form.setValue("exchangeRate", rounded, { shouldValidate: true });
     setConversionPref("byRate");
     try { localStorage.setItem("tx_conversion_pref", "byRate"); } catch {}
-    if (watchAmount) {
-      const amount = parseFloat(watchAmount);
-      if (!isNaN(amount) && amount > 0) {
-        const converted = (amount * parseFloat(rounded)).toFixed(2);
-        form.setValue("convertedAmount", converted, { shouldValidate: true });
-      }
+    const amountStr = form.getValues("amount");
+    const amount = parseFloat(amountStr);
+    if (!isNaN(amount) && amount > 0) {
+      const converted = (amount * num).toFixed(2);
+      form.setValue("convertedAmount", converted, { shouldValidate: true });
     }
   };
 
@@ -557,12 +563,11 @@ export function TransactionModal({
                       </FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          step="0.0001"
-                          min="0.0001"
+                          type="text"
+                          inputMode="decimal"
                           value={field.value || ""}
-                          onChange={(e) => handleRateChange(e.target.value)}
-                          onBlur={(e) => handleRateChange(e.target.value)}
+                          onChange={(e) => handleRateInputChange(e.target.value)}
+                          onBlur={(e) => handleRateInputBlur(e.target.value)}
                           placeholder="1.0000"
                           className="font-mono"
                           data-testid="input-exchange-rate"
@@ -587,12 +592,11 @@ export function TransactionModal({
                         {walletCurrencyInfo?.symbol}
                       </span>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
                         value={watchConvertedAmount || ""}
-                        onChange={(e) => handleConvertedAmountChange(e.target.value)}
-                        onBlur={(e) => handleConvertedAmountChange(e.target.value)}
+                        onChange={(e) => handleConvertedInputChange(e.target.value)}
+                        onBlur={(e) => handleConvertedInputBlur(e.target.value)}
                         placeholder="0.00"
                         className="pl-10 font-mono"
                         data-testid="input-converted-amount"
