@@ -1,11 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { TransactionFilters, TransactionFilterValues } from "@/components/TransactionFilters";
 import { TransactionItem, TransactionItemSkeleton } from "@/components/TransactionItem";
-import { TransactionModal } from "@/components/TransactionModal";
+import { lazy, Suspense } from "react";
+const TransactionModal = lazy(() => import("@/components/TransactionModal").then(m => ({ default: m.TransactionModal })));
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,41 @@ export default function Transactions() {
       return lastPage.length === PAGE_SIZE ? nextOffset : undefined;
     },
     enabled: isAuthenticated,
+    initialPageParam: 0,
   });
+
+  const flatTransactions = transactionsPages?.pages?.flat() || [];
+  const [visibleCount, setVisibleCount] = useState(30);
+  useEffect(() => {
+    setVisibleCount(30);
+    const total = flatTransactions.length;
+    let cancelled = false;
+    const step = () => {
+      if (cancelled) return;
+      setVisibleCount((c) => (c < total ? Math.min(c + 30, total) : c));
+      if (typeof (window as any).requestIdleCallback === "function") {
+        (window as any).requestIdleCallback(step);
+      } else {
+        setTimeout(step, 100);
+      }
+    };
+    if (total > 30) step();
+    return () => { cancelled = true; };
+  }, [flatTransactions.length]);
+
+  const sentinelRef = useState<HTMLDivElement | null>(null)[0] as HTMLDivElement | null; // placeholder to keep TS happy
+  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!sentinelEl) return;
+    const io = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    }, { rootMargin: "200px" });
+    io.observe(sentinelEl);
+    return () => io.disconnect();
+  }, [sentinelEl, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const { data: stats, isLoading: isStatsLoading } = useQuery<TransactionStats>({
     queryKey: ["/api/transactions/stats", { startDate: filters.startDate, endDate: filters.endDate }],
@@ -248,7 +283,7 @@ export default function Transactions() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {transactionsPages?.pages?.flat().map((transaction) => (
+                  {flatTransactions.slice(0, visibleCount).map((transaction) => (
                     <TransactionItem
                       key={transaction.id}
                       transaction={transaction}
@@ -262,7 +297,7 @@ export default function Transactions() {
                     />
                   ))}
                   {hasNextPage && (
-                    <div className="flex justify-center pt-2">
+                    <div ref={setSentinelEl} className="flex justify-center pt-2">
                       <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
                         {isFetchingNextPage ? "加载中..." : "加载更多"}
                       </Button>
@@ -277,16 +312,18 @@ export default function Transactions() {
 
       <FloatingActionButton onClick={handleAddNew} />
 
-      <TransactionModal
-        open={isModalOpen}
-        onOpenChange={handleCloseModal}
-        wallets={wallets}
-        categories={categories}
-        subLedgers={subLedgers}
-        defaultCurrency={user?.defaultCurrency || "MYR"}
-        transaction={editingTransaction}
-        onDelete={handleDeleteTransaction}
-      />
+      <Suspense fallback={null}>
+        <TransactionModal
+          open={isModalOpen}
+          onOpenChange={handleCloseModal}
+          wallets={wallets}
+          categories={categories}
+          subLedgers={subLedgers}
+          defaultCurrency={user?.defaultCurrency || "MYR"}
+          transaction={editingTransaction}
+          onDelete={handleDeleteTransaction}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ interface TransactionFiltersProps {
   onExport?: () => void;
 }
 
-export function TransactionFilters({
+function TransactionFiltersComponent({
   categories,
   wallets,
   filters,
@@ -209,3 +209,5 @@ export function TransactionFilters({
     </div>
   );
 }
+
+export const TransactionFilters = memo(TransactionFiltersComponent);

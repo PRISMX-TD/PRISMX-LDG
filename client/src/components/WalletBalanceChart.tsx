@@ -1,12 +1,4 @@
-import { useMemo } from "react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { getCurrencyInfo } from "@shared/schema";
 
 interface WalletBalanceChartProps {
@@ -16,6 +8,23 @@ interface WalletBalanceChartProps {
 
 export function WalletBalanceChart({ data, currency }: WalletBalanceChartProps) {
   const currencyInfo = getCurrencyInfo(currency);
+  const holderRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [Recharts, setRecharts] = useState<any>(null);
+  useEffect(() => {
+    const el = holderRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) setIsVisible(true);
+    }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible || Recharts) return;
+    import("recharts").then((mod) => setRecharts(mod));
+  }, [isVisible, Recharts]);
 
   const yDomain = useMemo(() => {
     if (data.length === 0) return [0, 100];
@@ -45,19 +54,20 @@ export function WalletBalanceChart({ data, currency }: WalletBalanceChartProps) 
   }
 
   return (
-    <div className="h-48 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-        >
+    <div className="h-48 w-full" ref={holderRef}>
+      {Recharts && isVisible ? (
+        <Recharts.ResponsiveContainer width="100%" height="100%">
+          <Recharts.AreaChart
+            data={data}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+          >
           <defs>
             <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
               <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <XAxis
+          <Recharts.XAxis
             dataKey="date"
             axisLine={false}
             tickLine={false}
@@ -65,7 +75,7 @@ export function WalletBalanceChart({ data, currency }: WalletBalanceChartProps) 
             dy={10}
             interval="preserveStartEnd"
           />
-          <YAxis
+          <Recharts.YAxis
             domain={yDomain}
             axisLine={false}
             tickLine={false}
@@ -73,7 +83,7 @@ export function WalletBalanceChart({ data, currency }: WalletBalanceChartProps) 
             tickFormatter={formatYAxis}
             width={50}
           />
-          <Tooltip
+          <Recharts.Tooltip
             contentStyle={{
               backgroundColor: "hsl(var(--card))",
               border: "1px solid hsl(var(--border))",
@@ -92,15 +102,18 @@ export function WalletBalanceChart({ data, currency }: WalletBalanceChartProps) 
               "余额",
             ]}
           />
-          <Area
+          <Recharts.Area
             type="monotone"
             dataKey="balance"
             stroke="hsl(var(--primary))"
             strokeWidth={2}
             fill="url(#balanceGradient)"
           />
-        </AreaChart>
-      </ResponsiveContainer>
+          </Recharts.AreaChart>
+        </Recharts.ResponsiveContainer>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">加载中...</div>
+      )}
     </div>
   );
 }

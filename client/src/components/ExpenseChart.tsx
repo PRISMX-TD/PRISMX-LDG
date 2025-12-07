@@ -1,5 +1,4 @@
-import { useMemo } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { getCurrencyInfo } from "@shared/schema";
 import { PieChartIcon } from "lucide-react";
 
@@ -18,6 +17,25 @@ interface ExpenseChartProps {
 
 export function ExpenseChart({ data, currency = "MYR", isLoading }: ExpenseChartProps) {
   const currencyInfo = getCurrencyInfo(currency);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [Recharts, setRecharts] = useState<any>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+      }
+    }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible || Recharts) return;
+    import("recharts").then((mod) => setRecharts(mod));
+  }, [isVisible, Recharts]);
 
   const chartData = useMemo(() => {
     return data.map((item) => ({
@@ -92,7 +110,7 @@ export function ExpenseChart({ data, currency = "MYR", isLoading }: ExpenseChart
   }
 
   return (
-    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20" ref={containerRef}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <PieChartIcon className="w-4 h-4 text-primary" />
@@ -103,26 +121,30 @@ export function ExpenseChart({ data, currency = "MYR", isLoading }: ExpenseChart
         </span>
       </div>
       <div className="h-[220px]" data-testid="chart-expense-pie">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius={45}
-              outerRadius={70}
-              paddingAngle={2}
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend content={renderLegend} />
-          </PieChart>
-        </ResponsiveContainer>
+        {Recharts && isVisible ? (
+          <Recharts.ResponsiveContainer width="100%" height="100%">
+            <Recharts.PieChart>
+              <Recharts.Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={45}
+                outerRadius={70}
+                paddingAngle={2}
+              >
+                {chartData.map((entry, index) => (
+                  <Recharts.Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Recharts.Pie>
+              <Recharts.Tooltip content={<CustomTooltip />} />
+              <Recharts.Legend content={renderLegend} />
+            </Recharts.PieChart>
+          </Recharts.ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">加载中...</div>
+        )}
       </div>
     </div>
   );

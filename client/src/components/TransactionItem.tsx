@@ -1,4 +1,5 @@
 import type { Transaction, Category, Wallet } from "@shared/schema";
+import { memo } from "react";
 import { getCurrencyInfo } from "@shared/schema";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -41,7 +42,7 @@ const categoryIcons: Record<string, typeof ShoppingBag> = {
   other: MoreHorizontal,
 };
 
-export function TransactionItem({
+function TransactionItemInner({
   transaction,
   category,
   wallet,
@@ -164,7 +165,7 @@ export function TransactionItem({
   );
 }
 
-export function TransactionItemSkeleton() {
+function TransactionItemSkeletonInner() {
   return (
     <div className="flex items-center gap-3 py-3 px-4 rounded-xl border border-border/50 bg-muted/5 animate-pulse">
       <div className="w-10 h-10 rounded-full bg-muted/20 flex-shrink-0" />
@@ -179,3 +180,6 @@ export function TransactionItemSkeleton() {
     </div>
   );
 }
+
+export const TransactionItem = memo(TransactionItemInner);
+export const TransactionItemSkeleton = memo(TransactionItemSkeletonInner);
