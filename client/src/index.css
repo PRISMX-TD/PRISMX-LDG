@@ -626,4 +626,73 @@ div.glass-card:hover {
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+
+  /* Themed scrollbar for desktop */
+  @media (min-width: 768px) {
+    .themed-scrollbar,
+    body,
+    html,
+    #root,
+    main,
+    .overflow-auto,
+    .overflow-y-auto,
+    .overflow-scroll,
+    .overflow-y-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--primary)) hsla(var(--accent), 0.25);
+    }
+
+    .themed-scrollbar::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    html::-webkit-scrollbar,
+    #root::-webkit-scrollbar,
+    main::-webkit-scrollbar,
+    .overflow-auto::-webkit-scrollbar,
+    .overflow-y-auto::-webkit-scrollbar,
+    .overflow-scroll::-webkit-scrollbar,
+    .overflow-y-scroll::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .themed-scrollbar::-webkit-scrollbar-track,
+    body::-webkit-scrollbar-track,
+    html::-webkit-scrollbar-track,
+    #root::-webkit-scrollbar-track,
+    main::-webkit-scrollbar-track,
+    .overflow-auto::-webkit-scrollbar-track,
+    .overflow-y-auto::-webkit-scrollbar-track,
+    .overflow-scroll::-webkit-scrollbar-track,
+    .overflow-y-scroll::-webkit-scrollbar-track {
+      background: hsla(var(--accent), 0.12);
+      border-radius: 999px;
+    }
+
+    .themed-scrollbar::-webkit-scrollbar-thumb,
+    body::-webkit-scrollbar-thumb,
+    html::-webkit-scrollbar-thumb,
+    #root::-webkit-scrollbar-thumb,
+    main::-webkit-scrollbar-thumb,
+    .overflow-auto::-webkit-scrollbar-thumb,
+    .overflow-y-auto::-webkit-scrollbar-thumb,
+    .overflow-scroll::-webkit-scrollbar-thumb,
+    .overflow-y-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, hsl(var(--primary) / 0.85), hsl(var(--chart-3) / 0.85));
+      border: 1px solid hsl(var(--primary) / 0.4);
+      border-radius: 999px;
+      box-shadow: inset 0 0 4px hsla(0,0%,0%,0.2);
+    }
+
+    .themed-scrollbar::-webkit-scrollbar-thumb:hover,
+    body::-webkit-scrollbar-thumb:hover,
+    html::-webkit-scrollbar-thumb:hover,
+    #root::-webkit-scrollbar-thumb:hover,
+    main::-webkit-scrollbar-thumb:hover,
+    .overflow-auto::-webkit-scrollbar-thumb:hover,
+    .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+    .overflow-scroll::-webkit-scrollbar-thumb:hover,
+    .overflow-y-scroll::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--chart-3)));
+    }
+  }
 }

@@ -205,7 +205,7 @@ export default function Transactions() {
         <Header user={user} />
       </div>
 
-      <main className="container mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+      <main className="mx-auto max-w-[1600px] px-4 md:px-6 py-4 md:py-6 space-y-4 md:space-y-6">
         <div className="hidden md:flex items-center gap-4">
           <Link href="/">
             <Button variant="ghost" size="sm" data-testid="button-back-home">
@@ -271,8 +271,8 @@ export default function Transactions() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-4">
+          <div className="lg:col-span-3 space-y-4">
             <TransactionFilters
               categories={categories}
               wallets={wallets}
@@ -300,7 +300,7 @@ export default function Transactions() {
                   />
                 </div>
               ) : (
-                <div className="space-y-2" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)} style={{ maxHeight: "70vh", overflowY: "auto" }}>
+                <div className="space-y-2 themed-scrollbar" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)} style={{ maxHeight: "calc(100vh - 260px)", overflowY: "auto" }}>
                   <div style={{ height: totalHeight, position: "relative" }}>
                     <div style={{ transform: `translateY(${startIndex * ITEM_HEIGHT}px)` }}>
                       {flatTransactions.slice(startIndex, endIndex).map((transaction) => (

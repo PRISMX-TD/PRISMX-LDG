@@ -1053,7 +1053,7 @@ export default function Analytics() {
                           `${currencyInfo.symbol}${formatFullAmount(value)}`,
                           name === "savings" ? "月结余" : "累计"
                         ]}
-                        labelFormatter={(label) => `${label}月`}
+                        labelFormatter={(label: string | number) => `${label}月`}
                       />
                       <R.Bar dataKey="savings" fill="#8B5CF6" opacity={0.5} radius={[4, 4, 0, 0]} />
                       <R.Line type="monotone" dataKey="cumulative" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
