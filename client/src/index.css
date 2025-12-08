@@ -651,8 +651,8 @@ div.glass-card:hover {
     .overflow-y-auto::-webkit-scrollbar,
     .overflow-scroll::-webkit-scrollbar,
     .overflow-y-scroll::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
     }
 
     .themed-scrollbar::-webkit-scrollbar-track,
@@ -664,9 +664,9 @@ div.glass-card:hover {
     .overflow-y-auto::-webkit-scrollbar-track,
     .overflow-scroll::-webkit-scrollbar-track,
     .overflow-y-scroll::-webkit-scrollbar-track {
-      background: hsla(var(--accent), 0.12);
+      background: hsla(var(--accent), 0.16);
       border-radius: 999px;
-    }
+      }
 
     .themed-scrollbar::-webkit-scrollbar-thumb,
     body::-webkit-scrollbar-thumb,
@@ -677,11 +677,11 @@ div.glass-card:hover {
     .overflow-y-auto::-webkit-scrollbar-thumb,
     .overflow-scroll::-webkit-scrollbar-thumb,
     .overflow-y-scroll::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, hsl(var(--primary) / 0.85), hsl(var(--chart-3) / 0.85));
-      border: 1px solid hsl(var(--primary) / 0.4);
+      background: linear-gradient(180deg, hsl(var(--primary) / 0.9), hsl(var(--chart-3) / 0.9));
+      border: 1px solid hsl(var(--primary) / 0.5);
       border-radius: 999px;
-      box-shadow: inset 0 0 4px hsla(0,0%,0%,0.2);
-    }
+      box-shadow: inset 0 0 6px hsla(0,0%,0%,0.25);
+      }
 
     .themed-scrollbar::-webkit-scrollbar-thumb:hover,
     body::-webkit-scrollbar-thumb:hover,
