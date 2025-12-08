@@ -851,8 +851,8 @@ export default function Analytics() {
                         </defs>
                         <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
                         <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
-                        <R.Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} formatter={(value: number, name: string) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, name === 'income' ? '收入' : '支出']} labelFormatter={(label) => `${label}月`} />
+                        <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
+                        <R.Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} formatter={(value: number, name: string) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, name === 'income' ? '收入' : '支出']} labelFormatter={(label: string | number) => `${label}月`} />
                         <R.Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} fill="url(#colorIncome)" />
                         <R.Area type="monotone" dataKey="expense" stroke="#EF4444" strokeWidth={2} fill="url(#colorExpense)" />
                       </R.AreaChart>
@@ -1041,7 +1041,7 @@ export default function Analytics() {
                       </defs>
                       <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
                       <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                      <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
                       <R.Tooltip
                         contentStyle={{ 
                           backgroundColor: 'hsl(var(--card))', 
@@ -1089,9 +1089,9 @@ export default function Analytics() {
                 {(R) => (
                   <R.ResponsiveContainer width="100%" height="100%">
                     <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
                     <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
                     <R.Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
@@ -1151,9 +1151,9 @@ export default function Analytics() {
                 {(R) => (
                   <R.ResponsiveContainer width="100%" height="100%">
                     <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
                     <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
                     <R.Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
@@ -1221,7 +1221,7 @@ export default function Analytics() {
                     </defs>
                     <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
                     <R.XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
                     <R.Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 

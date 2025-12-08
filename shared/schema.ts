@@ -498,7 +498,7 @@ export const groupActivities = pgTable("group_activities", {
 export type GroupActivity = typeof groupActivities.$inferSelect;
 export type InsertGroupActivity = typeof groupActivities.$inferInsert;
 
-export const insertGroupActivitySchema = createInsertSchema(groupActivities).omit({
+export const insertGroupActivitySchema = (createInsertSchema(groupActivities) as any).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

@@ -15,3 +15,14 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+if (typeof window !== 'undefined') {
+  const idle = (fn: () => void) => {
+    const ric = (window as any).requestIdleCallback;
+    if (typeof ric === 'function') ric(fn);
+    else setTimeout(fn, 2000);
+  };
+  idle(() => {
+    import('recharts').catch(() => {});
+  });
+}

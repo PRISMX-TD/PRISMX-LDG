@@ -1,5 +1,6 @@
-import { useMemo, useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
 import { getCurrencyInfo } from "@shared/schema";
+import { LazyRecharts } from "@/components/LazyRecharts";
 
 interface WalletBalanceChartProps {
   data: { date: string; balance: number }[];
@@ -8,23 +9,6 @@ interface WalletBalanceChartProps {
 
 export function WalletBalanceChart({ data, currency }: WalletBalanceChartProps) {
   const currencyInfo = getCurrencyInfo(currency);
-  const holderRef = useRef<HTMLDivElement | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [Recharts, setRecharts] = useState<any>(null);
-  useEffect(() => {
-    const el = holderRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) setIsVisible(true);
-    }, { rootMargin: "200px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible || Recharts) return;
-    import("recharts").then((mod) => setRecharts(mod));
-  }, [isVisible, Recharts]);
 
   const yDomain = useMemo(() => {
     if (data.length === 0) return [0, 100];
@@ -54,66 +38,64 @@ export function WalletBalanceChart({ data, currency }: WalletBalanceChartProps) 
   }
 
   return (
-    <div className="h-48 w-full" ref={holderRef}>
-      {Recharts && isVisible ? (
-        <Recharts.ResponsiveContainer width="100%" height="100%">
-          <Recharts.AreaChart
+    <LazyRecharts className="h-48 w-full">
+      {(R) => (
+        <R.ResponsiveContainer width="100%" height="100%">
+          <R.AreaChart
             data={data}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           >
-          <defs>
-            <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Recharts.XAxis
-            dataKey="date"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            dy={10}
-            interval="preserveStartEnd"
-          />
-          <Recharts.YAxis
-            domain={yDomain}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            tickFormatter={formatYAxis}
-            width={50}
-          />
-          <Recharts.Tooltip
-            contentStyle={{
-              backgroundColor: "hsl(var(--card))",
-              border: "1px solid hsl(var(--border))",
-              borderRadius: "8px",
-              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-            }}
-            labelStyle={{
-              color: "hsl(var(--foreground))",
-              marginBottom: "4px",
-            }}
-            formatter={(value: number) => [
-              `${currencyInfo.symbol}${value.toLocaleString("zh-CN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`,
-              "余额",
-            ]}
-          />
-          <Recharts.Area
-            type="monotone"
-            dataKey="balance"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            fill="url(#balanceGradient)"
-          />
-          </Recharts.AreaChart>
-        </Recharts.ResponsiveContainer>
-      ) : (
-        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">加载中...</div>
+            <defs>
+              <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <R.XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              dy={10}
+              interval="preserveStartEnd"
+            />
+            <R.YAxis
+              domain={yDomain}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              tickFormatter={formatYAxis}
+              width={50}
+            />
+            <R.Tooltip
+              contentStyle={{
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+              }}
+              labelStyle={{
+                color: "hsl(var(--foreground))",
+                marginBottom: "4px",
+              }}
+              formatter={(value: number) => [
+                `${currencyInfo.symbol}${value.toLocaleString("zh-CN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`,
+                "余额",
+              ]}
+            />
+            <R.Area
+              type="monotone"
+              dataKey="balance"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fill="url(#balanceGradient)"
+            />
+          </R.AreaChart>
+        </R.ResponsiveContainer>
       )}
-    </div>
+    </LazyRecharts>
   );
 }

@@ -34,7 +34,12 @@ self.addEventListener('activate', event => {
             return caches.delete(key);
           })
       );
-    }).then(() => self.clients.claim())
+    }).then(async () => {
+      if (self.registration && 'navigationPreload' in self.registration) {
+        try { await self.registration.navigationPreload.enable(); } catch (e) {}
+      }
+      return self.clients.claim();
+    })
   );
 });
 
@@ -52,12 +57,20 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  const usePreload = async () => {
+    try {
+      const preloaded = event.preloadResponse ? await event.preloadResponse : null;
+      if (preloaded) return preloaded;
+    } catch {}
+    return null;
+  };
+
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(event.request));
+    event.respondWith((async () => (await usePreload()) || await networkFirst(event.request))());
   } else if (event.request.destination === 'image') {
-    event.respondWith(cacheFirst(event.request));
+    event.respondWith((async () => (await usePreload()) || await cacheFirst(event.request))());
   } else {
-    event.respondWith(networkFirst(event.request));
+    event.respondWith((async () => (await usePreload()) || await networkFirst(event.request))());
   }
 });
 
