@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -105,8 +105,9 @@ export default function Transactions() {
     return () => { cancelled = true; };
   }, [flatTransactions.length]);
 
-  const sentinelRef = useState<HTMLDivElement | null>(null)[0] as HTMLDivElement | null; // placeholder to keep TS happy
+  const sentinelRef = useState<HTMLDivElement | null>(null)[0] as HTMLDivElement | null;
   const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!sentinelEl) return;
     const io = new IntersectionObserver((entries) => {
@@ -114,10 +115,27 @@ export default function Transactions() {
       if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
         fetchNextPage();
       }
-    }, { rootMargin: "200px" });
+    }, { rootMargin: "200px", root: listRef.current || undefined });
     io.observe(sentinelEl);
     return () => io.disconnect();
   }, [sentinelEl, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const ITEM_HEIGHT = 72;
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setContainerHeight(el.clientHeight));
+    setContainerHeight(el.clientHeight);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [listRef.current]);
+  const overscan = 10;
+  const totalHeight = flatTransactions.length * ITEM_HEIGHT;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - overscan);
+  const visibleItems = Math.ceil((containerHeight || 0) / ITEM_HEIGHT) + overscan * 2;
+  const endIndex = Math.min(flatTransactions.length, startIndex + visibleItems);
 
   const { data: stats, isLoading: isStatsLoading } = useQuery<TransactionStats>({
     queryKey: ["/api/transactions/stats", { startDate: filters.startDate, endDate: filters.endDate }],
@@ -282,20 +300,24 @@ export default function Transactions() {
                   />
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {flatTransactions.slice(0, visibleCount).map((transaction) => (
-                    <TransactionItem
-                      key={transaction.id}
-                      transaction={transaction}
-                      category={transaction.category}
-                      wallet={transaction.wallet}
-                      toWallet={transaction.toWallet}
-                      onClick={(tx) => {
-                        setEditingTransaction(tx);
-                        setIsModalOpen(true);
-                      }}
-                    />
-                  ))}
+                <div className="space-y-2" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)} style={{ maxHeight: "70vh", overflowY: "auto" }}>
+                  <div style={{ height: totalHeight, position: "relative" }}>
+                    <div style={{ transform: `translateY(${startIndex * ITEM_HEIGHT}px)` }}>
+                      {flatTransactions.slice(startIndex, endIndex).map((transaction) => (
+                        <TransactionItem
+                          key={transaction.id}
+                          transaction={transaction}
+                          category={transaction.category}
+                          wallet={transaction.wallet}
+                          toWallet={transaction.toWallet}
+                          onClick={(tx) => {
+                            setEditingTransaction(tx);
+                            setIsModalOpen(true);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                   {hasNextPage && (
                     <div ref={setSentinelEl} className="flex justify-center pt-2">
                       <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
