@@ -58,24 +58,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { getCurrencyInfo } from "@shared/schema";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  ComposedChart,
-  Legend,
-} from "recharts";
+import { LazyRecharts } from "@/components/LazyRecharts";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Transaction, Category, Wallet as WalletType, Budget, SavingsGoal, SubLedger } from "@shared/schema";
@@ -852,50 +835,30 @@ export default function Analytics() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-2 pb-4">
-                <div className="h-[220px] md:h-[280px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                      <XAxis 
-                        dataKey="shortMonth" 
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v) => formatAmount(v)}
-                      />
-                      <Tooltip
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        }}
-                        formatter={(value: number, name: string) => [
-                          `${currencyInfo.symbol}${formatFullAmount(value)}`,
-                          name === "income" ? "收入" : "支出"
-                        ]}
-                        labelFormatter={(label) => `${label}月`}
-                      />
-                      <Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} fill="url(#colorIncome)" />
-                      <Area type="monotone" dataKey="expense" stroke="#EF4444" strokeWidth={2} fill="url(#colorExpense)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                <LazyRecharts className="h-[220px] md:h-[280px]">
+                  {(R) => (
+                    <R.ResponsiveContainer width="100%" height="100%">
+                      <R.AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                        <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                        <R.Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} formatter={(value: number, name: string) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, name === 'income' ? '收入' : '支出']} labelFormatter={(label) => `${label}月`} />
+                        <R.Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} fill="url(#colorIncome)" />
+                        <R.Area type="monotone" dataKey="expense" stroke="#EF4444" strokeWidth={2} fill="url(#colorExpense)" />
+                      </R.AreaChart>
+                    </R.ResponsiveContainer>
+                  )}
+                </LazyRecharts>
               </CardContent>
             </Card>
           )}
@@ -914,24 +877,19 @@ export default function Analytics() {
                 <CardContent className="px-4 pb-4">
                   <div className="flex items-center gap-4">
                     <div className="w-[120px] h-[120px] md:w-[140px] md:h-[140px] flex-shrink-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={expenseCategoryData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius="55%"
-                            outerRadius="85%"
-                            dataKey="total"
-                            paddingAngle={3}
-                            strokeWidth={0}
-                          >
-                            {expenseCategoryData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <LazyRecharts className="w-full h-full">
+                        {(R) => (
+                          <R.ResponsiveContainer width="100%" height="100%">
+                            <R.PieChart>
+                              <R.Pie data={expenseCategoryData} cx="50%" cy="50%" innerRadius="55%" outerRadius="85%" dataKey="total" paddingAngle={3} strokeWidth={0}>
+                                {expenseCategoryData.map((entry, index) => (
+                                  <R.Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </R.Pie>
+                            </R.PieChart>
+                          </R.ResponsiveContainer>
+                        )}
+                      </LazyRecharts>
                     </div>
                     <div className="flex-1 space-y-2">
                       {expenseCategoryData.slice(0, 4).map((cat, index) => {
@@ -962,24 +920,19 @@ export default function Analytics() {
                 <CardContent className="px-4 pb-4">
                   <div className="flex items-center gap-4">
                     <div className="w-[120px] h-[120px] md:w-[140px] md:h-[140px] flex-shrink-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={incomeCategoryData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius="55%"
-                            outerRadius="85%"
-                            dataKey="total"
-                            paddingAngle={3}
-                            strokeWidth={0}
-                          >
-                            {incomeCategoryData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <LazyRecharts className="w-full h-full">
+                        {(R) => (
+                          <R.ResponsiveContainer width="100%" height="100%">
+                            <R.PieChart>
+                              <R.Pie data={incomeCategoryData} cx="50%" cy="50%" innerRadius="55%" outerRadius="85%" dataKey="total" paddingAngle={3} strokeWidth={0}>
+                                {incomeCategoryData.map((entry, index) => (
+                                  <R.Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </R.Pie>
+                            </R.PieChart>
+                          </R.ResponsiveContainer>
+                        )}
+                      </LazyRecharts>
                     </div>
                     <div className="flex-1 space-y-2">
                       {incomeCategoryData.slice(0, 4).map((cat, index) => {
@@ -1076,19 +1029,20 @@ export default function Analytics() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-2 pb-4">
-                <div className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={cumulativeSavingsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LazyRecharts className="h-[200px]">
+                  {(R) => (
+                    <R.ResponsiveContainer width="100%" height="100%">
+                      <R.ComposedChart data={cumulativeSavingsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                      <XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
-                      <Tooltip
+                      <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                      <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                      <R.Tooltip
                         contentStyle={{ 
                           backgroundColor: 'hsl(var(--card))', 
                           border: '1px solid hsl(var(--border))',
@@ -1101,11 +1055,12 @@ export default function Analytics() {
                         ]}
                         labelFormatter={(label) => `${label}月`}
                       />
-                      <Bar dataKey="savings" fill="#8B5CF6" opacity={0.5} radius={[4, 4, 0, 0]} />
-                      <Line type="monotone" dataKey="cumulative" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
+                      <R.Bar dataKey="savings" fill="#8B5CF6" opacity={0.5} radius={[4, 4, 0, 0]} />
+                      <R.Line type="monotone" dataKey="cumulative" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
+                    </R.ComposedChart>
+                  </R.ResponsiveContainer>
+                  )}
+                </LazyRecharts>
               </CardContent>
             </Card>
           )}
@@ -1130,13 +1085,14 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-2 pb-4">
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LazyRecharts className="h-[240px]">
+                {(R) => (
+                  <R.ResponsiveContainer width="100%" height="100%">
+                    <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                    <XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
-                    <Tooltip
+                    <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                    <R.Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
@@ -1144,10 +1100,11 @@ export default function Analytics() {
                       }}
                       formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "收入"]}
                     />
-                    <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                    <R.Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} />
+                  </R.BarChart>
+                </R.ResponsiveContainer>
+                )}
+              </LazyRecharts>
             </CardContent>
           </Card>
 
@@ -1190,13 +1147,14 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-2 pb-4">
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LazyRecharts className="h-[240px]">
+                {(R) => (
+                  <R.ResponsiveContainer width="100%" height="100%">
+                    <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                    <XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
-                    <Tooltip
+                    <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                    <R.Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
@@ -1204,10 +1162,11 @@ export default function Analytics() {
                       }}
                       formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "支出"]}
                     />
-                    <Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                    <R.Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                  </R.BarChart>
+                </R.ResponsiveContainer>
+                )}
+              </LazyRecharts>
             </CardContent>
           </Card>
 
@@ -1250,19 +1209,20 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-2 pb-4">
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LazyRecharts className="h-[240px]">
+                {(R) => (
+                  <R.ResponsiveContainer width="100%" height="100%">
+                    <R.AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4}/>
                         <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                    <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
-                    <Tooltip
+                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                    <R.XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatAmount(v)} />
+                    <R.Tooltip
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
@@ -1270,10 +1230,11 @@ export default function Analytics() {
                       }}
                       formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "结余"]}
                     />
-                    <Area type="monotone" dataKey="savings" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorSavings)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+                    <R.Area type="monotone" dataKey="savings" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorSavings)" />
+                  </R.AreaChart>
+                </R.ResponsiveContainer>
+                )}
+              </LazyRecharts>
             </CardContent>
           </Card>
 
@@ -1289,24 +1250,19 @@ export default function Analytics() {
                 <CardContent className="px-4 pb-4">
                   <div className="flex items-center gap-4">
                     <div className="w-[100px] h-[100px] flex-shrink-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={walletData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius="50%"
-                            outerRadius="80%"
-                            dataKey="balance"
-                            paddingAngle={3}
-                            strokeWidth={0}
-                          >
-                            {walletData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <LazyRecharts className="w-full h-full">
+                        {(R) => (
+                          <R.ResponsiveContainer width="100%" height="100%">
+                            <R.PieChart>
+                              <R.Pie data={walletData} cx="50%" cy="50%" innerRadius="50%" outerRadius="80%" dataKey="balance" paddingAngle={3} strokeWidth={0}>
+                                {walletData.map((entry, index) => (
+                                  <R.Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </R.Pie>
+                            </R.PieChart>
+                          </R.ResponsiveContainer>
+                        )}
+                      </LazyRecharts>
                     </div>
                     <div className="flex-1 space-y-2">
                       {walletData.slice(0, 4).map((wallet, index) => (
