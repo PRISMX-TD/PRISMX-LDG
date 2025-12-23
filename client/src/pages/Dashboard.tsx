@@ -237,7 +237,7 @@ export default function Dashboard() {
 
   const { data: transactions = [], isLoading: isTransactionsLoading } =
     useQuery<TransactionWithRelations[]>({
-      queryKey: ["/api/transactions"],
+      queryKey: ["/api/transactions?limit=20"],
       enabled: isAuthenticated,
     });
 

@@ -47,7 +47,8 @@ import {
   type InsertGroupActivity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or } from "drizzle-orm";
+import { eq, desc, and, or, gte, lte, ilike, getTableColumns } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 // Default categories for new users
 const defaultExpenseCategories = [
@@ -384,97 +385,61 @@ export class DatabaseStorage implements IStorage {
 
   // Transaction operations
   async getTransactions(userId: string, filters?: TransactionFilters): Promise<any[]> {
+    const toWallets = alias(wallets, "to_wallets");
+    
+    const conditions = [eq(transactions.userId, userId)];
+    
+    if (filters) {
+      if (filters.startDate) {
+        conditions.push(gte(transactions.date, filters.startDate));
+      }
+      if (filters.endDate) {
+        conditions.push(lte(transactions.date, filters.endDate));
+      }
+      if (filters.categoryId) {
+        conditions.push(eq(transactions.categoryId, filters.categoryId));
+      }
+      if (filters.walletId) {
+        conditions.push(eq(transactions.walletId, filters.walletId));
+      }
+      if (filters.type) {
+        conditions.push(eq(transactions.type, filters.type));
+      }
+      if (filters.search) {
+        const searchPattern = `%${filters.search}%`;
+        conditions.push(or(
+          ilike(transactions.description, searchPattern),
+          ilike(categories.name, searchPattern)
+        ));
+      }
+    }
+
     let query = db
       .select({
-        id: transactions.id,
-        userId: transactions.userId,
-        type: transactions.type,
-        amount: transactions.amount,
-        walletId: transactions.walletId,
-        toWalletId: transactions.toWalletId,
-        categoryId: transactions.categoryId,
-        subLedgerId: transactions.subLedgerId,
-        description: transactions.description,
-        tags: transactions.tags,
-        date: transactions.date,
-        createdAt: transactions.createdAt,
+        ...getTableColumns(transactions),
         category: categories,
         wallet: wallets,
         subLedger: subLedgers,
+        toWallet: toWallets,
       })
       .from(transactions)
       .leftJoin(categories, eq(transactions.categoryId, categories.id))
       .leftJoin(wallets, eq(transactions.walletId, wallets.id))
       .leftJoin(subLedgers, eq(transactions.subLedgerId, subLedgers.id))
-      .where(eq(transactions.userId, userId))
+      .leftJoin(toWallets, eq(transactions.toWalletId, toWallets.id))
+      .where(and(...conditions))
       .orderBy(desc(transactions.date))
       .$dynamic();
 
-    const result = await query;
-
-    // Apply filters in memory for simplicity
-    let filtered = result;
-    if (filters) {
-      if (filters.startDate) {
-        filtered = filtered.filter(t => new Date(t.date) >= filters.startDate!);
-      }
-      if (filters.endDate) {
-        filtered = filtered.filter(t => new Date(t.date) <= filters.endDate!);
-      }
-      if (filters.categoryId) {
-        filtered = filtered.filter(t => t.categoryId === filters.categoryId);
-      }
-      if (filters.walletId) {
-        filtered = filtered.filter(t => t.walletId === filters.walletId);
-      }
-      if (filters.type) {
-        filtered = filtered.filter(t => t.type === filters.type);
-      }
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filtered = filtered.filter(t => 
-          t.description?.toLowerCase().includes(searchLower) ||
-          t.category?.name.toLowerCase().includes(searchLower)
-        );
-      }
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+    
+    if (filters?.offset) {
+      query = query.offset(filters.offset);
     }
 
-    const start = filters?.offset ? Math.max(0, filters.offset) : 0;
-    const end = filters?.limit ? start + Math.max(0, filters.limit) : undefined;
-    const paged = end !== undefined ? filtered.slice(start, end) : filtered;
-
-    const transactionsWithToWallet = await Promise.all(
-      paged.map(async (t) => {
-        let toWallet = null;
-        if (t.toWalletId) {
-          const [tw] = await db
-            .select()
-            .from(wallets)
-            .where(eq(wallets.id, t.toWalletId));
-          toWallet = tw || null;
-        }
-        return {
-          id: t.id,
-          userId: t.userId,
-          type: t.type,
-          amount: t.amount,
-          walletId: t.walletId,
-          toWalletId: t.toWalletId,
-          categoryId: t.categoryId,
-          subLedgerId: t.subLedgerId,
-          description: t.description,
-          tags: t.tags,
-          date: t.date,
-          createdAt: t.createdAt,
-          category: t.category,
-          wallet: t.wallet,
-          subLedger: t.subLedger,
-          toWallet,
-        };
-      })
-    );
-
-    return transactionsWithToWallet;
+    return await query;
   }
 
   async getTransaction(id: number, userId: string): Promise<Transaction | undefined> {

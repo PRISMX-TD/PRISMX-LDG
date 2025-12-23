@@ -86,7 +86,11 @@ export const transactions = pgTable("transactions", {
   tags: text("tags").array(), // tags for transaction
   date: timestamp("date").notNull().defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_transactions_user_date").on(table.userId, table.date),
+  index("IDX_transactions_wallet").on(table.walletId),
+  index("IDX_transactions_category").on(table.categoryId)
+]);
 
 // Budgets table - monthly budget per category
 export const budgets = pgTable("budgets", {

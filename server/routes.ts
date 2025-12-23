@@ -21,6 +21,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const exchangeRateCache = new Map<string, { rate: number; timestamp: number }>();
+  const CACHE_DURATION = 3600 * 1000; // 1 hour
+
   const txCreateSchema = z.object({
     type: z.enum(["expense","income","transfer"]),
     amount: z.number().positive(),
@@ -145,6 +148,13 @@ export async function registerRoutes(
         return res.json({ rate: 1, from: fromCurrency, to: toCurrency });
       }
 
+      // Check cache
+      const cacheKey = `${fromCurrency}-${toCurrency}`;
+      const cached = exchangeRateCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return res.json({ rate: cached.rate, from: fromCurrency, to: toCurrency });
+      }
+
       // Use Frankfurter API (free, no API key required)
       const response = await fetch(
         `https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`
@@ -162,6 +172,9 @@ export async function registerRoutes(
       if (!rate) {
         return res.status(503).json({ message: "无法获取该币种汇率，请手动输入" });
       }
+
+      // Update cache
+      exchangeRateCache.set(cacheKey, { rate, timestamp: Date.now() });
 
       res.json({ rate, from: fromCurrency, to: toCurrency });
     } catch (error) {
