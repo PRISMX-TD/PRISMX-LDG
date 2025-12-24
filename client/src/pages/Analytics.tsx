@@ -660,6 +660,7 @@ export default function Analytics() {
               <Settings2 className="w-5 h-5" />
             </Button>
           </div>
+        </div>
           
         {isTransactionsLoading ? (
           <div className="p-6 flex items-center justify-center min-h-[60vh]">
@@ -717,9 +718,7 @@ export default function Analytics() {
               )}
             </div>
           </div>
-        </div>
 
-        {/* View Tabs */}
         <Tabs value={dataView} onValueChange={(v) => setDataView(v as any)} className="w-full">
           <TabsList className="w-full justify-start bg-transparent gap-1 p-0 h-auto flex-wrap">
             {[
@@ -1347,6 +1346,8 @@ export default function Analytics() {
             )}
           </DialogContent>
         </Dialog>
+          </>
+        )}
       </div>
     </PageContainer>
   );

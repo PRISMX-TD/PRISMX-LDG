@@ -146,16 +146,11 @@ export default function SubLedgers() {
   const activeSubLedgers = subLedgers.filter(s => !s.isArchived);
   const archivedSubLedgers = subLedgers.filter(s => s.isArchived);
 
-  if (isLoading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <PageContainer>
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/">
           <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
@@ -186,7 +181,13 @@ export default function SubLedgers() {
         </div>
       </div>
 
-      {activeSubLedgers.length === 0 && !showArchived ? (
+      {isLoading ? (
+        <div className="p-6 flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          {activeSubLedgers.length === 0 && !showArchived ? (
         <EmptyState
           icon={BookOpen}
           title="暂无子账本"

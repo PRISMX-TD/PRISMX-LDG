@@ -141,16 +141,11 @@ export default function Reports() {
     window.open(`/api/transactions/export?startDate=${startDate}&endDate=${endDate}`, "_blank");
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+
 
   return (
-    <div className="p-6 space-y-6">
+    <PageContainer>
+      <div className="p-6 space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/">
           <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
@@ -168,6 +163,12 @@ export default function Reports() {
         </Button>
       </div>
 
+        {isLoading ? (
+          <div className="p-6 flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <Tabs value={reportType} onValueChange={(v) => setReportType(v as "monthly" | "yearly")}>
           <TabsList>

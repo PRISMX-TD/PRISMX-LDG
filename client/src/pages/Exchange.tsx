@@ -678,6 +678,7 @@ export default function Exchange() {
           <p>• 建议定期更换API Key以确保账户安全</p>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PageContainer>
   );
 }
