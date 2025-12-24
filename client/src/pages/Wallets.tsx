@@ -245,7 +245,7 @@ export default function Wallets() {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scroll pr-2 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scroll pr-2 space-y-6 touch-pan-y">
           <TotalAssetsCard
             wallets={wallets.filter((w)=>!(w.isFlexible === false && (w.name || '').endsWith(' (归档)')))}
             defaultCurrency={defaultCurrency}

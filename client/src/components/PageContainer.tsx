@@ -9,7 +9,7 @@ interface PageContainerProps {
 
 export function PageContainer({ children, className, scrollable = true }: PageContainerProps) {
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#030304] relative text-gray-200 font-sans">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#030304] relative text-gray-200 font-sans">
       {/* Ambient Background Effects */}
       <div className="ambient-noise"></div>
       <div className="ambient-glow"></div>
