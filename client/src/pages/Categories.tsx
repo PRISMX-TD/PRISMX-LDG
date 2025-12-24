@@ -264,7 +264,7 @@ export default function Categories() {
         </div>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-md glass-card border-0">
+          <DialogContent className="sm:max-w-md glass-modal border-0">
             <DialogHeader>
               <DialogTitle>{editingCategory ? "编辑分类" : "添加分类"}</DialogTitle>
             </DialogHeader>
