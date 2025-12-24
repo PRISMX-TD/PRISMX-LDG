@@ -60,7 +60,7 @@ function AuthenticatedLayout() {
         
         {/* Main Content Area - Shifted by Sidebar Width */}
         <div className="pl-64 h-full flex flex-col relative z-0">
-          <main className="flex-1 h-full overflow-hidden">
+          <main className="flex-1 h-full overflow-hidden flex flex-col">
             <Switch>
               <Route path="/auth" component={() => (
                 <Suspense fallback={SuspenseFallback}> 
@@ -160,7 +160,7 @@ function AuthenticatedLayout() {
       {/* Mobile Layout */}
       <div className="md:hidden flex flex-col h-screen overflow-hidden">
         <MobileHeader user={user} />
-        <main className="flex-1 overflow-hidden pb-20">
+        <main className="flex-1 overflow-hidden pb-20 flex flex-col">
           <Switch>
             <Route path="/auth" component={() => (
               <Suspense fallback={SuspenseFallback}> 
