@@ -17,7 +17,7 @@ export function WalletSection({ userName = "USER", defaultWalletBalance = 0, cur
   const rate = exchangeRate?.rate || 4.45;
 
   return (
-    <div className="flex-1 flex flex-col gap-4 min-w-[300px]">
+    <div className="flex-1 flex flex-col gap-4 w-full lg:min-w-[300px] xl:min-w-[350px]">
       {/* Virtual Credit Card */}
       <div className="h-48 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden credit-card-bg shadow-2xl group transition-transform hover:scale-[1.02]">
         <div className="absolute top-0 right-0 w-32 h-32 holo-sticker rounded-full -translate-y-1/2 translate-x-1/2"></div>

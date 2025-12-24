@@ -62,91 +62,102 @@ export function MetricsGrid({
     }
 
     return (
-      <div className={`flex items-center text-xs ${colorClass} ${!isNeutral ? 'bg-white/5' : ''} w-fit px-2 py-1 rounded`}>
+      <div className={`flex items-center text-xs font-medium ${colorClass} ${!isNeutral ? 'bg-white/5' : ''} px-2 py-1 rounded-md whitespace-nowrap`}>
         <Icon className={`w-3 h-3 mr-1 ${!isPositive && !isNeutral ? 'rotate-180' : ''}`} />
-        {value > 0 ? '+' : ''}{value.toFixed(1)}% 与上月
+        <span>{value > 0 ? '+' : ''}{value.toFixed(1)}%</span>
       </div>
     );
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-8">
       {/* 1. Total Assets */}
-      <div className="glass-card p-5 group">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
+      <div className="glass-card p-4 md:p-5 flex flex-col justify-between h-full min-h-[140px] group relative overflow-hidden">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
             <Wallet className="w-4 h-4 text-blue-400" />
             总资产估值
           </div>
           <MoreHorizontal className="w-4 h-4 text-gray-600 cursor-pointer hover:text-white" />
         </div>
-        <div className="text-2xl lg:text-3xl font-bold text-white mb-1 group-hover:text-blue-200 transition-colors font-mono">
-          {formatMoney(totalAssets)}
+        <div className="mt-auto">
+          <div className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight group-hover:text-blue-200 transition-colors font-mono truncate">
+            {formatMoney(totalAssets)}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-gray-500 hidden sm:inline-block">与上月相比</span>
+            <TrendIndicator value={assetTrend} />
+          </div>
         </div>
-        <TrendIndicator value={assetTrend} />
       </div>
 
       {/* 2. Liquid Assets (Flexible Funds) */}
-      <div className="glass-card p-5 group">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
+      <div className="glass-card p-4 md:p-5 flex flex-col justify-between h-full min-h-[140px] group relative overflow-hidden">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
             <CreditCard className="w-4 h-4 text-neon-purple" />
             可灵活调用
           </div>
           <MoreHorizontal className="w-4 h-4 text-gray-600 cursor-pointer hover:text-white" />
         </div>
-        <div className="text-2xl lg:text-3xl font-bold text-white mb-1 group-hover:text-purple-200 transition-colors font-mono">
-          {formatMoney(liquidAssets)}
-        </div>
-        <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center text-xs text-gray-500">
+        <div className="mt-auto">
+          <div className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-200 transition-colors font-mono truncate">
+            {formatMoney(liquidAssets)}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center text-xs text-gray-500 truncate min-w-0">
                流动资金
             </div>
             <TrendIndicator value={liquidAssetTrend} />
+          </div>
         </div>
       </div>
 
       {/* 3. Monthly Income */}
-      <div className="glass-card p-5 group">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
+      <div className="glass-card p-4 md:p-5 flex flex-col justify-between h-full min-h-[140px] group relative overflow-hidden">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
             <Coins className="w-4 h-4 text-yellow-400" />
             本月收入
           </div>
         </div>
-        <div className="text-2xl lg:text-3xl font-bold text-white mb-1 font-mono">
-          {formatMoney(monthlyIncome)}
-        </div>
-        <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center text-xs text-gray-500">
-            固定工资 + 副业
+        <div className="mt-auto">
+          <div className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight font-mono truncate">
+            {formatMoney(monthlyIncome)}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center text-xs text-gray-500 truncate min-w-0">
+               固定工资 + 副业
             </div>
             <TrendIndicator value={incomeTrend} />
+          </div>
         </div>
       </div>
 
       {/* 4. Monthly Expense */}
-      <div className="glass-card p-5 group">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
+      <div className="glass-card p-4 md:p-5 flex flex-col justify-between h-full min-h-[140px] group relative overflow-hidden">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
             <ArrowUpRight className="w-4 h-4 text-red-400" />
             本月支出
           </div>
         </div>
-        <div className="text-2xl lg:text-3xl font-bold text-white mb-1 group-hover:text-red-200 transition-colors font-mono">
-          {formatMoney(monthlyExpense)}
-        </div>
-        <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center text-xs text-gray-500 gap-2">
-            <div className="h-1.5 w-16 bg-gray-800 rounded-full overflow-hidden">
-                <div 
-                className="h-full bg-red-500" 
-                style={{ width: `${Math.min(parseFloat(expenseRate), 100)}%` }}
-                ></div>
-            </div>
-            {expenseRate}%
+        <div className="mt-auto">
+          <div className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight group-hover:text-red-200 transition-colors font-mono truncate">
+            {formatMoney(monthlyExpense)}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center text-xs text-gray-500 gap-2 min-w-0">
+              <div className="h-1.5 w-12 bg-gray-800 rounded-full overflow-hidden shrink-0">
+                  <div 
+                  className="h-full bg-red-500" 
+                  style={{ width: `${Math.min(parseFloat(expenseRate), 100)}%` }}
+                  ></div>
+              </div>
+              <span className="truncate">{expenseRate}%</span>
             </div>
             <TrendIndicator value={expenseTrend} inverse />
+          </div>
         </div>
       </div>
     </div>

@@ -93,8 +93,8 @@ export function CashFlowChart({ transactions = [] }: CashFlowChartProps) {
   const { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } = Recharts;
 
   return (
-    <div ref={containerRef} className="flex-[2] glass-card p-6 flex flex-col min-w-[300px]">
-      <div className="flex justify-between items-center mb-6">
+    <div ref={containerRef} className="flex-[2] glass-card p-4 md:p-6 flex flex-col w-full min-w-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
         <div>
           <h3 className="text-white font-semibold flex items-center gap-2">
             <ArrowUpRight className="w-4 h-4 text-neon-purple" />
@@ -104,11 +104,11 @@ export function CashFlowChart({ transactions = [] }: CashFlowChartProps) {
             收入 vs 支出 ({timeRange === "week" ? "近7天" : "近30天"})
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <button 
             onClick={() => setTimeRange("week")}
             className={cn(
-              "px-3 py-1 rounded-lg text-xs transition-colors",
+              "flex-1 sm:flex-none px-3 py-1 rounded-lg text-xs transition-colors text-center",
               timeRange === "week" 
                 ? "bg-white/10 text-white border border-white/10" 
                 : "bg-transparent text-gray-500 hover:text-white"
@@ -119,7 +119,7 @@ export function CashFlowChart({ transactions = [] }: CashFlowChartProps) {
           <button 
             onClick={() => setTimeRange("month")}
             className={cn(
-              "px-3 py-1 rounded-lg text-xs transition-colors",
+              "flex-1 sm:flex-none px-3 py-1 rounded-lg text-xs transition-colors text-center",
               timeRange === "month" 
                 ? "bg-white/10 text-white border border-white/10" 
                 : "bg-transparent text-gray-500 hover:text-white"
@@ -133,7 +133,7 @@ export function CashFlowChart({ transactions = [] }: CashFlowChartProps) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-[250px] w-full">
+      <div className="flex-1 min-h-[250px] w-full -ml-2">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>

@@ -238,7 +238,7 @@ export default function Dashboard() {
           setIsModalOpen(true);
         }} />
 
-        <div className="flex-1 overflow-y-auto custom-scroll p-8 pt-0">
+        <div className="flex-1 overflow-y-auto custom-scroll p-4 md:p-8 pt-0">
           {/* Key Metrics Grid */}
           <MetricsGrid 
             totalAssets={totalAssets}
