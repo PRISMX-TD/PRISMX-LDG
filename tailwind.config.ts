@@ -11,6 +11,17 @@ export default {
         sm: ".1875rem", /* 3px */
       },
       colors: {
+        deep: '#030304', // 极致深黑
+        surface: '#0B0B0F', // 表面黑
+        neon: {
+            purple: '#8B5CF6',
+            glow: '#A78BFA',
+            dark: '#5B21B6'
+        },
+        glass: {
+            border: 'rgba(255, 255, 255, 0.06)',
+            shine: 'rgba(255, 255, 255, 0.03)',
+        },
         // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",

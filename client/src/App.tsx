@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -38,6 +38,8 @@ const SuspenseFallback = (
 
 function AuthenticatedLayout() {
   const { user, isLoading } = useAuth();
+  const [location] = useLocation();
+  const isDashboard = location === "/";
 
   if (isLoading) {
     return (
@@ -65,9 +67,11 @@ function AuthenticatedLayout() {
             <AppSidebar user={user} />
             <SidebarRail />
             <SidebarInset className="flex flex-col flex-1 min-w-0 bg-transparent">
-              <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-4 border-b border-primary/10 bg-background/40 backdrop-blur-xl px-4">
-                <SidebarTrigger data-testid="button-sidebar-toggle" className="-ml-1" />
-              </header>
+              {!isDashboard && (
+                <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-4 border-b border-primary/10 bg-background/40 backdrop-blur-xl px-4">
+                  <SidebarTrigger data-testid="button-sidebar-toggle" className="-ml-1" />
+                </header>
+              )}
               <main className="flex-1 overflow-auto">
                 <Switch>
                   <Route path="/auth" component={() => (
