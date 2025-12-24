@@ -2248,7 +2248,13 @@ export async function registerRoutes(
 
       if (!resp.ok) {
         const text = await resp.text();
-        return res.status(502).json({ metrics, ai: null, aiEnabled: true, message: `DeepSeek 调用失败: ${resp.status} ${text}` });
+        console.error(`DeepSeek API error: ${resp.status} ${text}`);
+        return res.json({ 
+          metrics, 
+          ai: null, 
+          aiEnabled: false, 
+          message: `DeepSeek 调用失败 (${resp.status}): 服务暂时不可用` 
+        });
       }
 
       const data = await resp.json();
@@ -2267,7 +2273,7 @@ export async function registerRoutes(
       console.error('Error generating AI insights:', error);
       const aborted = (error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error.message || ''))));
       if (aborted) {
-        return res.status(504).json({ metrics, ai: null, aiEnabled: true, message: 'DeepSeek 请求超时' });
+        return res.json({ metrics, ai: null, aiEnabled: false, message: 'AI请求超时，请稍后重试' });
       }
       return res.json({ metrics, ai: null, aiEnabled: false, message: 'AI 生成失败：' + String(error?.message || '未知错误') });
     }
