@@ -13,6 +13,10 @@ import { Link } from "wouter";
 import type { Wallet, Category, Transaction, SubLedger } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
 
 interface TransactionWithRelations extends Transaction {
   category?: Category | null;
@@ -66,7 +70,6 @@ export default function Transactions() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    refetch: refetchTransactions,
   } = useInfiniteQuery<TransactionWithRelations[]>({
     queryKey: ["/api/transactions", queryParams],
     queryFn: async ({ pageParam = 0 }) => {
@@ -84,55 +87,6 @@ export default function Transactions() {
   });
 
   const flatTransactions = transactionsPages?.pages?.flat() || [];
-  const [visibleCount, setVisibleCount] = useState(30);
-  useEffect(() => {
-    setVisibleCount(30);
-    const total = flatTransactions.length;
-    let cancelled = false;
-    const step = () => {
-      if (cancelled) return;
-      setVisibleCount((c) => (c < total ? Math.min(c + 30, total) : c));
-      if (typeof (window as any).requestIdleCallback === "function") {
-        (window as any).requestIdleCallback(step);
-      } else {
-        setTimeout(step, 100);
-      }
-    };
-    if (total > 30) step();
-    return () => { cancelled = true; };
-  }, [flatTransactions.length]);
-
-  const sentinelRef = useState<HTMLDivElement | null>(null)[0] as HTMLDivElement | null;
-  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!sentinelEl) return;
-    const io = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
-    }, { rootMargin: "200px", root: listRef.current || undefined });
-    io.observe(sentinelEl);
-    return () => io.disconnect();
-  }, [sentinelEl, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const ITEM_HEIGHT = 72;
-  const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setContainerHeight(el.clientHeight));
-    setContainerHeight(el.clientHeight);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [listRef.current]);
-  const overscan = 10;
-  const totalHeight = flatTransactions.length * ITEM_HEIGHT;
-  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - overscan);
-  const visibleItems = Math.ceil((containerHeight || 0) / ITEM_HEIGHT) + overscan * 2;
-  const endIndex = Math.min(flatTransactions.length, startIndex + visibleItems);
 
   const { data: stats, isLoading: isStatsLoading } = useQuery<TransactionStats>({
     queryKey: ["/api/transactions/stats", { startDate: filters.startDate, endDate: filters.endDate }],
@@ -279,15 +233,15 @@ export default function Transactions() {
             />
           </div>
 
-          {/* 交易列表 - 无卡片包装，直接展示 */}
-          <div className="flex-1 min-h-0">
+          {/* 交易列表 - 直接展示，移除手动虚拟滚动 */}
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scroll pr-2">
             {isTransactionsLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <TransactionItemSkeleton key={i} />
                 ))}
               </div>
-            ) : (transactionsPages?.pages?.flat().length || 0) === 0 ? (
+            ) : flatTransactions.length === 0 ? (
               <div className="py-12 glass-card rounded-xl">
                 <EmptyState
                   icon={Receipt}
@@ -298,27 +252,30 @@ export default function Transactions() {
                 />
               </div>
             ) : (
-              <div className="space-y-2 themed-scrollbar h-full overflow-y-auto pr-2" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
-                <div style={{ height: totalHeight, position: "relative" }}>
-                  <div style={{ transform: `translateY(${startIndex * ITEM_HEIGHT}px)` }}>
-                    {flatTransactions.slice(startIndex, endIndex).map((transaction) => (
-                      <TransactionItem
-                        key={transaction.id}
-                        transaction={transaction}
-                        category={categories.find(c => c.id === transaction.categoryId)}
-                        wallet={wallets.find(w => w.id === transaction.walletId)}
-                        toWallet={transaction.toWalletId ? wallets.find(w => w.id === transaction.toWalletId) : undefined}
-                        onClick={(tx) => {
-                          setEditingTransaction(tx);
-                          setIsModalOpen(true);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
+              <div className="space-y-2 pb-20 md:pb-0">
+                {flatTransactions.map((transaction) => (
+                  <TransactionItem
+                    key={transaction.id}
+                    transaction={transaction}
+                    category={categories.find(c => c.id === transaction.categoryId)}
+                    wallet={wallets.find(w => w.id === transaction.walletId)}
+                    toWallet={transaction.toWalletId ? wallets.find(w => w.id === transaction.toWalletId) : undefined}
+                    onClick={(tx) => {
+                      setEditingTransaction(tx);
+                      setIsModalOpen(true);
+                    }}
+                  />
+                ))}
+                
                 {hasNextPage && (
-                  <div ref={setSentinelEl} className="flex justify-center pt-2">
-                    <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage} className="bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10">
+                  <div className="flex justify-center py-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => fetchNextPage()} 
+                      disabled={isFetchingNextPage}
+                      className="bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
+                    >
                       {isFetchingNextPage ? "加载中..." : "加载更多"}
                     </Button>
                   </div>
