@@ -584,7 +584,6 @@ export default function Split() {
               </div>
             </div>
 
-            
           </CardContent>
         </Card>
       )}
