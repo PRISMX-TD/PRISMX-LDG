@@ -1,13 +1,11 @@
-import { useState, useRef, useCallback, useMemo } from "react";
-import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { PageContainer } from "@/components/PageContainer";
+import { Header } from "@/components/Header";
 import { WalletCard, WalletCardSkeleton } from "@/components/WalletCard";
 import { WalletModal } from "@/components/WalletModal";
 import { TotalAssetsCard } from "@/components/TotalAssetsCard";
 import { EmptyState } from "@/components/EmptyState";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { 
   Wallet, 
   Plus, 
@@ -18,6 +16,7 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronRight,
+  ArrowLeft
 } from "lucide-react";
 import { walletTypeLabels, getCurrencyInfo } from "@shared/schema";
 import type { Wallet as WalletType, UserWalletPreferences } from "@shared/schema";
@@ -28,6 +27,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { useLocation, Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 const walletTypeOrder = ['cash', 'bank_card', 'digital_wallet', 'credit_card', 'investment'];
 
@@ -199,206 +202,204 @@ export default function Wallets() {
     }
   };
 
-  const handleWalletEdit = (e: React.MouseEvent, wallet: WalletType) => {
-    e.stopPropagation();
-    setSelectedWallet(wallet);
-    setIsModalOpen(true);
-  };
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div 
-      className="p-4 md:p-6 space-y-4 md:space-y-6"
-      onMouseMove={handleDragMove}
-      onMouseUp={handleLongPressEnd}
-      onMouseLeave={handleLongPressEnd}
-      onTouchMove={handleDragMove}
-      onTouchEnd={handleLongPressEnd}
-      onTouchCancel={handleLongPressEnd}
-    >
-      <div className="hidden md:flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Wallet className="w-6 h-6" />
-          钱包管理
-        </h1>
-        <Button
-          onClick={() => {
-            setSelectedWallet(null);
-            setIsModalOpen(true);
-          }}
-          data-testid="button-add-wallet"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          添加钱包
-        </Button>
+    <PageContainer scrollable={false}>
+      <div className="hidden md:block mb-4">
+        <Header user={user} />
       </div>
 
-      <TotalAssetsCard
-        wallets={wallets.filter((w)=>!(w.isFlexible === false && (w.name || '').endsWith(' (归档)')))}
-        defaultCurrency={defaultCurrency}
-        isLoading={isLoading}
-      />
-
-      <div className="flex md:hidden items-center justify-between">
-        <h2 className="text-base font-semibold flex items-center gap-2">
-          <Wallet className="w-4 h-4" />
-          我的钱包
-        </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setSelectedWallet(null);
-            setIsModalOpen(true);
-          }}
-          className="text-sm"
-          data-testid="button-add-wallet-inline"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          添加
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-5 w-20 bg-muted rounded animate-pulse" />
-              <div className="space-y-2">
-                {[1, 2].map((j) => (
-                  <WalletCardSkeleton key={j} />
-                ))}
-              </div>
-            </div>
-          ))}
+      <div 
+        className="flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6"
+        onMouseMove={handleDragMove}
+        onMouseUp={handleLongPressEnd}
+        onMouseLeave={handleLongPressEnd}
+        onTouchMove={handleDragMove}
+        onTouchEnd={handleLongPressEnd}
+        onTouchCancel={handleLongPressEnd}
+      >
+        <div className="hidden md:flex items-center gap-4">
+          <Link href="/">
+            <Button variant="ghost" size="sm" data-testid="button-back-home" className="text-gray-400 hover:text-white">
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              返回
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-semibold flex items-center gap-2 text-white">
+            <Wallet className="w-6 h-6 text-neon-purple" />
+            钱包管理
+          </h1>
+          <Button
+            onClick={() => {
+              setSelectedWallet(null);
+              setIsModalOpen(true);
+            }}
+            data-testid="button-add-wallet"
+            className="ml-auto bg-neon-purple hover:bg-neon-dark text-white shadow-neon border-none"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            添加钱包
+          </Button>
         </div>
-      ) : wallets.length === 0 ? (
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <EmptyState
-              icon={Wallet}
-              title="还没有钱包"
-              description="添加您的第一个钱包开始记账"
-              actionLabel="添加钱包"
-              onAction={() => setIsModalOpen(true)}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {groupedWallets.map(({ type, wallets: typeWallets }) => {
-            const TypeIcon = walletTypeIcons[type] || Wallet;
-            const isCollapsed = collapsedTypes.has(type);
-            const totalBalance = typeWallets.reduce((sum, w) => {
-              const balance = parseFloat(w.balance || "0");
-              const walletCurrency = w.currency || "MYR";
-              if (walletCurrency === defaultCurrency) {
-                return sum + balance;
-              }
-              const rate = parseFloat(w.exchangeRateToDefault || "1");
-              return sum + balance * rate;
-            }, 0);
 
-            return (
-              <Collapsible key={type} open={!isCollapsed} onOpenChange={() => toggleCollapse(type)}>
-                <div className="space-y-2">
-                  <CollapsibleTrigger asChild>
-                    <button
-                      className="flex items-center justify-between w-full p-2 rounded-lg hover-elevate transition-colors"
-                      data-testid={`button-toggle-${type}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <TypeIcon className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {walletTypeLabels[type] || type}
-                        </span>
-                        <span className="text-xs text-muted-foreground/70">
-                          ({typeWallets.length})
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {currencyInfo.symbol}{totalBalance >= 0 ? '+' : ''}{totalBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
-                        </span>
-                        {isCollapsed ? (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </button>
-                  </CollapsibleTrigger>
+        <div className="flex-1 overflow-y-auto custom-scroll pr-2 space-y-6">
+          <TotalAssetsCard
+            wallets={wallets.filter((w)=>!(w.isFlexible === false && (w.name || '').endsWith(' (归档)')))}
+            defaultCurrency={defaultCurrency}
+            isLoading={isLoading}
+          />
 
-                  <CollapsibleContent>
-                    <div className="hidden md:grid gap-3 grid-cols-2 lg:grid-cols-3">
-                      {typeWallets.map((wallet) => (
-                        <div
-                          key={wallet.id}
-                          className={`relative ${
-                            dragState?.walletId === wallet.id ? 'opacity-50 scale-95' : ''
-                          } ${
-                            dragOverWalletId === wallet.id && dragState?.type === type ? 'ring-2 ring-primary' : ''
-                          }`}
-                          onMouseDown={(e) => handleLongPressStart(e, wallet)}
-                          onMouseEnter={() => handleDragEnter(wallet.id)}
-                        >
-                          <WalletCard
-                            wallet={wallet}
-                            onClick={() => handleWalletClick(wallet)}
-                          />
-                        </div>
-                      ))}
-                    </div>
+          <div className="flex md:hidden items-center justify-between">
+            <h2 className="text-base font-semibold flex items-center gap-2 text-white">
+              <Wallet className="w-4 h-4 text-neon-purple" />
+              我的钱包
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedWallet(null);
+                setIsModalOpen(true);
+              }}
+              className="text-sm text-neon-purple hover:text-white hover:bg-white/10"
+              data-testid="button-add-wallet-inline"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              添加
+            </Button>
+          </div>
 
-                    <div className="md:hidden space-y-2">
-                      {typeWallets.map((wallet) => (
-                        <div
-                          key={wallet.id}
-                          className={`relative flex items-center gap-2 ${
-                            dragState?.walletId === wallet.id ? 'opacity-50 scale-95' : ''
-                          } ${
-                            dragOverWalletId === wallet.id && dragState?.type === type ? 'ring-2 ring-primary rounded-lg' : ''
-                          }`}
-                          onTouchStart={(e) => handleLongPressStart(e, wallet)}
-                          onTouchMove={(e) => {
-                            if (dragState) {
-                              const touch = e.touches[0];
-                              const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                              const walletElement = element?.closest('[data-wallet-id]');
-                              if (walletElement) {
-                                const id = parseInt(walletElement.getAttribute('data-wallet-id') || '0');
-                                if (id !== dragOverWalletId) {
-                                  handleDragEnter(id);
-                                }
-                              }
-                            }
-                          }}
-                          data-wallet-id={wallet.id}
-                        >
-                          {dragState?.type === type && (
-                            <div className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
-                              <GripVertical className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <WalletCard
-                              wallet={wallet}
-                              onClick={() => handleWalletClick(wallet)}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-5 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="space-y-2">
+                    {[1, 2].map((j) => (
+                      <WalletCardSkeleton key={j} />
+                    ))}
+                  </div>
                 </div>
-              </Collapsible>
-            );
-          })}
-        </div>
-      )}
+              ))}
+            </div>
+          ) : wallets.length === 0 ? (
+            <div className="glass-card rounded-xl p-6">
+              <EmptyState
+                icon={Wallet}
+                title="还没有钱包"
+                description="添加您的第一个钱包开始记账"
+                actionLabel="添加钱包"
+                onAction={() => setIsModalOpen(true)}
+              />
+            </div>
+          ) : (
+            <div className="space-y-4 pb-20 md:pb-0">
+              {groupedWallets.map(({ type, wallets: typeWallets }) => {
+                const TypeIcon = walletTypeIcons[type] || Wallet;
+                const isCollapsed = collapsedTypes.has(type);
+                const totalBalance = typeWallets.reduce((sum, w) => {
+                  const balance = parseFloat(w.balance || "0");
+                  const walletCurrency = w.currency || "MYR";
+                  if (walletCurrency === defaultCurrency) {
+                    return sum + balance;
+                  }
+                  const rate = parseFloat(w.exchangeRateToDefault || "1");
+                  return sum + balance * rate;
+                }, 0);
 
-      <div className="md:hidden text-center text-xs text-muted-foreground/60 mt-4">
-        长按钱包可拖动排序
+                return (
+                  <Collapsible key={type} open={!isCollapsed} onOpenChange={() => toggleCollapse(type)}>
+                    <div className="space-y-3">
+                      <CollapsibleTrigger asChild>
+                        <button
+                          className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-white/5 transition-colors group"
+                          data-testid={`button-toggle-${type}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <TypeIcon className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
+                            <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                              {walletTypeLabels[type] || type}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({typeWallets.length})
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-gray-400 group-hover:text-gray-200 transition-colors">
+                              {currencyInfo.symbol} {totalBalance >= 0 ? '+' : ''}{totalBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
+                            </span>
+                            {isCollapsed ? (
+                              <ChevronRight className="w-4 h-4 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-gray-500" />
+                            )}
+                          </div>
+                        </button>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent>
+                        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          {typeWallets.map((wallet) => (
+                            <div
+                              key={wallet.id}
+                              className={`relative transition-all duration-200 ${
+                                dragState?.walletId === wallet.id ? 'opacity-50 scale-95' : ''
+                              } ${
+                                dragOverWalletId === wallet.id && dragState?.type === type ? 'ring-2 ring-neon-purple rounded-xl' : ''
+                              }`}
+                              onMouseDown={(e) => handleLongPressStart(e, wallet)}
+                              onMouseEnter={() => handleDragEnter(wallet.id)}
+                              onTouchStart={(e) => handleLongPressStart(e, wallet)}
+                              onTouchMove={(e) => {
+                                if (dragState) {
+                                  const touch = e.touches[0];
+                                  const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                                  const walletElement = element?.closest('[data-wallet-id]');
+                                  if (walletElement) {
+                                    const id = parseInt(walletElement.getAttribute('data-wallet-id') || '0');
+                                    if (id !== dragOverWalletId) {
+                                      handleDragEnter(id);
+                                    }
+                                  }
+                                }
+                              }}
+                              data-wallet-id={wallet.id}
+                            >
+                              <div className="h-full">
+                                {dragState?.type === type && (
+                                  <div className="absolute right-2 top-2 z-10 md:hidden flex-shrink-0 touch-none cursor-grab active:cursor-grabbing p-2 bg-black/50 rounded-full backdrop-blur-sm">
+                                    <GripVertical className="w-4 h-4 text-white" />
+                                  </div>
+                                )}
+                                <WalletCard
+                                  wallet={wallet}
+                                  onClick={() => handleWalletClick(wallet)}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="md:hidden text-center text-xs text-gray-500 mt-4 pb-8">
+            长按钱包可拖动排序
+          </div>
+        </div>
       </div>
+
+      <FloatingActionButton onClick={() => {
+        setSelectedWallet(null);
+        setIsModalOpen(true);
+      }} />
 
       <WalletModal
         open={isModalOpen}
@@ -406,6 +407,6 @@ export default function Wallets() {
         wallet={selectedWallet}
         defaultCurrency={user?.defaultCurrency || "MYR"}
       />
-    </div>
+    </PageContainer>
   );
 }

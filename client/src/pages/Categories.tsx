@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +30,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import type { Category } from "@shared/schema";
+import { PageContainer } from "@/components/PageContainer";
 
 const COLORS = [
   "#EF4444", "#F97316", "#F59E0B", "#84CC16", "#22C55E", 
@@ -188,165 +188,159 @@ export default function Categories() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header user={user} />
-
-      <main className="container mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button variant="ghost" size="sm" data-testid="button-back-home">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              返回
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Tag className="w-6 h-6" />
-            分类管理
-          </h1>
+    <PageContainer>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center">
+            <Tag className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">分类管理</h1>
+            <p className="text-sm text-muted-foreground hidden md:block">自定义收入和支出分类</p>
+          </div>
         </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-                <TabsList>
-                  <TabsTrigger value="expense" data-testid="tab-expense">
-                    支出 ({expenseCategories.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="income" data-testid="tab-income">
-                    收入 ({incomeCategories.length})
-                  </TabsTrigger>
-                </TabsList>
-                <Button onClick={openCreateModal} data-testid="button-add-category">
-                  <Plus className="w-4 h-4 mr-1" />
-                  添加分类
+        <div className="glass-card p-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+              <TabsList className="bg-background/50">
+                <TabsTrigger value="expense" data-testid="tab-expense">
+                  支出 ({expenseCategories.length})
+                </TabsTrigger>
+                <TabsTrigger value="income" data-testid="tab-income">
+                  收入 ({incomeCategories.length})
+                </TabsTrigger>
+              </TabsList>
+              <Button onClick={openCreateModal} data-testid="button-add-category" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Plus className="w-4 h-4 mr-1" />
+                添加分类
+              </Button>
+            </div>
+
+            <TabsContent value="expense">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : expenseCategories.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">暂无支出分类</p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {expenseCategories.map((category) => (
+                    <CategoryItem
+                      key={category.id}
+                      category={category}
+                      onEdit={() => openEditModal(category)}
+                      onDelete={() => deleteMutation.mutate(category.id)}
+                      isDeleting={deleteMutation.isPending}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="income">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : incomeCategories.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">暂无收入分类</p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {incomeCategories.map((category) => (
+                    <CategoryItem
+                      key={category.id}
+                      category={category}
+                      onEdit={() => openEditModal(category)}
+                      onDelete={() => deleteMutation.mutate(category.id)}
+                      isDeleting={deleteMutation.isPending}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="sm:max-w-md glass-card border-0">
+            <DialogHeader>
+              <DialogTitle>{editingCategory ? "编辑分类" : "添加分类"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+              <div className="space-y-2">
+                <Label>分类名称</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="输入分类名称"
+                  className="bg-background/50 border-white/10"
+                  data-testid="input-category-name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>图标</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {ICON_OPTIONS.map(({ value, label, Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all ${
+                        icon === value
+                          ? "border-primary bg-primary/10 ring-2 ring-primary"
+                          : "border-white/10 hover:bg-white/5"
+                      }`}
+                      onClick={() => setIcon(value)}
+                      title={label}
+                      data-testid={`icon-${value}`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>颜色</Label>
+                <div className="grid grid-cols-9 gap-2">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`w-6 h-6 rounded-full transition-transform ${
+                        color === c ? "ring-2 ring-offset-2 ring-primary scale-110" : ""
+                      }`}
+                      style={{ backgroundColor: c }}
+                      onClick={() => setColor(c)}
+                      data-testid={`color-${c}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="ghost" onClick={closeModal} className="flex-1">
+                  取消
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  data-testid="button-save-category"
+                >
+                  {(createMutation.isPending || updateMutation.isPending) && (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  )}
+                  保存
                 </Button>
               </div>
-
-              <TabsContent value="expense">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : expenseCategories.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-12">暂无支出分类</p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {expenseCategories.map((category) => (
-                      <CategoryItem
-                        key={category.id}
-                        category={category}
-                        onEdit={() => openEditModal(category)}
-                        onDelete={() => deleteMutation.mutate(category.id)}
-                        isDeleting={deleteMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="income">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : incomeCategories.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-12">暂无收入分类</p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {incomeCategories.map((category) => (
-                      <CategoryItem
-                        key={category.id}
-                        category={category}
-                        onEdit={() => openEditModal(category)}
-                        onDelete={() => deleteMutation.mutate(category.id)}
-                        isDeleting={deleteMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </main>
-
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingCategory ? "编辑分类" : "添加分类"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>分类名称</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="输入分类名称"
-                data-testid="input-category-name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>图标</Label>
-              <div className="grid grid-cols-5 gap-2">
-                {ICON_OPTIONS.map(({ value, label, Icon }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all ${
-                      icon === value
-                        ? "border-primary bg-primary/10 ring-2 ring-primary"
-                        : "border-border hover-elevate"
-                    }`}
-                    onClick={() => setIcon(value)}
-                    title={label}
-                    data-testid={`icon-${value}`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>颜色</Label>
-              <div className="grid grid-cols-9 gap-2">
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={`w-6 h-6 rounded-full transition-transform ${
-                      color === c ? "ring-2 ring-offset-2 ring-primary scale-110" : ""
-                    }`}
-                    style={{ backgroundColor: c }}
-                    onClick={() => setColor(c)}
-                    data-testid={`color-${c}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={closeModal} className="flex-1">
-                取消
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-                className="flex-1"
-                data-testid="button-save-category"
-              >
-                {(createMutation.isPending || updateMutation.isPending) && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
-                保存
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageContainer>
   );
 }
 
@@ -362,18 +356,18 @@ function CategoryItem({ category, onEdit, onDelete, isDeleting }: CategoryItemPr
   
   return (
     <div
-      className="flex items-center justify-between p-3 rounded-lg border bg-card hover-elevate"
+      className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-colors"
       data-testid={`category-item-${category.id}`}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg"
           style={{ backgroundColor: category.color || "#6366F1" }}
         >
           <IconComponent className="w-4 h-4" />
         </div>
         <div>
-          <p className="font-medium">{category.name}</p>
+          <p className="font-medium text-sm">{category.name}</p>
           {category.isDefault && (
             <span className="text-xs text-muted-foreground">默认</span>
           )}
@@ -384,6 +378,7 @@ function CategoryItem({ category, onEdit, onDelete, isDeleting }: CategoryItemPr
           variant="ghost"
           size="icon"
           onClick={onEdit}
+          className="h-8 w-8 hover:bg-white/10"
           data-testid={`button-edit-category-${category.id}`}
         >
           <Pencil className="w-4 h-4" />
@@ -394,12 +389,13 @@ function CategoryItem({ category, onEdit, onDelete, isDeleting }: CategoryItemPr
             size="icon"
             onClick={onDelete}
             disabled={isDeleting}
+            className="h-8 w-8 hover:bg-rose-500/20 hover:text-rose-500"
             data-testid={`button-delete-category-${category.id}`}
           >
             {isDeleting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Trash2 className="w-4 h-4 text-expense" />
+              <Trash2 className="w-4 h-4" />
             )}
           </Button>
         )}

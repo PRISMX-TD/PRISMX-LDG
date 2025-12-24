@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Settings as SettingsIcon, Globe, User, Shield, Loader2, Smartphone, ChevronRight } from "lucide-react";
 import { supportedCurrencies } from "@shared/schema";
 import { MobileNavSettingsModal } from "@/components/MobileNavSettingsModal";
+import { PageContainer } from "@/components/PageContainer";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -46,47 +47,47 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-3xl">
-      <h1 className="hidden md:flex text-2xl font-bold items-center gap-2">
-        <SettingsIcon className="w-6 h-6" />
-        设置
-      </h1>
+    <PageContainer>
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center">
+            <SettingsIcon className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">设置</h1>
+            <p className="text-sm text-muted-foreground hidden md:block">管理您的账户偏好和安全设置</p>
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            账户信息
-          </CardTitle>
-          <CardDescription>查看您的账户基本信息</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <div className="glass-card p-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
+          <div className="flex items-center gap-2 mb-4">
+            <User className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-medium">账户信息</h3>
+          </div>
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-16 w-16 border-2 border-white/10 shadow-lg">
               <AvatarImage
                 src={user.profileImageUrl || undefined}
                 alt={displayName}
                 className="object-cover"
               />
-              <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+              <AvatarFallback className="text-lg bg-primary/20 text-primary">{initials}</AvatarFallback>
             </Avatar>
             <div>
               <p className="text-lg font-medium">{displayName}</p>
               {user.email && <p className="text-muted-foreground">{user.email}</p>}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
-            默认币种
-          </CardTitle>
-          <CardDescription>选择您的首选货币，此设置将用于显示总资产等汇总数据</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-medium">默认币种</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">选择您的首选货币，此设置将用于显示总资产等汇总数据</p>
+          
           <RadioGroup
             value={currentCurrency}
             onValueChange={(value) => currencyMutation.mutate(value)}
@@ -95,13 +96,18 @@ export default function Settings() {
             {supportedCurrencies.map((currency) => (
               <div
                 key={currency.code}
-                className="flex items-center space-x-3 rounded-lg border p-3 hover-elevate cursor-pointer"
+                className={`flex items-center space-x-3 rounded-lg border p-3 cursor-pointer transition-all ${
+                  currentCurrency === currency.code 
+                    ? "bg-primary/10 border-primary/50 shadow-[0_0_10px_rgba(139,92,246,0.2)]" 
+                    : "bg-background/30 border-white/5 hover:bg-white/5 hover:border-white/10"
+                }`}
                 onClick={() => !currencyMutation.isPending && currencyMutation.mutate(currency.code)}
               >
                 <RadioGroupItem
                   value={currency.code}
                   id={`currency-${currency.code}`}
                   disabled={currencyMutation.isPending}
+                  className="border-primary text-primary"
                 />
                 <Label
                   htmlFor={`currency-${currency.code}`}
@@ -120,49 +126,41 @@ export default function Settings() {
               <span className="text-sm">正在更新...</span>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card className="md:hidden">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5" />
-            移动端导航
-          </CardTitle>
-          <CardDescription>自定义底部导航栏显示的项目</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <div className="glass-card p-6 md:hidden">
+          <div className="flex items-center gap-2 mb-1">
+            <Smartphone className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-medium">移动端导航</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">自定义底部导航栏显示的项目</p>
           <Button
             variant="outline"
-            className="w-full justify-between"
+            className="w-full justify-between bg-background/30 border-white/10 hover:bg-white/5"
             onClick={() => setIsMobileNavSettingsOpen(true)}
             data-testid="button-mobile-nav-settings"
           >
             <span>配置导航栏</span>
             <ChevronRight className="w-4 h-4" />
           </Button>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            账户安全
-          </CardTitle>
-          <CardDescription>管理您的账户安全设置</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" asChild>
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-medium">账户安全</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">管理您的账户安全设置</p>
+          <Button variant="outline" asChild className="bg-background/30 border-white/10 hover:bg-white/5 hover:text-rose-500 hover:border-rose-500/20">
             <a href="/api/logout">退出登录</a>
           </Button>
-        </CardContent>
-      </Card>
+        </div>
 
-      <MobileNavSettingsModal
-        open={isMobileNavSettingsOpen}
-        onOpenChange={setIsMobileNavSettingsOpen}
-      />
-    </div>
+        <MobileNavSettingsModal
+          open={isMobileNavSettingsOpen}
+          onOpenChange={setIsMobileNavSettingsOpen}
+        />
+      </div>
+    </PageContainer>
   );
 }

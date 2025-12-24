@@ -1,5 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Wallet } from "lucide-react";
+import { TrendingUp, Wallet, MoreHorizontal } from "lucide-react";
 import type { Wallet as WalletType } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
 
@@ -29,46 +28,37 @@ export function TotalAssetsCard({ wallets, isLoading, defaultCurrency = "MYR" }:
 
   if (isLoading) {
     return (
-      <Card className="bg-primary text-primary-foreground">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center gap-2 opacity-90">
-            <Wallet className="w-5 h-5" />
+      <div className="glass-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <Wallet className="w-4 h-4 text-blue-400" />
             总资产
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-12 w-48 bg-white/20 rounded animate-pulse" />
-        </CardContent>
-      </Card>
+          </div>
+          <MoreHorizontal className="w-4 h-4 text-gray-600" />
+        </div>
+        <div className="h-8 w-48 bg-white/10 rounded animate-pulse" />
+      </div>
     );
   }
 
   return (
-    <Card className="bg-gradient-to-br from-primary via-primary/90 to-purple-600 text-primary-foreground overflow-visible shadow-xl shadow-primary/30">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium flex items-center gap-2 opacity-90">
-          <Wallet className="w-5 h-5" />
+    <div className="glass-card p-5 group">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <Wallet className="w-4 h-4 text-blue-400" />
           总资产
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-baseline gap-1">
-          <span className="text-lg opacity-80">{currencyInfo.symbol}</span>
-          <span
-            className="text-4xl font-bold font-mono tracking-tight"
-            data-testid="text-total-assets"
-          >
-            {totalInDefaultCurrency.toLocaleString("zh-CN", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
         </div>
-        <div className="flex items-center gap-2 mt-3 text-sm opacity-80">
-          <TrendingUp className="w-4 h-4" />
+        <MoreHorizontal className="w-4 h-4 text-gray-600 cursor-pointer hover:text-white" />
+      </div>
+      <div className="text-3xl font-bold text-white mb-1 group-hover:text-blue-200 transition-colors font-mono">
+        {currencyInfo.symbol} {totalInDefaultCurrency.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <div className="flex items-center text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded">
+          <TrendingUp className="w-3 h-3 mr-1" />
           <span>{wallets.length} 个账户</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { PageContainer } from "@/components/PageContainer";
 import { Header } from "@/components/Header";
 import { TransactionFilters, TransactionFilterValues } from "@/components/TransactionFilters";
 import { TransactionItem, TransactionItemSkeleton } from "@/components/TransactionItem";
@@ -11,7 +8,7 @@ import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Receipt, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { Receipt, ArrowLeft, TrendingUp, TrendingDown, ArrowUpRight } from "lucide-react";
 import { Link } from "wouter";
 import type { Wallet, Category, Transaction, SubLedger } from "@shared/schema";
 import { getCurrencyInfo } from "@shared/schema";
@@ -200,65 +197,65 @@ export default function Transactions() {
   }
 
   return (
-    <div className="min-h-screen aurora-bg">
-      <div className="hidden md:block">
+    <PageContainer scrollable={false}>
+      <div className="hidden md:block mb-4">
         <Header user={user} />
       </div>
 
-      <main className="mx-auto max-w-[1600px] px-4 md:px-6 py-4 md:py-6 space-y-4 md:space-y-6">
+      <div className="flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6">
         <div className="hidden md:flex items-center gap-4">
           <Link href="/">
-            <Button variant="ghost" size="sm" data-testid="button-back-home">
+            <Button variant="ghost" size="sm" data-testid="button-back-home" className="text-gray-400 hover:text-white">
               <ArrowLeft className="w-4 h-4 mr-1" />
               返回
             </Button>
           </Link>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Receipt className="w-6 h-6" />
+          <h1 className="text-2xl font-semibold flex items-center gap-2 text-white">
+            <Receipt className="w-6 h-6 text-neon-purple" />
             交易记录
           </h1>
         </div>
 
         {/* 统计卡片 - 使用透明玻璃效果 */}
         <div className="grid gap-3 md:gap-4 grid-cols-3">
-          <div className="p-3 md:p-4 rounded-xl bg-income/5 border border-income/20">
+          <div className="glass-card p-3 md:p-4 group">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="w-4 h-4 text-income" />
-              <span className="text-xs md:text-sm text-muted-foreground">收入</span>
+              <TrendingUp className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs md:text-sm text-gray-400">收入</span>
             </div>
             {isStatsLoading ? (
-              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-6 w-16 bg-white/10" />
             ) : (
-              <p className="text-base md:text-xl font-bold font-mono text-income">
+              <p className="text-base md:text-xl font-bold font-mono text-white group-hover:text-yellow-200 transition-colors">
                 +{currencyInfo.symbol}{(stats?.totalIncome || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
               </p>
             )}
           </div>
 
-          <div className="p-3 md:p-4 rounded-xl bg-expense/5 border border-expense/20">
+          <div className="glass-card p-3 md:p-4 group">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingDown className="w-4 h-4 text-expense" />
-              <span className="text-xs md:text-sm text-muted-foreground">支出</span>
+              <ArrowUpRight className="w-4 h-4 text-red-400" />
+              <span className="text-xs md:text-sm text-gray-400">支出</span>
             </div>
             {isStatsLoading ? (
-              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-6 w-16 bg-white/10" />
             ) : (
-              <p className="text-base md:text-xl font-bold font-mono text-expense">
+              <p className="text-base md:text-xl font-bold font-mono text-white group-hover:text-red-200 transition-colors">
                 -{currencyInfo.symbol}{(stats?.totalExpense || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
               </p>
             )}
           </div>
 
-          <div className="p-3 md:p-4 rounded-xl bg-primary/5 border border-primary/20">
+          <div className="glass-card p-3 md:p-4 group">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs md:text-sm text-muted-foreground">净收入</span>
+              <span className="text-xs md:text-sm text-gray-400">净收入</span>
             </div>
             {isStatsLoading ? (
-              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-6 w-16 bg-white/10" />
             ) : (
               <p
-                className={`text-base md:text-xl font-bold font-mono ${
-                  (stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "text-income" : "text-expense"
+                className={`text-base md:text-xl font-bold font-mono transition-colors ${
+                  (stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "text-white group-hover:text-green-200" : "text-red-400 group-hover:text-red-200"
                 }`}
               >
                 {(stats?.totalIncome || 0) - (stats?.totalExpense || 0) >= 0 ? "+" : ""}
@@ -271,8 +268,8 @@ export default function Transactions() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:gap-6 grid-cols-1">
-          <div className="space-y-4">
+        <div className="flex-1 flex flex-col min-h-0 gap-4">
+          <div className="glass-card p-4">
             <TransactionFilters
               categories={categories}
               wallets={wallets}
@@ -280,57 +277,57 @@ export default function Transactions() {
               onFiltersChange={setFilters}
               onExport={handleExport}
             />
+          </div>
 
-            {/* 交易列表 - 无卡片包装，直接展示 */}
-            <div>
-              {isTransactionsLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <TransactionItemSkeleton key={i} />
-                  ))}
-                </div>
-              ) : (transactionsPages?.pages?.flat().length || 0) === 0 ? (
-                <div className="py-12">
-                  <EmptyState
-                    icon={Receipt}
-                    title="没有找到交易记录"
-                    description="调整筛选条件或添加新交易"
-                    actionLabel="记一笔"
-                    onAction={handleAddNew}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-2 themed-scrollbar" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)} style={{ maxHeight: "calc(100vh - 260px)", overflowY: "auto" }}>
-                  <div style={{ height: totalHeight, position: "relative" }}>
-                    <div style={{ transform: `translateY(${startIndex * ITEM_HEIGHT}px)` }}>
-                      {flatTransactions.slice(startIndex, endIndex).map((transaction) => (
-                        <TransactionItem
-                          key={transaction.id}
-                          transaction={transaction}
-                          category={transaction.category}
-                          wallet={transaction.wallet}
-                          toWallet={transaction.toWallet}
-                          onClick={(tx) => {
-                            setEditingTransaction(tx);
-                            setIsModalOpen(true);
-                          }}
-                        />
-                      ))}
-                    </div>
+          {/* 交易列表 - 无卡片包装，直接展示 */}
+          <div className="flex-1 min-h-0">
+            {isTransactionsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <TransactionItemSkeleton key={i} />
+                ))}
+              </div>
+            ) : (transactionsPages?.pages?.flat().length || 0) === 0 ? (
+              <div className="py-12 glass-card rounded-xl">
+                <EmptyState
+                  icon={Receipt}
+                  title="没有找到交易记录"
+                  description="调整筛选条件或添加新交易"
+                  actionLabel="记一笔"
+                  onAction={handleAddNew}
+                />
+              </div>
+            ) : (
+              <div className="space-y-2 themed-scrollbar h-full overflow-y-auto pr-2" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
+                <div style={{ height: totalHeight, position: "relative" }}>
+                  <div style={{ transform: `translateY(${startIndex * ITEM_HEIGHT}px)` }}>
+                    {flatTransactions.slice(startIndex, endIndex).map((transaction) => (
+                      <TransactionItem
+                        key={transaction.id}
+                        transaction={transaction}
+                        category={transaction.category}
+                        wallet={transaction.wallet}
+                        toWallet={transaction.toWallet}
+                        onClick={(tx) => {
+                          setEditingTransaction(tx);
+                          setIsModalOpen(true);
+                        }}
+                      />
+                    ))}
                   </div>
-                  {hasNextPage && (
-                    <div ref={setSentinelEl} className="flex justify-center pt-2">
-                      <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-                        {isFetchingNextPage ? "加载中..." : "加载更多"}
-                      </Button>
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
+                {hasNextPage && (
+                  <div ref={setSentinelEl} className="flex justify-center pt-2">
+                    <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage} className="bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10">
+                      {isFetchingNextPage ? "加载中..." : "加载更多"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </main>
+      </div>
 
       <FloatingActionButton onClick={handleAddNew} />
 
@@ -346,6 +343,6 @@ export default function Transactions() {
           onDelete={handleDeleteTransaction}
         />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 }

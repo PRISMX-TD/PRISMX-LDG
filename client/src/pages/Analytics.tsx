@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,6 @@ import {
   Wallet,
   PieChart as PieChartIcon,
   Calendar,
-  ArrowUpDown,
   Settings2,
   Target,
   Percent,
@@ -35,7 +34,6 @@ import {
   Coins,
   ArrowUp,
   ArrowDown,
-  Banknote,
   CreditCard,
   BookOpen,
 } from "lucide-react";
@@ -71,6 +69,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PageContainer } from "@/components/PageContainer";
 
 const CHART_COLORS = [
   "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE",
@@ -646,235 +645,235 @@ export default function Analytics() {
   const savingsRate = yearlyTotals.income > 0 ? ((yearlyTotals.savings / yearlyTotals.income) * 100) : 0;
 
   return (
-    <div className="p-4 md:p-6 space-y-5 md:space-y-6 max-w-7xl mx-auto">
-      {/* Header Section */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-primary" />
+    <PageContainer>
+      <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="hidden md:block text-xl font-semibold">数据分析</h1>
+                <p className="hidden md:block text-sm text-muted-foreground">财务数据概览与趋势分析</p>
+              </div>
             </div>
-            <div>
-              <h1 className="hidden md:block text-xl font-semibold">数据分析</h1>
-              <p className="hidden md:block text-sm text-muted-foreground">财务数据概览与趋势分析</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} data-testid="button-analytics-settings">
-            <Settings2 className="w-5 h-5" />
-          </Button>
-        </div>
-        
-        {/* Time Period Controls */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-card/50 border border-border/30">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handlePrevPeriod} data-testid="button-prev-period">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/50 min-w-[120px] justify-center">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-sm font-medium" data-testid="text-selected-period">{getPeriodLabel()}</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleNextPeriod} data-testid="button-next-period">
-              <ChevronRight className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} data-testid="button-analytics-settings">
+              <Settings2 className="w-5 h-5" />
             </Button>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Tabs value={timePeriod} onValueChange={(v) => {
-              setTimePeriod(v as "year" | "month");
-              if (v === "month" && selectedMonth === null) {
-                setSelectedMonth(currentMonth);
-              }
-            }}>
-              <TabsList className="h-8">
-                <TabsTrigger value="month" className="text-xs px-3 h-6" data-testid="button-period-month">按月</TabsTrigger>
-                <TabsTrigger value="year" className="text-xs px-3 h-6" data-testid="button-period-year">按年</TabsTrigger>
-              </TabsList>
-            </Tabs>
+          {/* Time Period Controls */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl glass-card border-0">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handlePrevPeriod} data-testid="button-prev-period">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/50 min-w-[120px] justify-center">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-sm font-medium" data-testid="text-selected-period">{getPeriodLabel()}</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleNextPeriod} data-testid="button-next-period">
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
             
-            {subLedgers.length > 0 && (
-              <Select value={selectedSubLedgerId} onValueChange={setSelectedSubLedgerId}>
-                <SelectTrigger className="w-[130px] h-8 text-xs" data-testid="select-subledger-filter">
-                  <BookOpen className="w-3 h-3 mr-1" />
-                  <SelectValue placeholder="账本" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" data-testid="option-subledger-all">全部账本</SelectItem>
-                  <SelectItem value="main" data-testid="option-subledger-main">仅主账本</SelectItem>
-                  {subLedgers.filter(s => !s.isArchived).map((subLedger) => (
-                    <SelectItem key={subLedger.id} value={String(subLedger.id)} data-testid={`option-subledger-${subLedger.id}`}>
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: subLedger.color || "#8B5CF6" }} />
-                        {subLedger.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <div className="flex items-center gap-2">
+              <Tabs value={timePeriod} onValueChange={(v) => {
+                setTimePeriod(v as "year" | "month");
+                if (v === "month" && selectedMonth === null) {
+                  setSelectedMonth(currentMonth);
+                }
+              }}>
+                <TabsList className="h-8 bg-background/50">
+                  <TabsTrigger value="month" className="text-xs px-3 h-6" data-testid="button-period-month">按月</TabsTrigger>
+                  <TabsTrigger value="year" className="text-xs px-3 h-6" data-testid="button-period-year">按年</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              
+              {subLedgers.length > 0 && (
+                <Select value={selectedSubLedgerId} onValueChange={setSelectedSubLedgerId}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs bg-background/50 border-0" data-testid="select-subledger-filter">
+                    <BookOpen className="w-3 h-3 mr-1" />
+                    <SelectValue placeholder="账本" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" data-testid="option-subledger-all">全部账本</SelectItem>
+                    <SelectItem value="main" data-testid="option-subledger-main">仅主账本</SelectItem>
+                    {subLedgers.filter(s => !s.isArchived).map((subLedger) => (
+                      <SelectItem key={subLedger.id} value={String(subLedger.id)} data-testid={`option-subledger-${subLedger.id}`}>
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: subLedger.color || "#8B5CF6" }} />
+                          {subLedger.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* View Tabs */}
-      <Tabs value={dataView} onValueChange={(v) => setDataView(v as any)} className="w-full">
-        <TabsList className="w-full justify-start bg-transparent gap-1 p-0 h-auto flex-wrap">
-          {[
-            { key: "overview", label: "总览", icon: BarChart3 },
-            { key: "income", label: "收入", icon: TrendingUp },
-            { key: "expense", label: "支出", icon: TrendingDown },
-            { key: "savings", label: "储蓄", icon: Wallet },
-            { key: "ai", label: "AI 建议", icon: Activity },
-          ].map((item) => (
-            <TabsTrigger
-              key={item.key}
-              value={item.key}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg gap-1.5 px-3 py-1.5"
-              data-testid={`button-view-${item.key}`}
-            >
-              <item.icon className="w-3.5 h-3.5" />
-              <span className="text-sm">{item.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+        {/* View Tabs */}
+        <Tabs value={dataView} onValueChange={(v) => setDataView(v as any)} className="w-full">
+          <TabsList className="w-full justify-start bg-transparent gap-1 p-0 h-auto flex-wrap">
+            {[
+              { key: "overview", label: "总览", icon: BarChart3 },
+              { key: "income", label: "收入", icon: TrendingUp },
+              { key: "expense", label: "支出", icon: TrendingDown },
+              { key: "savings", label: "储蓄", icon: Wallet },
+              { key: "ai", label: "AI 建议", icon: Activity },
+            ].map((item) => (
+              <TabsTrigger
+                key={item.key}
+                value={item.key}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg gap-1.5 px-3 py-1.5"
+                data-testid={`button-view-${item.key}`}
+              >
+                <item.icon className="w-3.5 h-3.5" />
+                <span className="text-sm">{item.label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-      {/* Main Stats Cards */}
-      {preferences.showYearlyStats && (
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {/* Income Card */}
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5" data-testid="card-yearly-income">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/20">
-                  <ArrowUp className="w-4 h-4 text-emerald-500" />
-                </div>
-                {timePeriod === "month" && compareData.incomeChange !== 0 && (
-                  <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.incomeChange > 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                    {compareData.incomeChange > 0 ? "+" : ""}{compareData.incomeChange.toFixed(1)}%
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mb-1">{periodLabel}收入</p>
-              <p className="text-lg md:text-xl font-bold font-mono text-emerald-500">
-                {currencyInfo.symbol}{formatAmount(displayTotals.income)}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Expense Card */}
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-rose-500/10 to-rose-600/5" data-testid="card-yearly-expense">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500/20">
-                  <ArrowDown className="w-4 h-4 text-rose-500" />
-                </div>
-                {timePeriod === "month" && compareData.expenseChange !== 0 && (
-                  <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.expenseChange > 0 ? "text-rose-500" : "text-emerald-500"}`}>
-                    {compareData.expenseChange > 0 ? "+" : ""}{compareData.expenseChange.toFixed(1)}%
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mb-1">{periodLabel}支出</p>
-              <p className="text-lg md:text-xl font-bold font-mono text-rose-500">
-                {currencyInfo.symbol}{formatAmount(displayTotals.expense)}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Savings Card */}
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-500/10 to-violet-600/5" data-testid="card-yearly-savings">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/20">
-                  <Coins className="w-4 h-4 text-violet-500" />
-                </div>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {(displayTotals.income > 0 ? (displayTotals.savings / displayTotals.income * 100) : 0).toFixed(0)}%
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mb-1">{periodLabel}结余</p>
-              <p className={`text-lg md:text-xl font-bold font-mono ${displayTotals.savings >= 0 ? "text-violet-500" : "text-rose-500"}`}>
-                {displayTotals.savings >= 0 ? "+" : "-"}{currencyInfo.symbol}{formatAmount(Math.abs(displayTotals.savings))}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Total Assets Card */}
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 to-blue-600/5" data-testid="card-total-assets">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/20">
-                  <CreditCard className="w-4 h-4 text-blue-500" />
-                </div>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {wallets.length} 账户
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mb-1">总资产</p>
-              <p className="text-lg md:text-xl font-bold font-mono text-blue-500">
-                {currencyInfo.symbol}{formatAmount(totalBalance)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Overview View */}
-      {dataView === "overview" && (
-        <div className="space-y-4">
-          {/* AI Insights summary slice for overview (mobile-first grid) */}
-          <AiInsightsSection compact />
-          {/* Trend Chart */}
-          {preferences.showMonthlyTrend && (
-            <Card className="border-0 bg-card/50" data-testid="card-monthly-trend">
-              <CardHeader className="pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-primary" />
-                  收支趋势
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-2 pb-4">
-                <LazyRecharts className="h-[220px] md:h-[280px]">
-                  {(R) => (
-                    <R.ResponsiveContainer width="100%" height="100%">
-                      <R.AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                        <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
-                        <R.Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} formatter={(value: number, name: string) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, name === 'income' ? '收入' : '支出']} labelFormatter={(label: string | number) => `${label}月`} />
-                        <R.Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} fill="url(#colorIncome)" />
-                        <R.Area type="monotone" dataKey="expense" stroke="#EF4444" strokeWidth={2} fill="url(#colorExpense)" />
-                      </R.AreaChart>
-                    </R.ResponsiveContainer>
+        {/* Main Stats Cards */}
+        {preferences.showYearlyStats && (
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            {/* Income Card */}
+            <div className="glass-card p-4 relative overflow-hidden" data-testid="card-yearly-income">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 opacity-50 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/20">
+                    <ArrowUp className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  {timePeriod === "month" && compareData.incomeChange !== 0 && (
+                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.incomeChange > 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                      {compareData.incomeChange > 0 ? "+" : ""}{compareData.incomeChange.toFixed(1)}%
+                    </Badge>
                   )}
-                </LazyRecharts>
-              </CardContent>
-            </Card>
-          )}
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">{periodLabel}收入</p>
+                <p className="text-lg md:text-xl font-bold font-mono text-emerald-500">
+                  {currencyInfo.symbol}{formatAmount(displayTotals.income)}
+                </p>
+              </div>
+            </div>
 
-          {/* Distribution Charts Row */}
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-            {/* Expense Distribution */}
-            {preferences.showExpenseDistribution && expenseCategoryData.length > 0 && (
-              <Card className="border-0 bg-card/50" data-testid="card-expense-distribution">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+            {/* Expense Card */}
+            <div className="glass-card p-4 relative overflow-hidden" data-testid="card-yearly-expense">
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-rose-600/5 opacity-50 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500/20">
+                    <ArrowDown className="w-4 h-4 text-rose-500" />
+                  </div>
+                  {timePeriod === "month" && compareData.expenseChange !== 0 && (
+                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${compareData.expenseChange > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                      {compareData.expenseChange > 0 ? "+" : ""}{compareData.expenseChange.toFixed(1)}%
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">{periodLabel}支出</p>
+                <p className="text-lg md:text-xl font-bold font-mono text-rose-500">
+                  {currencyInfo.symbol}{formatAmount(displayTotals.expense)}
+                </p>
+              </div>
+            </div>
+
+            {/* Savings Card */}
+            <div className="glass-card p-4 relative overflow-hidden" data-testid="card-yearly-savings">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-violet-600/5 opacity-50 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/20">
+                    <Coins className="w-4 h-4 text-violet-500" />
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    {(displayTotals.income > 0 ? (displayTotals.savings / displayTotals.income * 100) : 0).toFixed(0)}%
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">{periodLabel}结余</p>
+                <p className={`text-lg md:text-xl font-bold font-mono ${displayTotals.savings >= 0 ? "text-violet-500" : "text-rose-500"}`}>
+                  {displayTotals.savings >= 0 ? "+" : "-"}{currencyInfo.symbol}{formatAmount(Math.abs(displayTotals.savings))}
+                </p>
+              </div>
+            </div>
+
+            {/* Total Assets Card */}
+            <div className="glass-card p-4 relative overflow-hidden" data-testid="card-total-assets">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-blue-600/5 opacity-50 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/20">
+                    <CreditCard className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    {wallets.length} 账户
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">总资产</p>
+                <p className="text-lg md:text-xl font-bold font-mono text-blue-500">
+                  {currencyInfo.symbol}{formatAmount(totalBalance)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Overview View */}
+        {dataView === "overview" && (
+          <div className="space-y-4">
+            {/* AI Insights summary slice for overview (mobile-first grid) */}
+            <AiInsightsSection compact />
+            {/* Trend Chart */}
+            {preferences.showMonthlyTrend && (
+              <div className="glass-card p-4" data-testid="card-monthly-trend">
+                <div className="pb-4 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">收支趋势</span>
+                </div>
+                <div className="h-[220px] md:h-[280px]">
+                  <LazyRecharts>
+                    {(R) => (
+                      <R.ResponsiveContainer width="100%" height="100%">
+                        <R.AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                          <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
+                          <R.Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} formatter={(value: number, name: string) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, name === 'income' ? '收入' : '支出']} labelFormatter={(label: string | number) => `${label}月`} />
+                          <R.Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} fill="url(#colorIncome)" />
+                          <R.Area type="monotone" dataKey="expense" stroke="#EF4444" strokeWidth={2} fill="url(#colorExpense)" />
+                        </R.AreaChart>
+                      </R.ResponsiveContainer>
+                    )}
+                  </LazyRecharts>
+                </div>
+              </div>
+            )}
+
+            {/* Distribution Charts Row */}
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+              {/* Expense Distribution */}
+              {preferences.showExpenseDistribution && expenseCategoryData.length > 0 && (
+                <div className="glass-card p-4" data-testid="card-expense-distribution">
+                  <div className="pb-4 flex items-center gap-2">
                     <PieChartIcon className="w-4 h-4 text-rose-500" />
-                    支出构成
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
+                    <span className="text-sm font-medium">支出构成</span>
+                  </div>
                   <div className="flex items-center gap-4">
                     <div className="w-[120px] h-[120px] md:w-[140px] md:h-[140px] flex-shrink-0">
                       <LazyRecharts className="w-full h-full">
@@ -904,20 +903,16 @@ export default function Analytics() {
                       })}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              )}
 
-            {/* Income Distribution */}
-            {preferences.showIncomeDistribution && incomeCategoryData.length > 0 && (
-              <Card className="border-0 bg-card/50" data-testid="card-income-distribution">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+              {/* Income Distribution */}
+              {preferences.showIncomeDistribution && incomeCategoryData.length > 0 && (
+                <div className="glass-card p-4" data-testid="card-income-distribution">
+                  <div className="pb-4 flex items-center gap-2">
                     <PieChartIcon className="w-4 h-4 text-emerald-500" />
-                    收入构成
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
+                    <span className="text-sm font-medium">收入构成</span>
+                  </div>
                   <div className="flex items-center gap-4">
                     <div className="w-[120px] h-[120px] md:w-[140px] md:h-[140px] flex-shrink-0">
                       <LazyRecharts className="w-full h-full">
@@ -947,98 +942,139 @@ export default function Analytics() {
                       })}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
 
-          {/* Budget & Savings Progress */}
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-            {preferences.showBudgetProgress && budgetProgressData.length > 0 && (
-              <Card className="border-0 bg-card/50" data-testid="card-budget-progress">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+            {/* Budget & Savings Progress */}
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+              {preferences.showBudgetProgress && budgetProgressData.length > 0 && (
+                <div className="glass-card p-4" data-testid="card-budget-progress">
+                  <div className="pb-4 flex items-center gap-2">
                     <Target className="w-4 h-4 text-primary" />
-                    预算执行
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-3">
-                  {budgetProgressData.map((b, index) => (
-                    <div key={index} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: b.color }} />
-                          <span className="text-xs">{b.name}</span>
+                    <span className="text-sm font-medium">预算执行</span>
+                  </div>
+                  <div className="space-y-3">
+                    {budgetProgressData.map((b, index) => (
+                      <div key={index} className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: b.color }} />
+                            <span className="text-xs">{b.name}</span>
+                          </div>
+                          <span className={`text-xs font-mono ${b.percentage > 100 ? "text-rose-500" : b.percentage > 80 ? "text-amber-500" : "text-muted-foreground"}`}>
+                            {b.percentage.toFixed(0)}%
+                          </span>
                         </div>
-                        <span className={`text-xs font-mono ${b.percentage > 100 ? "text-rose-500" : b.percentage > 80 ? "text-amber-500" : "text-muted-foreground"}`}>
-                          {b.percentage.toFixed(0)}%
-                        </span>
+                        <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ 
+                              width: `${Math.min(b.percentage, 100)}%`, 
+                              backgroundColor: b.percentage > 100 ? "#EF4444" : b.color 
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${Math.min(b.percentage, 100)}%`, 
-                            backgroundColor: b.percentage > 100 ? "#EF4444" : b.color 
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {preferences.showSavingsProgress && savingsGoalsProgress.length > 0 && (
-              <Card className="border-0 bg-card/50" data-testid="card-savings-progress">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+              {preferences.showSavingsProgress && savingsGoalsProgress.length > 0 && (
+                <div className="glass-card p-4" data-testid="card-savings-progress">
+                  <div className="pb-4 flex items-center gap-2">
                     <Percent className="w-4 h-4 text-emerald-500" />
-                    储蓄目标
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-3">
-                  {savingsGoalsProgress.slice(0, 4).map((g, index) => (
-                    <div key={index} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs ${g.isCompleted ? "line-through text-muted-foreground" : ""}`}>{g.name}</span>
-                        <span className={`text-xs font-mono ${g.isCompleted ? "text-emerald-500" : "text-muted-foreground"}`}>
-                          {g.percentage.toFixed(0)}%
-                        </span>
+                    <span className="text-sm font-medium">储蓄目标</span>
+                  </div>
+                  <div className="space-y-3">
+                    {savingsGoalsProgress.slice(0, 4).map((g, index) => (
+                      <div key={index} className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs ${g.isCompleted ? "line-through text-muted-foreground" : ""}`}>{g.name}</span>
+                          <span className={`text-xs font-mono ${g.isCompleted ? "text-emerald-500" : "text-muted-foreground"}`}>
+                            {g.percentage.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                            style={{ width: `${Math.min(g.percentage, 100)}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                          style={{ width: `${Math.min(g.percentage, 100)}%` }}
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cashflow Trend */}
+            {preferences.showCashflowTrend && (
+              <div className="glass-card p-4" data-testid="card-cashflow-trend">
+                <div className="pb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">累计现金流</span>
+                </div>
+                <div className="h-[200px]">
+                  <LazyRecharts>
+                    {(R) => (
+                      <R.ResponsiveContainer width="100%" height="100%">
+                        <R.ComposedChart data={cumulativeSavingsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                        <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
+                        <R.Tooltip
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                          }}
+                          formatter={(value: number, name: string) => [
+                            `${currencyInfo.symbol}${formatFullAmount(value)}`,
+                            name === "savings" ? "月结余" : "累计"
+                          ]}
+                          labelFormatter={(label: string | number) => `${label}月`}
                         />
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                        <R.Bar dataKey="savings" fill="#8B5CF6" opacity={0.5} radius={[4, 4, 0, 0]} />
+                        <R.Line type="monotone" dataKey="cumulative" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
+                      </R.ComposedChart>
+                    </R.ResponsiveContainer>
+                    )}
+                  </LazyRecharts>
+                </div>
+              </div>
             )}
           </div>
+        )}
 
-          {/* Cashflow Trend */}
-          {preferences.showCashflowTrend && (
-            <Card className="border-0 bg-card/50" data-testid="card-cashflow-trend">
-              <CardHeader className="pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                  累计现金流
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-2 pb-4">
-                <LazyRecharts className="h-[200px]">
+        {/* AI View */}
+        {dataView === "ai" && (
+          <div className="space-y-4">
+            <AiInsightsSection />
+          </div>
+        )}
+
+        {/* Income View */}
+        {dataView === "income" && (
+          <div className="space-y-4">
+            <div className="glass-card p-4">
+              <div className="pb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm font-medium">月度收入</span>
+              </div>
+              <div className="h-[240px]">
+                <LazyRecharts>
                   {(R) => (
                     <R.ResponsiveContainer width="100%" height="100%">
-                      <R.ComposedChart data={cumulativeSavingsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
+                      <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
                       <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
@@ -1047,207 +1083,150 @@ export default function Analytics() {
                           backgroundColor: 'hsl(var(--card))', 
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                         }}
-                        formatter={(value: number, name: string) => [
-                          `${currencyInfo.symbol}${formatFullAmount(value)}`,
-                          name === "savings" ? "月结余" : "累计"
-                        ]}
-                        labelFormatter={(label: string | number) => `${label}月`}
+                        formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "收入"]}
                       />
-                      <R.Bar dataKey="savings" fill="#8B5CF6" opacity={0.5} radius={[4, 4, 0, 0]} />
-                      <R.Line type="monotone" dataKey="cumulative" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 3 }} />
-                    </R.ComposedChart>
+                      <R.Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} />
+                    </R.BarChart>
                   </R.ResponsiveContainer>
                   )}
                 </LazyRecharts>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+              </div>
+            </div>
 
-      {/* AI View */}
-      {dataView === "ai" && (
-        <div className="space-y-4">
-          <AiInsightsSection />
-        </div>
-      )}
-
-      {/* Income View */}
-      {dataView === "income" && (
-        <div className="space-y-4">
-          <Card className="border-0 bg-card/50">
-            <CardHeader className="pb-2 px-4 pt-4">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-emerald-500" />
-                月度收入
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-2 pb-4">
-              <LazyRecharts className="h-[240px]">
-                {(R) => (
-                  <R.ResponsiveContainer width="100%" height="100%">
-                    <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                    <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
-                    <R.Tooltip
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "收入"]}
-                    />
-                    <R.Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} />
-                  </R.BarChart>
-                </R.ResponsiveContainer>
-                )}
-              </LazyRecharts>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 bg-card/50">
-            <CardHeader className="pb-2 px-4 pt-4">
-              <CardTitle className="text-sm font-medium">收入来源排行</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-3">
-              {incomeCategoryData.map((cat, index) => {
-                const maxTotal = incomeCategoryData[0]?.total || 1;
-                const percentage = (cat.total / maxTotal) * 100;
-                return (
-                  <div key={index} className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{index + 1}</Badge>
-                        <span className="text-sm">{cat.name}</span>
+            <div className="glass-card p-4">
+              <div className="pb-4">
+                <h3 className="text-sm font-medium">收入来源排行</h3>
+              </div>
+              <div className="space-y-3">
+                {incomeCategoryData.map((cat, index) => {
+                  const maxTotal = incomeCategoryData[0]?.total || 1;
+                  const percentage = (cat.total / maxTotal) * 100;
+                  return (
+                    <div key={index} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{index + 1}</Badge>
+                          <span className="text-sm">{cat.name}</span>
+                        </div>
+                        <span className="text-sm font-mono text-emerald-500">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
                       </div>
-                      <span className="text-sm font-mono text-emerald-500">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
+                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: cat.color }} />
+                      </div>
                     </div>
-                    <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: cat.color }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
-      {/* Expense View */}
-      {dataView === "expense" && (
-        <div className="space-y-4">
-          <Card className="border-0 bg-card/50">
-            <CardHeader className="pb-2 px-4 pt-4">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+        {/* Expense View */}
+        {dataView === "expense" && (
+          <div className="space-y-4">
+            <div className="glass-card p-4">
+              <div className="pb-4 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-rose-500" />
-                月度支出
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-2 pb-4">
-              <LazyRecharts className="h-[240px]">
-                {(R) => (
-                  <R.ResponsiveContainer width="100%" height="100%">
-                    <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                    <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
-                    <R.Tooltip
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "支出"]}
-                    />
-                    <R.Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                  </R.BarChart>
-                </R.ResponsiveContainer>
-                )}
-              </LazyRecharts>
-            </CardContent>
-          </Card>
+                <span className="text-sm font-medium">月度支出</span>
+              </div>
+              <div className="h-[240px]">
+                <LazyRecharts>
+                  {(R) => (
+                    <R.ResponsiveContainer width="100%" height="100%">
+                      <R.BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                      <R.XAxis dataKey="shortMonth" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
+                      <R.Tooltip
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "支出"]}
+                      />
+                      <R.Bar dataKey="expense" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                    </R.BarChart>
+                  </R.ResponsiveContainer>
+                  )}
+                </LazyRecharts>
+              </div>
+            </div>
 
-          <Card className="border-0 bg-card/50">
-            <CardHeader className="pb-2 px-4 pt-4">
-              <CardTitle className="text-sm font-medium">支出分类排行</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-3">
-              {expenseCategoryData.map((cat, index) => {
-                const maxTotal = expenseCategoryData[0]?.total || 1;
-                const percentage = (cat.total / maxTotal) * 100;
-                return (
-                  <div key={index} className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{index + 1}</Badge>
-                        <span className="text-sm">{cat.name}</span>
+            <div className="glass-card p-4">
+              <div className="pb-4">
+                <h3 className="text-sm font-medium">支出分类排行</h3>
+              </div>
+              <div className="space-y-3">
+                {expenseCategoryData.map((cat, index) => {
+                  const maxTotal = expenseCategoryData[0]?.total || 1;
+                  const percentage = (cat.total / maxTotal) * 100;
+                  return (
+                    <div key={index} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{index + 1}</Badge>
+                          <span className="text-sm">{cat.name}</span>
+                        </div>
+                        <span className="text-sm font-mono text-rose-500">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
                       </div>
-                      <span className="text-sm font-mono text-rose-500">{currencyInfo.symbol}{formatAmount(cat.total)}</span>
+                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: cat.color }} />
+                      </div>
                     </div>
-                    <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: cat.color }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
-      {/* Savings View */}
-      {dataView === "savings" && (
-        <div className="space-y-4">
-          <Card className="border-0 bg-card/50">
-            <CardHeader className="pb-2 px-4 pt-4">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+        {/* Savings View */}
+        {dataView === "savings" && (
+          <div className="space-y-4">
+            <div className="glass-card p-4">
+              <div className="pb-4 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-violet-500" />
-                月度储蓄趋势
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-2 pb-4">
-              <LazyRecharts className="h-[240px]">
-                {(R) => (
-                  <R.ResponsiveContainer width="100%" height="100%">
-                    <R.AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
-                    <R.XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
-                    <R.Tooltip
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "结余"]}
-                    />
-                    <R.Area type="monotone" dataKey="savings" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorSavings)" />
-                  </R.AreaChart>
-                </R.ResponsiveContainer>
-                )}
-              </LazyRecharts>
-            </CardContent>
-          </Card>
+                <span className="text-sm font-medium">月度储蓄趋势</span>
+              </div>
+              <div className="h-[240px]">
+                <LazyRecharts>
+                  {(R) => (
+                    <R.ResponsiveContainer width="100%" height="100%">
+                      <R.AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} vertical={false} />
+                      <R.XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <R.YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatAmount(v)} />
+                      <R.Tooltip
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => [`${currencyInfo.symbol}${formatFullAmount(value)}`, "结余"]}
+                      />
+                      <R.Area type="monotone" dataKey="savings" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorSavings)" />
+                    </R.AreaChart>
+                  </R.ResponsiveContainer>
+                  )}
+                </LazyRecharts>
+              </div>
+            </div>
 
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-            {preferences.showWalletDistribution && walletData.length > 0 && (
-              <Card className="border-0 bg-card/50">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+              {preferences.showWalletDistribution && walletData.length > 0 && (
+                <div className="glass-card p-4">
+                  <div className="pb-4 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-blue-500" />
-                    账户分布
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
+                    <span className="text-sm font-medium">账户分布</span>
+                  </div>
                   <div className="flex items-center gap-4">
                     <div className="w-[100px] h-[100px] flex-shrink-0">
                       <LazyRecharts className="w-full h-full">
@@ -1274,99 +1253,99 @@ export default function Analytics() {
                       ))}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              )}
+
+              <div className="glass-card p-4">
+                <div className="pb-4">
+                  <h3 className="text-sm font-medium">储蓄概览</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b border-border/30">
+                    <span className="text-xs text-muted-foreground">平均月储蓄</span>
+                    <span className="text-sm font-mono">{currencyInfo.symbol}{formatAmount(yearlyTotals.savings / 12)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-border/30">
+                    <span className="text-xs text-muted-foreground">最高月储蓄</span>
+                    <span className="text-sm font-mono text-emerald-500">{currencyInfo.symbol}{formatAmount(Math.max(...monthlyData.map(m => m.savings)))}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-border/30">
+                    <span className="text-xs text-muted-foreground">最低月储蓄</span>
+                    <span className="text-sm font-mono text-rose-500">{currencyInfo.symbol}{formatAmount(Math.min(...monthlyData.map(m => m.savings)))}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs text-muted-foreground">储蓄率</span>
+                    <span className="text-sm font-mono">{savingsRate.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Dialog */}
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col glass-card border-0" data-testid="modal-analytics-settings" aria-describedby={undefined}>
+            <DialogHeader className="pb-2">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Settings2 className="w-4 h-4" />
+                分析页设置
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                选择要显示的卡片，拖拽或使用箭头调整顺序
+              </p>
+            </DialogHeader>
+            
+            {/* Amount Display Format Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/30 mb-2">
+              <div className="flex-1 min-w-0">
+                <Label className="text-xs font-medium">显示完整金额</Label>
+                <p className="text-[10px] text-muted-foreground">关闭时显示缩写(如 8.4k)，开启后显示完整数字</p>
+              </div>
+              <Switch
+                checked={preferences.showFullAmount}
+                onCheckedChange={() => togglePreference("showFullAmount")}
+                disabled={updatePreferencesMutation.isPending}
+                data-testid="switch-showFullAmount"
+              />
+            </div>
+            
+            {orderedItems.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={orderedItems.map(item => item.key)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+                    {orderedItems.map((item, index) => {
+                      const isChecked = preferences[item.key] as boolean;
+                      return (
+                        <SortableSettingsItem
+                          key={item.key}
+                          item={item}
+                          isChecked={isChecked}
+                          onToggle={togglePreference}
+                          onMove={moveItem}
+                          index={index}
+                          total={orderedItems.length}
+                          isPending={updatePreferencesMutation.isPending}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                没有可显示的卡片
+              </div>
             )}
-
-            <Card className="border-0 bg-card/50">
-              <CardHeader className="pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-medium">储蓄概览</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 space-y-3">
-                <div className="flex items-center justify-between py-2 border-b border-border/30">
-                  <span className="text-xs text-muted-foreground">平均月储蓄</span>
-                  <span className="text-sm font-mono">{currencyInfo.symbol}{formatAmount(yearlyTotals.savings / 12)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border/30">
-                  <span className="text-xs text-muted-foreground">最高月储蓄</span>
-                  <span className="text-sm font-mono text-emerald-500">{currencyInfo.symbol}{formatAmount(Math.max(...monthlyData.map(m => m.savings)))}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border/30">
-                  <span className="text-xs text-muted-foreground">最低月储蓄</span>
-                  <span className="text-sm font-mono text-rose-500">{currencyInfo.symbol}{formatAmount(Math.min(...monthlyData.map(m => m.savings)))}</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-xs text-muted-foreground">储蓄率</span>
-                  <span className="text-sm font-mono">{savingsRate.toFixed(1)}%</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Dialog */}
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col" data-testid="modal-analytics-settings" aria-describedby={undefined}>
-          <DialogHeader className="pb-2">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Settings2 className="w-4 h-4" />
-              分析页设置
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground">
-              选择要显示的卡片，拖拽或使用箭头调整顺序
-            </p>
-          </DialogHeader>
-          
-          {/* Amount Display Format Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/30 mb-2">
-            <div className="flex-1 min-w-0">
-              <Label className="text-xs font-medium">显示完整金额</Label>
-              <p className="text-[10px] text-muted-foreground">关闭时显示缩写(如 8.4k)，开启后显示完整数字</p>
-            </div>
-            <Switch
-              checked={preferences.showFullAmount}
-              onCheckedChange={() => togglePreference("showFullAmount")}
-              disabled={updatePreferencesMutation.isPending}
-              data-testid="switch-showFullAmount"
-            />
-          </div>
-          
-          {orderedItems.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={orderedItems.map(item => item.key)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2 overflow-y-auto flex-1 pr-1">
-                  {orderedItems.map((item, index) => {
-                    const isChecked = preferences[item.key] as boolean;
-                    return (
-                      <SortableSettingsItem
-                        key={item.key}
-                        item={item}
-                        isChecked={isChecked}
-                        onToggle={togglePreference}
-                        onMove={moveItem}
-                        index={index}
-                        total={orderedItems.length}
-                        isPending={updatePreferencesMutation.isPending}
-                      />
-                    );
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <div className="text-sm text-muted-foreground py-4 text-center">
-              没有可显示的卡片
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageContainer>
   );
 }
 
@@ -1413,15 +1392,15 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
   const currency = getCurrencyInfo(undefined as any)?.symbol || "RM";
 
   return (
-    <Card className="border-0 bg-card/50">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
+    <div className="glass-card p-4">
+      <div className="flex flex-row items-center justify-between gap-2 pb-2">
+        <div className="text-sm font-medium flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary" />
           AI 建议
-        </CardTitle>
+        </div>
         <div className="flex items-center gap-2">
           <Select value={rangeMonths} onValueChange={(v) => setRangeMonths(v)}>
-            <SelectTrigger className="w-24 h-8" data-testid="select-ai-range-analytics">
+            <SelectTrigger className="w-24 h-8 bg-background/50 border-0" data-testid="select-ai-range-analytics">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1432,8 +1411,8 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
           </Select>
           <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-ai-analytics" disabled={!!data && !!data.fromCache && (data.cooldownRemainingMs ?? 0) > 0}>刷新</Button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+      </div>
+      <div className="space-y-3">
         {isLoading ? (
           <div className="space-y-2">
             <Skeleton className="h-5 w-2/3" />
@@ -1450,30 +1429,30 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
               </div>
             )}
             <div className={`grid gap-3 ${compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
-              <Card className="glass-card">
-                <CardHeader className="pb-1">
-                  <CardTitle className="text-xs">储蓄率</CardTitle>
-                </CardHeader>
-                <CardContent>
+              <div className="glass-card p-4 bg-white/5">
+                <div className="pb-1">
+                  <h4 className="text-xs text-muted-foreground">储蓄率</h4>
+                </div>
+                <div>
                   <p className="text-2xl font-mono">{(data.metrics.savingsRate * 100).toFixed(1)}%</p>
-                </CardContent>
-              </Card>
-              <Card className="glass-card">
-                <CardHeader className="pb-1">
-                  <CardTitle className="text-xs">应急金月数</CardTitle>
-                </CardHeader>
-                <CardContent>
+                </div>
+              </div>
+              <div className="glass-card p-4 bg-white/5">
+                <div className="pb-1">
+                  <h4 className="text-xs text-muted-foreground">应急金月数</h4>
+                </div>
+                <div>
                   <p className="text-2xl font-mono">{data.metrics.emergencyFundMonths == null ? "未知" : data.metrics.emergencyFundMonths.toFixed(2)}</p>
-                </CardContent>
-              </Card>
-              <Card className="glass-card">
-                <CardHeader className="pb-1">
-                  <CardTitle className="text-xs">平均月支出</CardTitle>
-                </CardHeader>
-                <CardContent>
+                </div>
+              </div>
+              <div className="glass-card p-4 bg-white/5">
+                <div className="pb-1">
+                  <h4 className="text-xs text-muted-foreground">平均月支出</h4>
+                </div>
+                <div>
                   <p className="text-2xl font-mono">{currency}{data.metrics.avgMonthlyExpense.toFixed(2)}</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <h3 className="text-sm font-medium">当月预算偏差 Top</h3>
@@ -1528,7 +1507,7 @@ function AiInsightsSection({ compact = false }: { compact?: boolean }) {
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
