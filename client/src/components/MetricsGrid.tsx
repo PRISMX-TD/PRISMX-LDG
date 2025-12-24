@@ -1,23 +1,27 @@
-import { Wallet, CreditCard, Coins, PiggyBank, MoreHorizontal, TrendingUp } from "lucide-react";
+import { Wallet, CreditCard, Coins, TrendingUp, MoreHorizontal, ArrowUpRight } from "lucide-react";
 import { getCurrencyInfo } from "@shared/schema";
 
 interface MetricsGridProps {
   totalAssets: number;
+  liquidAssets: number;
   monthlyExpense: number;
   monthlyIncome: number;
   prevMonthlyExpense?: number;
   prevMonthlyIncome?: number;
   prevTotalAssets?: number;
+  prevLiquidAssets?: number;
   currencyCode?: string;
 }
 
 export function MetricsGrid({ 
   totalAssets, 
+  liquidAssets,
   monthlyExpense, 
   monthlyIncome, 
   prevMonthlyExpense = 0,
   prevMonthlyIncome = 0,
   prevTotalAssets = 0,
+  prevLiquidAssets = 0,
   currencyCode = "MYR" 
 }: MetricsGridProps) {
   const currency = getCurrencyInfo(currencyCode);
@@ -32,6 +36,7 @@ export function MetricsGrid({
   };
 
   const assetTrend = calculateTrend(totalAssets, prevTotalAssets);
+  const liquidAssetTrend = calculateTrend(liquidAssets, prevLiquidAssets);
   const expenseTrend = calculateTrend(monthlyExpense, prevMonthlyExpense);
   const incomeTrend = calculateTrend(monthlyIncome, prevMonthlyIncome);
 
@@ -42,10 +47,6 @@ export function MetricsGrid({
   const TrendIndicator = ({ value, inverse = false }: { value: number, inverse?: boolean }) => {
     const isPositive = value > 0;
     const isNeutral = value === 0;
-    // For expense, positive trend is bad (usually), but let's keep color logic consistent with math first
-    // Or invert color: Green for good.
-    // Asset/Income: Increase is Green.
-    // Expense: Increase is Red.
     
     let colorClass = "text-gray-400";
     let Icon = TrendingUp;
@@ -54,7 +55,6 @@ export function MetricsGrid({
       if (inverse) {
          // Expense logic: Increase (Pos) -> Red, Decrease (Neg) -> Green
          colorClass = isPositive ? "text-red-400" : "text-success";
-         Icon = isPositive ? TrendingUp : TrendingUp; // Or TrendingDown icon
       } else {
          // Income/Asset logic: Increase (Pos) -> Green, Decrease (Neg) -> Red
          colorClass = isPositive ? "text-success" : "text-red-400";
@@ -71,7 +71,7 @@ export function MetricsGrid({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {/* Total Assets */}
+      {/* 1. Total Assets */}
       <div className="glass-card p-5 group">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm">
@@ -86,32 +86,27 @@ export function MetricsGrid({
         <TrendIndicator value={assetTrend} />
       </div>
 
-      {/* Monthly Expense */}
+      {/* 2. Liquid Assets (Flexible Funds) */}
       <div className="glass-card p-5 group">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm">
-            <CreditCard className="w-4 h-4 text-neon-glow" />
-            本月支出
+            <CreditCard className="w-4 h-4 text-neon-purple" />
+            可灵活调用
           </div>
+          <MoreHorizontal className="w-4 h-4 text-gray-600 cursor-pointer hover:text-white" />
         </div>
         <div className="text-2xl lg:text-3xl font-bold text-white mb-1 group-hover:text-purple-200 transition-colors font-mono">
-          {formatMoney(monthlyExpense)}
+          {formatMoney(liquidAssets)}
         </div>
         <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center text-xs text-gray-500 gap-2">
-            <div className="h-1.5 w-16 bg-gray-800 rounded-full overflow-hidden">
-                <div 
-                className="h-full bg-neon-purple" 
-                style={{ width: `${Math.min(parseFloat(expenseRate), 100)}%` }}
-                ></div>
+            <div className="flex items-center text-xs text-gray-500">
+               流动资金
             </div>
-            {expenseRate}%
-            </div>
-            <TrendIndicator value={expenseTrend} inverse />
+            <TrendIndicator value={liquidAssetTrend} />
         </div>
       </div>
 
-      {/* Monthly Income */}
+      {/* 3. Monthly Income */}
       <div className="glass-card p-5 group">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm">
@@ -130,20 +125,28 @@ export function MetricsGrid({
         </div>
       </div>
 
-      {/* Net Savings */}
-      <div className="glass-card p-5 group relative overflow-hidden">
-        <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-success/20 blur-xl rounded-full"></div>
-        <div className="flex items-center justify-between mb-4 relative z-10">
+      {/* 4. Monthly Expense */}
+      <div className="glass-card p-5 group">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm">
-            <PiggyBank className="w-4 h-4 text-success" />
-            本月结余
+            <ArrowUpRight className="w-4 h-4 text-red-400" />
+            本月支出
           </div>
         </div>
-        <div className="text-2xl lg:text-3xl font-bold text-white mb-1 relative z-10 group-hover:text-green-100 transition-colors font-mono">
-          {formatMoney(netSavings)}
+        <div className="text-2xl lg:text-3xl font-bold text-white mb-1 group-hover:text-red-200 transition-colors font-mono">
+          {formatMoney(monthlyExpense)}
         </div>
-        <div className="text-xs text-success relative z-10">
-          储蓄率 {savingsRate}%
+        <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center text-xs text-gray-500 gap-2">
+            <div className="h-1.5 w-16 bg-gray-800 rounded-full overflow-hidden">
+                <div 
+                className="h-full bg-red-500" 
+                style={{ width: `${Math.min(parseFloat(expenseRate), 100)}%` }}
+                ></div>
+            </div>
+            {expenseRate}%
+            </div>
+            <TrendIndicator value={expenseTrend} inverse />
         </div>
       </div>
     </div>

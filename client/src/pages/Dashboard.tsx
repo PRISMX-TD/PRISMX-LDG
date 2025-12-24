@@ -115,6 +115,27 @@ export default function Dashboard() {
     const expense = monthlyTransactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + getConvertedAmount(t), 0);
+
+    // Calculate income and expense specifically for flexible wallets
+    const incomeFlexible = monthlyTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => {
+        const wallet = wallets.find(w => w.id === t.walletId);
+        if (wallet?.isFlexible) {
+          return sum + getConvertedAmount(t);
+        }
+        return sum;
+      }, 0);
+
+    const expenseFlexible = monthlyTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => {
+        const wallet = wallets.find(w => w.id === t.walletId);
+        if (wallet?.isFlexible) {
+          return sum + getConvertedAmount(t);
+        }
+        return sum;
+      }, 0);
       
     const prevIncome = prevMonthlyTransactions
       .filter((t) => t.type === "income")
@@ -124,10 +145,17 @@ export default function Dashboard() {
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + getConvertedAmount(t), 0);
 
-    return { income, expense, prevIncome, prevExpense };
+    return { income, expense, prevIncome, prevExpense, incomeFlexible, expenseFlexible };
   };
 
-  const { income: monthlyIncome, expense: monthlyExpense, prevIncome: prevMonthlyIncome, prevExpense: prevMonthlyExpense } = getMonthlyStats();
+  const { 
+    income: monthlyIncome, 
+    expense: monthlyExpense, 
+    prevIncome: prevMonthlyIncome, 
+    prevExpense: prevMonthlyExpense,
+    incomeFlexible: monthlyIncomeFlexible,
+    expenseFlexible: monthlyExpenseFlexible
+  } = getMonthlyStats();
 
   const totalAssets = useMemo(() => {
     return wallets.reduce((sum, w) => {
@@ -137,11 +165,22 @@ export default function Dashboard() {
     }, 0);
   }, [wallets]);
   
+  const liquidAssets = useMemo(() => {
+    return wallets
+      .filter(w => w.isFlexible)
+      .reduce((sum, w) => {
+        const balance = parseFloat(w.balance || "0");
+        const rate = parseFloat(w.exchangeRateToDefault || "1");
+        return sum + balance * rate;
+      }, 0);
+  }, [wallets]);
+
   // Simple approximation for previous month assets: 
   // Current Assets - (Current Month Income - Current Month Expense)
   // This assumes all asset changes come from income/expense, which is not 100% accurate (transfers, adjustments)
   // but good enough for a trend indicator without full historical snapshots.
   const prevTotalAssets = totalAssets - (monthlyIncome - monthlyExpense);
+  const prevLiquidAssets = liquidAssets - (monthlyIncomeFlexible - monthlyExpenseFlexible);
 
   const defaultWallet = wallets.find(w => w.id === user?.defaultWalletId) || wallets[0];
   const defaultWalletBalance = defaultWallet ? parseFloat(defaultWallet.balance) : 0;
@@ -203,11 +242,13 @@ export default function Dashboard() {
           {/* Key Metrics Grid */}
           <MetricsGrid 
             totalAssets={totalAssets}
+            liquidAssets={liquidAssets}
             monthlyExpense={monthlyExpense}
             monthlyIncome={monthlyIncome}
             prevMonthlyExpense={prevMonthlyExpense}
             prevMonthlyIncome={prevMonthlyIncome}
             prevTotalAssets={prevTotalAssets}
+            prevLiquidAssets={prevLiquidAssets}
             currencyCode={userCurrency}
           />
 
