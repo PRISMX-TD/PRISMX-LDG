@@ -263,7 +263,13 @@ export default function Dashboard() {
           </div>
 
           {/* Recent Transactions Table */}
-          <RecentTransactions transactions={transactions} />
+          <RecentTransactions 
+            transactions={transactions} 
+            onTransactionClick={(transaction) => {
+              setEditingTransaction(transaction);
+              setIsModalOpen(true);
+            }}
+          />
         </div>
       </div>
 

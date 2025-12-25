@@ -68,7 +68,11 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
               const sign = isExpense ? '-' : isIncome ? '+' : '';
               
               return (
-                <tr key={t.id} className="hover:bg-white/[0.02] transition-colors group cursor-pointer">
+                <tr 
+                  key={t.id} 
+                  className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                  onClick={() => onTransactionClick && onTransactionClick(t)}
+                >
                   <td className="px-6 py-4 flex items-center">
                     <div className="w-9 h-9 rounded-lg bg-[#000] border border-white/10 flex items-center justify-center mr-3 text-white">
                       <Icon className="w-4 h-4" style={{ color: t.category?.color }} />
