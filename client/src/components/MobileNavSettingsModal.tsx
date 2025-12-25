@@ -300,6 +300,8 @@ export function MobileNavSettingsModal({ open, onOpenChange }: MobileNavSettings
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
+          <DialogTitle className="sr-only">加载中</DialogTitle>
+          <DialogDescription className="sr-only">正在加载导航设置...</DialogDescription>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>

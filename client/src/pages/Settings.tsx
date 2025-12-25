@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings as SettingsIcon, Globe, User, Shield, Loader2, Smartphone, ChevronRight } from "lucide-react";
+import { Settings as SettingsIcon, Globe, User, Shield, Loader2, Smartphone, ChevronRight, ArrowLeft } from "lucide-react";
 import { supportedCurrencies } from "@shared/schema";
 import { MobileNavSettingsModal } from "@/components/MobileNavSettingsModal";
 import { PageContainer } from "@/components/PageContainer";
