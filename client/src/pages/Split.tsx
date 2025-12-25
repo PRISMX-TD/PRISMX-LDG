@@ -239,7 +239,8 @@ export default function Split() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
+    <PageContainer>
+      <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-4">
         <Link href="/">
           <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
