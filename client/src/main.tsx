@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { startVitalsLogging } from "./lib/vitals";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
@@ -33,6 +34,8 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+startVitalsLogging();
 
 if (typeof window !== 'undefined') {
   const idle = (fn: () => void) => {

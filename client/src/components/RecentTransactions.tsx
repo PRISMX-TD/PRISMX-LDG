@@ -2,9 +2,11 @@ import { List, Filter, Download, Coffee, Smartphone, Briefcase, ShoppingBag, Hom
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import type { Transaction } from "@shared/schema";
+import { Link } from "wouter";
 
 interface RecentTransactionsProps {
   transactions: any[]; // Using any[] for now as it includes joined fields
+  onTransactionClick?: (transaction: any) => void;
 }
 
 const getCategoryIcon = (iconName: string) => {
@@ -25,7 +27,10 @@ const getCategoryColor = (color: string) => {
   return color || "#6B7280";
 };
 
-export function RecentTransactions({ transactions }: RecentTransactionsProps) {
+export function RecentTransactions({ transactions, onTransactionClick }: RecentTransactionsProps) {
+  const VISIBLE_COUNT = 50;
+  const visible = transactions.slice(0, VISIBLE_COUNT);
+
   return (
     <div className="glass-card mb-6">
       <div className="p-6 border-b border-white/5 flex justify-between items-center">
@@ -55,7 +60,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
             </tr>
           </thead>
           <tbody className="text-sm divide-y divide-white/5">
-            {transactions.map((t) => {
+            {visible.map((t) => {
               const Icon = getCategoryIcon(t.category?.icon || 'other');
               const isExpense = t.type === 'expense';
               const isIncome = t.type === 'income';
@@ -114,6 +119,14 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
           </tbody>
         </table>
       </div>
+      
+      {transactions.length > VISIBLE_COUNT && (
+        <div className="px-6 py-4 border-t border-white/5 flex justify-end">
+          <Link href="/transactions">
+            <a className="text-sm text-neon-purple hover:text-neon-glow transition-colors">查看全部交易</a>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

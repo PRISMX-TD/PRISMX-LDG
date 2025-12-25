@@ -70,9 +70,17 @@ export default function Dashboard() {
 
   const { data: transactions = [], isLoading: isTransactionsLoading } =
     useQuery<TransactionWithRelations[]>({
-      queryKey: ["/api/transactions?limit=100"], // Increased limit for chart
+      queryKey: ["/api/transactions", { limit: 100 }],
       enabled: isAuthenticated,
     });
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      queryClient.prefetchQuery({ queryKey: ["/api/wallets"] });
+      queryClient.prefetchQuery({ queryKey: ["/api/categories"] });
+      queryClient.prefetchQuery({ queryKey: ["/api/transactions", { limit: 100 }] });
+    }
+  }, [isAuthenticated]);
 
   // Helper function to convert transaction amount to user's default currency
   const getConvertedAmount = (t: Transaction): number => {
@@ -87,75 +95,57 @@ export default function Dashboard() {
     return rawAmount;
   };
 
-  const getMonthlyStats = () => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const prevMonthStart = new Date(
+    now.getFullYear(),
+    now.getMonth() === 0 ? 11 : now.getMonth() - 1,
+    1
+  );
+  const prevMonthEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    0
+  );
 
-    const monthlyTransactions = transactions.filter((t) => {
+  const { data: currentStats } = useQuery<{ totalIncome: number; totalExpense: number }>({
+    queryKey: ["/api/transactions/stats", { startDate: currentMonthStart.toISOString(), endDate: currentMonthEnd.toISOString() }],
+    enabled: isAuthenticated,
+  });
+  const { data: prevStats } = useQuery<{ totalIncome: number; totalExpense: number }>({
+    queryKey: ["/api/transactions/stats", { startDate: prevMonthStart.toISOString(), endDate: prevMonthEnd.toISOString() }],
+    enabled: isAuthenticated,
+  });
+
+  const monthlyIncome = currentStats?.totalIncome || 0;
+  const monthlyExpense = currentStats?.totalExpense || 0;
+  const prevMonthlyIncome = prevStats?.totalIncome || 0;
+  const prevMonthlyExpense = prevStats?.totalExpense || 0;
+
+  const monthlyIncomeFlexible = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => {
+      const wallet = wallets.find(w => w.id === t.walletId);
       const date = new Date(t.date);
-      return (
-        date.getMonth() === currentMonth && date.getFullYear() === currentYear
-      );
-    });
-    
-    const prevMonthlyTransactions = transactions.filter((t) => {
+      const inCurrent = date >= currentMonthStart && date <= currentMonthEnd;
+      if (inCurrent && wallet?.isFlexible) {
+        return sum + getConvertedAmount(t);
+      }
+      return sum;
+    }, 0);
+
+  const monthlyExpenseFlexible = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => {
+      const wallet = wallets.find(w => w.id === t.walletId);
       const date = new Date(t.date);
-      return (
-        date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear
-      );
-    });
-
-    const income = monthlyTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + getConvertedAmount(t), 0);
-
-    const expense = monthlyTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + getConvertedAmount(t), 0);
-
-    // Calculate income and expense specifically for flexible wallets
-    const incomeFlexible = monthlyTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => {
-        const wallet = wallets.find(w => w.id === t.walletId);
-        if (wallet?.isFlexible) {
-          return sum + getConvertedAmount(t);
-        }
-        return sum;
-      }, 0);
-
-    const expenseFlexible = monthlyTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => {
-        const wallet = wallets.find(w => w.id === t.walletId);
-        if (wallet?.isFlexible) {
-          return sum + getConvertedAmount(t);
-        }
-        return sum;
-      }, 0);
-      
-    const prevIncome = prevMonthlyTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + getConvertedAmount(t), 0);
-
-    const prevExpense = prevMonthlyTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + getConvertedAmount(t), 0);
-
-    return { income, expense, prevIncome, prevExpense, incomeFlexible, expenseFlexible };
-  };
-
-  const { 
-    income: monthlyIncome, 
-    expense: monthlyExpense, 
-    prevIncome: prevMonthlyIncome, 
-    prevExpense: prevMonthlyExpense,
-    incomeFlexible: monthlyIncomeFlexible,
-    expenseFlexible: monthlyExpenseFlexible
-  } = getMonthlyStats();
+      const inCurrent = date >= currentMonthStart && date <= currentMonthEnd;
+      if (inCurrent && wallet?.isFlexible) {
+        return sum + getConvertedAmount(t);
+      }
+      return sum;
+    }, 0);
 
   const totalAssets = useMemo(() => {
     return wallets.reduce((sum, w) => {

@@ -53,7 +53,22 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const url = queryKey.join("/") as string;
+    let base = String(queryKey[0] || "");
+    let url = base;
+
+    const params = queryKey[1];
+    if (typeof params === "string") {
+      url = params.startsWith("?") ? `${base}${params}` : `${base}?${params}`;
+    } else if (params && typeof params === "object") {
+      const usp = new URLSearchParams();
+      for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
+        if (v === undefined || v === null) continue;
+        usp.append(k, String(v));
+      }
+      const qs = usp.toString();
+      if (qs) url = `${base}?${qs}`;
+    }
+
     let res = await fetch(url, { credentials: "include", headers: getFallbackHeaders() });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
@@ -79,6 +94,7 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
+      gcTime: 1000 * 60 * 30,
       retry: false,
     },
     mutations: {

@@ -6,6 +6,7 @@ import { createServer } from "http";
 
 const app = express();
 const httpServer = createServer(app);
+app.set("etag", "strong");
 
 declare module "http" {
   interface IncomingMessage {
@@ -125,7 +126,11 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/")) {
-    res.setHeader("Cache-Control", "no-store");
+    if (req.method === "GET") {
+      res.setHeader("Cache-Control", "no-cache");
+    } else {
+      res.setHeader("Cache-Control", "no-store");
+    }
   }
   next();
 });
