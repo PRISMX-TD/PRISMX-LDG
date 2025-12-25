@@ -591,5 +591,3 @@ export default function Split() {
     </PageContainer>
   );
 }
-
-export default Split;
