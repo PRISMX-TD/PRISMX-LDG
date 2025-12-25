@@ -206,14 +206,14 @@ export default function SubLedgers() {
                   return (
                     <Card
                       key={subLedger.id}
-                      className="glass-card hover-elevate relative overflow-visible h-full flex flex-col justify-between"
+                      className="glass-card hover-elevate relative overflow-visible h-full min-h-[320px] flex flex-col"
                       data-testid={`card-subledger-${subLedger.id}`}
                     >
                       <div
-                        className="absolute top-0 left-0 right-0 h-1 rounded-t-lg"
+                        className="absolute top-0 left-0 right-0 h-1.5 rounded-t-lg"
                         style={{ backgroundColor: subLedger.color || "#8B5CF6" }}
                       />
-                      <CardHeader className="pb-2 pt-4">
+                      <CardHeader className="pb-2 pt-5 px-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <div
@@ -255,50 +255,50 @@ export default function SubLedgers() {
                           </DropdownMenu>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-3">
+                      <CardContent className="space-y-5 px-5 pb-5 flex-1 flex flex-col">
                         {subLedger.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {subLedger.description}
                           </p>
                         )}
                         
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1 text-muted-foreground">
+                        <div className="flex items-center justify-between text-sm py-1">
+                          <div className="flex items-center gap-1.5 text-muted-foreground bg-white/5 px-2.5 py-1 rounded-md">
                             <Receipt className="w-3.5 h-3.5" />
-                            <span>{stats.count} 笔交易</span>
+                            <span>{stats.count} 笔</span>
                           </div>
                           {(subLedger.startDate || subLedger.endDate) && (
-                            <div className="flex items-center gap-1 text-muted-foreground">
+                            <div className="flex items-center gap-1.5 text-muted-foreground bg-white/5 px-2.5 py-1 rounded-md">
                               <Calendar className="w-3.5 h-3.5" />
                               <span>
                                 {subLedger.startDate ? format(new Date(subLedger.startDate), "MM/dd") : "?"}
-                                {" - "}
+                                -
                                 {subLedger.endDate ? format(new Date(subLedger.endDate), "MM/dd") : "?"}
                               </span>
                             </div>
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
+                        <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
                           <div>
-                            <p className="text-xs text-muted-foreground">收入</p>
-                            <p className="text-sm font-mono text-income truncate">+{stats.income.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground mb-1">收入</p>
+                            <p className="text-base font-bold font-mono text-income truncate">+{stats.income.toFixed(2)}</p>
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">支出</p>
-                            <p className="text-sm font-mono text-expense truncate">-{stats.expense.toFixed(2)}</p>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground mb-1">支出</p>
+                            <p className="text-base font-bold font-mono text-expense truncate">-{stats.expense.toFixed(2)}</p>
                           </div>
                         </div>
 
                         {subLedger.budgetAmount && parseFloat(subLedger.budgetAmount) > 0 && (
-                          <div className="space-y-2 pt-2 border-t border-border/50">
+                          <div className="space-y-2.5 pt-1">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                                 <Target className="w-3.5 h-3.5" />
-                                <span>预算</span>
+                                <span>预算目标</span>
                               </div>
-                              <span className="text-xs font-mono truncate max-w-[50%] text-right">
-                                {stats.expense.toFixed(0)} / {parseFloat(subLedger.budgetAmount).toFixed(0)}
+                              <span className="text-xs font-mono font-medium truncate max-w-[50%] text-right text-gray-300">
+                                {stats.expense.toFixed(0)} <span className="text-muted-foreground">/</span> {parseFloat(subLedger.budgetAmount).toFixed(0)}
                               </span>
                             </div>
                             {(() => {
@@ -309,17 +309,17 @@ export default function SubLedgers() {
                                 <>
                                   <Progress 
                                     value={percentage} 
-                                    className={`h-2 ${isOverBudget ? "[&>div]:bg-destructive" : "[&>div]:bg-primary"}`}
+                                    className={`h-2.5 ${isOverBudget ? "[&>div]:bg-destructive" : "[&>div]:bg-primary"}`}
                                   />
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className={isOverBudget ? "text-destructive flex items-center gap-1 truncate max-w-[60%]" : "text-muted-foreground truncate max-w-[60%]"}>
+                                  <div className="flex items-center justify-between text-xs pt-0.5">
+                                    <span className={isOverBudget ? "text-destructive flex items-center gap-1 truncate max-w-[60%] font-medium" : "text-muted-foreground truncate max-w-[60%]"}>
                                       {isOverBudget && <AlertTriangle className="w-3 h-3 shrink-0" />}
                                       {isOverBudget 
                                         ? `超支 ${(stats.expense - budget).toFixed(2)}` 
                                         : `剩余 ${(budget - stats.expense).toFixed(2)}`
                                       }
                                     </span>
-                                    <span className={isOverBudget ? "text-destructive font-medium" : "text-muted-foreground"}>
+                                    <span className={isOverBudget ? "text-destructive font-bold" : "text-muted-foreground"}>
                                       {((stats.expense / budget) * 100).toFixed(0)}%
                                     </span>
                                   </div>
@@ -329,7 +329,7 @@ export default function SubLedgers() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-2 pt-2">
+                        <div className="flex items-center gap-2 pt-2 mt-auto">
                           <ChartLine className="w-3.5 h-3.5 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground">
                             {subLedger.includeInMainAnalytics ? "计入总账分析" : "独立统计"}
