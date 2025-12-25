@@ -193,59 +193,59 @@ export default function Reports() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="glass-card hover-elevate border-0 group relative overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-gray-400 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-income" />
               总收入
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono text-income">
+            <p className="text-2xl font-bold font-mono text-white group-hover:text-income transition-colors">
               +{currencyInfo.symbol}{reportData.totalIncome.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover-elevate border-0 group relative overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-gray-400 flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-expense" />
               总支出
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono text-expense">
+            <p className="text-2xl font-bold font-mono text-white group-hover:text-expense transition-colors">
               -{currencyInfo.symbol}{reportData.totalExpense.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover-elevate border-0 group relative overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground">净收入</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-400">净收入</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold font-mono ${reportData.netIncome >= 0 ? "text-income" : "text-expense"}`}>
+            <p className={`text-2xl font-bold font-mono text-white transition-colors ${reportData.netIncome >= 0 ? "group-hover:text-income" : "group-hover:text-expense"}`}>
               {reportData.netIncome >= 0 ? "+" : ""}{currencyInfo.symbol}{reportData.netIncome.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover-elevate border-0 group relative overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-muted-foreground">交易笔数</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-400">交易笔数</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{reportData.transactionCount}</p>
+            <p className="text-2xl font-bold text-white group-hover:text-neon-purple transition-colors">{reportData.transactionCount}</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="glass-card border-0">
           <CardHeader>
-            <CardTitle>分类明细</CardTitle>
+            <CardTitle className="text-base text-gray-200">分类明细</CardTitle>
           </CardHeader>
           <CardContent>
             {reportData.categoryBreakdown.length === 0 ? (
@@ -253,13 +253,13 @@ export default function Reports() {
             ) : (
               <div className="space-y-4">
                 {reportData.categoryBreakdown.map((cat, index) => (
-                  <div key={index} className="flex items-center justify-between">
+                  <div key={index} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors">
                     <div className="flex items-center gap-3">
                       <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: cat.color }}
                       />
-                      <span className="font-medium">{cat.name}</span>
+                      <span className="font-medium text-gray-200">{cat.name}</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                       {cat.income > 0 && (
@@ -280,10 +280,10 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card border-0">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="w-5 h-5" />
+            <CardTitle className="text-base text-gray-200 flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-neon-purple" />
               钱包明细
             </CardTitle>
           </CardHeader>
@@ -293,8 +293,8 @@ export default function Reports() {
             ) : (
               <div className="space-y-4">
                 {reportData.walletBreakdown.map((wallet, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="font-medium">{wallet.name}</span>
+                  <div key={index} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors">
+                    <span className="font-medium text-gray-200">{wallet.name}</span>
                     <div className="flex items-center gap-4 text-sm">
                       {wallet.income > 0 && (
                         <span className="text-income font-mono">
@@ -315,9 +315,9 @@ export default function Reports() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="glass-card border-0">
         <CardHeader>
-          <CardTitle>报表说明</CardTitle>
+          <CardTitle className="text-base text-gray-200">报表说明</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>• 报表期间: {format(reportData.startDate, "yyyy-MM-dd")} 至 {format(reportData.endDate, "yyyy-MM-dd")}</p>
