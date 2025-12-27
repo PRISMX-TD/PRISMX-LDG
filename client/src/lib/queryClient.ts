@@ -56,17 +56,35 @@ export const getQueryFn: <T>(options: {
     let base = String(queryKey[0] || "");
     let url = base;
 
-    const params = queryKey[1];
-    if (typeof params === "string") {
-      url = params.startsWith("?") ? `${base}${params}` : `${base}?${params}`;
-    } else if (params && typeof params === "object") {
+    const rest = queryKey.slice(1);
+    let qsObj: Record<string, unknown> | null = null;
+    const pathSegments: string[] = [];
+
+    for (const seg of rest) {
+      if (seg && typeof seg === "object") {
+        qsObj = { ...(qsObj || {}), ...(seg as Record<string, unknown>) };
+      } else if (typeof seg === "string" || typeof seg === "number") {
+        const s = String(seg);
+        if (s.startsWith("?")) {
+          url = `${base}${s}`;
+        } else {
+          pathSegments.push(s);
+        }
+      }
+    }
+
+    if (pathSegments.length) {
+      url = `${base}/${pathSegments.join("/")}`;
+    }
+
+    if (!url.includes("?") && qsObj) {
       const usp = new URLSearchParams();
-      for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
+      for (const [k, v] of Object.entries(qsObj)) {
         if (v === undefined || v === null) continue;
         usp.append(k, String(v));
       }
       const qs = usp.toString();
-      if (qs) url = `${base}?${qs}`;
+      if (qs) url = `${url}?${qs}`;
     }
 
     let res = await fetch(url, { credentials: "include", headers: getFallbackHeaders() });

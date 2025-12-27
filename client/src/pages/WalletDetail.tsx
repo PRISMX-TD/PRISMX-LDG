@@ -172,7 +172,7 @@ export default function WalletDetail() {
   const balance = parseFloat(wallet?.balance || "0");
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="min-h-screen overflow-y-auto custom-scroll p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/wallets">
