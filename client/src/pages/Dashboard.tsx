@@ -233,10 +233,13 @@ export default function Dashboard() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        <DashboardHeader onAddTransaction={() => {
-          setEditingTransaction(null);
-          setIsModalOpen(true);
-        }} />
+        <DashboardHeader 
+          onAddTransaction={() => {
+            setEditingTransaction(null);
+            setIsModalOpen(true);
+          }}
+          onCustomize={() => setIsCustomizeOpen(true)}
+        />
 
         <div className="flex-1 overflow-y-auto custom-scroll p-4 md:p-8 pt-0">
           {/* Key Metrics Grid */}

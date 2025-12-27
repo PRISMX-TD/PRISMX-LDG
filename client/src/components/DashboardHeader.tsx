@@ -1,4 +1,4 @@
-import { Search, Bell, Plus, PanelLeftIcon } from "lucide-react";
+import { Search, Bell, Plus, PanelLeftIcon, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -7,9 +7,10 @@ import { useLocation } from "wouter";
 
 interface DashboardHeaderProps {
   onAddTransaction: () => void;
+  onCustomize?: () => void;
 }
 
-export function DashboardHeader({ onAddTransaction }: DashboardHeaderProps) {
+export function DashboardHeader({ onAddTransaction, onCustomize }: DashboardHeaderProps) {
   const today = new Date();
   const [searchValue, setSearchValue] = useState("");
   const [, setLocation] = useLocation();
@@ -65,6 +66,16 @@ export function DashboardHeader({ onAddTransaction }: DashboardHeaderProps) {
         </div>
 
         {/* Buttons */}
+        {onCustomize && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onCustomize}
+            className="border-white/10 bg-[#131316] text-gray-400 hover:text-white hover:bg-white/5"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </Button>
+        )}
         <Button 
           onClick={onAddTransaction}
           className="bg-neon-purple hover:bg-neon-dark text-white px-3 md:px-4 py-2 h-8 md:h-9 rounded-lg text-xs md:text-sm font-medium shadow-neon transition-all flex items-center gap-1.5 md:gap-2 border-none"
