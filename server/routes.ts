@@ -1626,7 +1626,7 @@ export async function registerRoutes(
           showBudgets: true,
           showSavingsGoals: true,
           showRecentTransactions: true,
-          showFlexibleFunds: false,
+          showFlexibleFunds: true,
           cardOrder: null,
         });
       }
