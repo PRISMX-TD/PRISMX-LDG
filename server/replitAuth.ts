@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
 const isAuthDisabled = process.env.DISABLE_AUTH === "true";
-const isLocalAuth = process.env.LOCAL_AUTH === "true";
+const isLocalAuth = process.env.LOCAL_AUTH === "true" || !process.env.REPL_ID;
 const NO_DEMO_COOKIE = "NO_DEMO";
 function getCookie(req: any, name: string): string | undefined {
   const cookie = req.headers?.cookie || "";
@@ -49,13 +49,11 @@ const getOidcConfig = memoize(
 );
 
 export function getSession() {
-  if (!process.env.SESSION_SECRET) {
-    throw new Error("SESSION_SECRET must be set");
-  }
+  const secret = process.env.SESSION_SECRET || "default_local_secret";
   
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   let sessionStore: session.Store;
-  const storeType = (process.env.SESSION_STORE || (process.env.LOCAL_AUTH === "true" ? "memory" : "pg")).toLowerCase();
+  const storeType = (process.env.SESSION_STORE || (isLocalAuth ? "memory" : "pg")).toLowerCase();
   if (storeType === "pg" && process.env.DATABASE_URL) {
     const PgStore = connectPg(session);
     sessionStore = new PgStore({
@@ -71,7 +69,7 @@ export function getSession() {
   const isProduction = process.env.NODE_ENV === "production";
   
   return session({
-    secret: process.env.SESSION_SECRET,
+    secret: secret,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
