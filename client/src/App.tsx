@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -67,11 +67,12 @@ function AuthenticatedLayout() {
                   <Dashboard />
                 </Suspense>
               )} />
-              <Route path="/" component={() => (
+              <Route path="/dashboard" component={() => (
                 <Suspense fallback={SuspenseFallback}> 
                   <Dashboard />
                 </Suspense>
               )} />
+              <Route path="/" component={() => <Redirect to="/dashboard" />} />
               <Route path="/transactions" component={() => (
                 <Suspense fallback={SuspenseFallback}> 
                   <Transactions />

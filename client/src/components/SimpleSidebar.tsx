@@ -55,7 +55,7 @@ export function SimpleSidebar({ user }: SimpleSidebarProps) {
   });
 
   const mainNavItems = [
-    { href: "/", icon: LayoutDashboard, label: "仪表盘" },
+    { href: "/dashboard", icon: LayoutDashboard, label: "仪表盘" },
     { href: "/transactions", icon: Receipt, label: "交易记录" },
     { href: "/wallets", icon: Wallet, label: "钱包管理" },
     { href: "/exchange", icon: ArrowUpDown, label: "交易所" },

@@ -40,7 +40,7 @@ interface MobileNavBarProps {
 }
 
 const allNavItems = [
-  { key: "dashboard", href: "/", icon: LayoutDashboard, label: "首页" },
+  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard, label: "首页" },
   { key: "transactions", href: "/transactions", icon: Receipt, label: "交易" },
   { key: "wallets", href: "/wallets", icon: Wallet, label: "钱包" },
   { key: "analytics", href: "/analytics", icon: BarChart3, label: "分析" },

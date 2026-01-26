@@ -27,7 +27,7 @@ export default function Auth() {
       setLoading(true);
       await apiRequest("POST", "/api/login", { email, password });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      startTransition(() => setLocation("/"));
+      startTransition(() => setLocation("/dashboard"));
     } catch (e: any) {
       toast({ title: "登录失败", description: e.message, variant: "destructive" });
     } finally {
