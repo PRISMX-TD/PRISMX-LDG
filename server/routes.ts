@@ -141,9 +141,38 @@ export async function registerRoutes(
       }
 
       // Use Frankfurter API (free, no API key required)
-      const response = await fetch(
-        `https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`
-      );
+      // Note: Frankfurter does not support TWD. For TWD, we'll try to fallback to a different source or return a specific error
+      let response;
+      if (fromCurrency === 'TWD' || toCurrency === 'TWD') {
+        // Fallback for TWD - using a different free API or hardcoded approximation if needed
+        // For now, let's try a different free API that might support TWD like ExchangeRate-API (if available) or similar
+        // Or simply fail gracefully if no free alternative is available.
+        // As a temporary fix for TWD, we can use a different endpoint or service.
+        // Let's try to use a different public API for TWD if possible, or handle it.
+        // Currently Frankfurter doesn't support TWD. 
+        // We will try to fetch from another source or return 503 with specific message.
+        // Let's try to use https://api.exchangerate-api.com/v4/latest/USD as an alternative for TWD
+        
+        try {
+             response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+             if (response.ok) {
+                 const data = await response.json();
+                 const rate = data.rates?.[toCurrency];
+                 if (rate) {
+                     exchangeRateCache.set(cacheKey, { rate, timestamp: Date.now() });
+                     return res.json({ rate, from: fromCurrency, to: toCurrency });
+                 }
+             }
+        } catch (e) {
+            console.error("Alternative API failed for TWD:", e);
+        }
+        
+        return res.status(503).json({ message: "暂不支持台币(TWD)自动汇率，请手动输入" });
+      } else {
+         response = await fetch(
+            `https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`
+          );
+      }
 
       if (!response.ok) {
         // Fallback: try with a different API or return error
@@ -215,7 +244,7 @@ export async function registerRoutes(
       if (exchangeRateToDefault !== undefined) {
         const rate = parseFloat(exchangeRateToDefault);
         if (!isNaN(rate) && rate > 0) {
-          rateToDefault = rate.toFixed(6);
+          rateToDefault = rate.toFixed(7);
         }
       }
       

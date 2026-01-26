@@ -122,7 +122,10 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
   }, [wallet, defaultCurrency, form]);
 
   useEffect(() => {
-    const fetchRate = async () => {
+    let isCancelled = false;
+    let retryTimeout: NodeJS.Timeout;
+
+    const fetchRate = async (retryCount = 0) => {
       if (!showExchangeRate || !watchedCurrency) {
         if (!isEditing) {
           form.setValue("exchangeRateToDefault", "1");
@@ -138,16 +141,26 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
       setIsLoadingRate(true);
       try {
         const response = await fetch(`/api/exchange-rate?from=${watchedCurrency}&to=${defaultCurrency}`);
+        
+        if (isCancelled) return;
+
         if (response.ok) {
           const data = await response.json();
           if (data.rate) {
             form.setValue("exchangeRateToDefault", data.rate.toString());
+            setIsLoadingRate(false);
+            return;
           }
         }
+        throw new Error("Failed to get rate");
       } catch (error) {
-        console.error("Failed to fetch exchange rate:", error);
-      } finally {
-        setIsLoadingRate(false);
+        if (isCancelled) return;
+        console.error(`Failed to fetch exchange rate (attempt ${retryCount + 1}):`, error);
+        
+        // Retry after 2 seconds
+        retryTimeout = setTimeout(() => {
+          if (!isCancelled) fetchRate(retryCount + 1);
+        }, 2000);
       }
     };
 
@@ -155,7 +168,12 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
       fetchRate();
     }, 500); // Debounce to avoid too many requests
 
-    return () => clearTimeout(timer);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+      clearTimeout(retryTimeout);
+      setIsLoadingRate(false);
+    };
   }, [watchedCurrency, defaultCurrency, showExchangeRate, isEditing, wallet, form]);
 
   const createMutation = useMutation({
@@ -377,8 +395,8 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                       <FormControl>
                         <Input
                           type="number"
-                          step="0.0001"
-                          min="0.0001"
+                          step="0.0000001"
+                          min="0.0000001"
                           placeholder="输入汇率"
                           {...field}
                           data-testid="input-exchange-rate"
