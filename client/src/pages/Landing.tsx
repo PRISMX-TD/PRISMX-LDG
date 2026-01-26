@@ -11,8 +11,11 @@ import {
 } from "lucide-react";
 import { SiGoogle, SiGithub, SiApple } from "react-icons/si";
 import { RiTwitterXFill } from "react-icons/ri";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Landing() {
+  const { isAuthenticated } = useAuth();
+
   const features = [
     {
       icon: Wallet,
@@ -60,12 +63,20 @@ export default function Landing() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-login">
-              <a href="/auth">登录</a>
-            </Button>
-            <Button asChild variant="outline" className="border-primary/30 hover:bg-primary/10 hover:border-primary/50" data-testid="button-register">
-              <a href="/auth?tab=register">注册</a>
-            </Button>
+            {isAuthenticated ? (
+              <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-dashboard">
+                <a href="/dashboard">进入仪表盘</a>
+              </Button>
+            ) : (
+              <>
+                <Button asChild className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" data-testid="button-login">
+                  <a href="/auth">登录</a>
+                </Button>
+                <Button asChild variant="outline" className="border-primary/30 hover:bg-primary/10 hover:border-primary/50" data-testid="button-register">
+                  <a href="/auth?tab=register">注册</a>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -86,9 +97,15 @@ export default function Landing() {
               多钱包管理、智能分类、实时追踪，让您的财务管理更加轻松。
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="text-base bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 border-0" data-testid="button-get-started">
-                <a href="/auth">免费开始使用</a>
-              </Button>
+              {isAuthenticated ? (
+                <Button size="lg" asChild className="text-base bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 border-0" data-testid="button-get-started">
+                  <a href="/dashboard">进入仪表盘</a>
+                </Button>
+              ) : (
+                <Button size="lg" asChild className="text-base bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30 border-0" data-testid="button-get-started">
+                  <a href="/auth">免费开始使用</a>
+                </Button>
+              )}
               <Button size="lg" variant="outline" className="text-base border-primary/30 hover:bg-primary/10 hover:border-primary/50" data-testid="button-learn-more">
                 <a href="#features">了解更多</a>
               </Button>
@@ -132,9 +149,15 @@ export default function Landing() {
               <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
                 加入 PRISMX Ledger，轻松追踪您的收入支出，掌握资金流向，实现财务自由
               </p>
-              <Button size="lg" asChild className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30" data-testid="button-cta">
-                <a href="/auth">立即开始</a>
-              </Button>
+              {isAuthenticated ? (
+                <Button size="lg" asChild className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30" data-testid="button-cta">
+                  <a href="/dashboard">进入仪表盘</a>
+                </Button>
+              ) : (
+                <Button size="lg" asChild className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-xl shadow-primary/30" data-testid="button-cta">
+                  <a href="/auth">立即开始</a>
+                </Button>
+              )}
             </div>
           </div>
         </section>
