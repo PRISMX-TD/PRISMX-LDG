@@ -97,6 +97,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
 
   const watchedCurrency = form.watch("currency");
   const showExchangeRate = watchedCurrency !== defaultCurrency;
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
 
   useEffect(() => {
     if (wallet) {
@@ -119,6 +120,43 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
       });
     }
   }, [wallet, defaultCurrency, form]);
+
+  useEffect(() => {
+    const fetchRate = async () => {
+      if (!showExchangeRate || !watchedCurrency) {
+        if (!isEditing) {
+          form.setValue("exchangeRateToDefault", "1");
+        }
+        return;
+      }
+
+      // If editing and currency hasn't changed from original wallet currency, don't fetch
+      if (isEditing && wallet?.currency === watchedCurrency) {
+        return;
+      }
+
+      setIsLoadingRate(true);
+      try {
+        const response = await fetch(`/api/exchange-rate?from=${watchedCurrency}&to=${defaultCurrency}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.rate) {
+            form.setValue("exchangeRateToDefault", data.rate.toString());
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch exchange rate:", error);
+      } finally {
+        setIsLoadingRate(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchRate();
+    }, 500); // Debounce to avoid too many requests
+
+    return () => clearTimeout(timer);
+  }, [watchedCurrency, defaultCurrency, showExchangeRate, isEditing, wallet, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: WalletFormData) => {
@@ -334,6 +372,7 @@ export function WalletModal({ open, onOpenChange, wallet, defaultCurrency = "MYR
                     <FormItem>
                       <FormLabel>
                         汇率 (1 {watchedCurrency} = ? {defaultCurrency})
+                        {isLoadingRate && <Loader2 className="inline ml-2 h-3 w-3 animate-spin" />}
                       </FormLabel>
                       <FormControl>
                         <Input
