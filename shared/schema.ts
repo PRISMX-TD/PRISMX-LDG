@@ -178,7 +178,7 @@ export const userDashboardPreferences = pgTable("user_dashboard_preferences", {
   showBudgets: boolean("show_budgets").default(true),
   showSavingsGoals: boolean("show_savings_goals").default(true),
   showRecentTransactions: boolean("show_recent_transactions").default(true),
-  showFlexibleFunds: boolean("show_flexible_funds").default(false),
+  showFlexibleFunds: boolean("show_flexible_funds").default(true),
   cardOrder: text("card_order").array(), // array of card keys in user's preferred order
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

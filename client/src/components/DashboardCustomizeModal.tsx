@@ -31,7 +31,7 @@ export function DashboardCustomizeModal({ open, onOpenChange }: DashboardCustomi
   const [showTotalAssets, setShowTotalAssets] = useState(true);
   const [showMonthlyIncome, setShowMonthlyIncome] = useState(true);
   const [showMonthlyExpense, setShowMonthlyExpense] = useState(true);
-  const [showFlexibleFunds, setShowFlexibleFunds] = useState(false);
+  const [showFlexibleFunds, setShowFlexibleFunds] = useState(true);
   const [showWallets, setShowWallets] = useState(true);
   const [showRecent, setShowRecent] = useState(true);
 
