@@ -62,6 +62,7 @@ function AuthenticatedLayout() {
         <div className="pl-64 h-full flex flex-col relative z-0">
           <main className="flex-1 h-full overflow-hidden flex flex-col">
             <Switch>
+              <Route path="/" component={() => <Redirect to="/dashboard" />} />
               <Route path="/auth" component={() => (
                 <Suspense fallback={SuspenseFallback}> 
                   <Dashboard />
@@ -162,16 +163,8 @@ function AuthenticatedLayout() {
         <MobileHeader user={user} />
         <main className="flex-1 overflow-hidden pb-20 flex flex-col">
           <Switch>
+            <Route path="/" component={() => <Redirect to="/dashboard" />} />
             <Route path="/auth" component={() => (
-              <Suspense fallback={SuspenseFallback}> 
-                <Dashboard />
-              </Suspense>
-            )} />
-            <Route path="/" component={() => (
-              <Suspense fallback={SuspenseFallback}> 
-                <Dashboard />
-              </Suspense>
-            )} />
             <Route path="/dashboard" component={() => (
               <Suspense fallback={SuspenseFallback}> 
                 <Dashboard />
@@ -274,15 +267,6 @@ function Router() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
-    );
-  }
-
-  // 始终允许访问 Landing Page
-  if (location === "/") {
-    return (
-      <Suspense fallback={SuspenseFallback}>
-        <Landing />
-      </Suspense>
     );
   }
 
