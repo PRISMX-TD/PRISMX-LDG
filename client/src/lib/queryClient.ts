@@ -1,5 +1,4 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getIsLoggingOut } from "@/hooks/useAuth";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -8,20 +7,8 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-function hasNoDemoCookie(): boolean {
-  if (typeof document === 'undefined') return false;
-  const cookie = document.cookie || '';
-  return cookie.split(';').map(c => c.trim()).some(p => p.startsWith('NO_DEMO='));
-}
-
 function getFallbackHeaders(): Record<string, string> {
-  try {
-    if (hasNoDemoCookie()) return {};
-    const uid = localStorage.getItem('PRISMX_USER_ID') || localStorage.getItem('x-user-id');
-    return uid ? { 'x-user-id': uid } : {} as Record<string, string>;
-  } catch {
-    return {} as Record<string, string>;
-  }
+  return {} as Record<string, string>;
 }
 
 function getCsrfToken(): string | undefined {
@@ -101,15 +88,6 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    if (!res.ok && res.status === 401) {
-      if (!hasNoDemoCookie() && !getIsLoggingOut()) {
-        try {
-          localStorage.setItem('PRISMX_USER_ID', 'demo-user');
-          localStorage.setItem('x-user-id', 'demo-user');
-        } catch {}
-        res = await fetch(url, { credentials: "include", headers: getFallbackHeaders() });
-      }
-    }
     await throwIfResNotOk(res);
     return await res.json();
   };
