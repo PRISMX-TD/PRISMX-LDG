@@ -172,6 +172,11 @@ function AuthenticatedLayout() {
                 <Dashboard />
               </Suspense>
             )} />
+            <Route path="/dashboard" component={() => (
+              <Suspense fallback={SuspenseFallback}> 
+                <Dashboard />
+              </Suspense>
+            )} />
             <Route path="/transactions" component={() => (
               <Suspense fallback={SuspenseFallback}> 
                 <Transactions />
