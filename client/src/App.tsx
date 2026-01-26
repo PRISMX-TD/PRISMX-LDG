@@ -165,6 +165,10 @@ function AuthenticatedLayout() {
           <Switch>
             <Route path="/" component={() => <Redirect to="/dashboard" />} />
             <Route path="/auth" component={() => (
+              <Suspense fallback={SuspenseFallback}> 
+                <Dashboard />
+              </Suspense>
+            )} />
             <Route path="/dashboard" component={() => (
               <Suspense fallback={SuspenseFallback}> 
                 <Dashboard />
