@@ -345,6 +345,8 @@ function LoanCard({ loan }: { loan: Loan }) {
   );
 }
 
+import { supportedCurrencies } from "@shared/schema";
+
 function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOpenChange: (open: boolean) => void, wallets: Wallet[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -389,36 +391,21 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
       const loan = await loanRes.json();
 
       // 2. Create Initial Transaction (Money moving out/in)
-      const transactionType = formData.type === 'lend' ? 'expense' : 'income'; // If I lend, money goes out (expense-like flow but recorded as debt). Wait, actually:
-      // Lend = I give money -> Wallet balance decreases -> Type 'expense' (conceptually) or transfer?
-      // Borrow = I get money -> Wallet balance increases -> Type 'income'
-      // To keep analytics clean, we might want to tag these specifically or use categories.
-      // For now, let's use 'expense' for lending (money out) and 'income' for borrowing (money in),
-      // BUT we should probably use a special category like "Debt/Loan".
-      
-      // Ideally, we'd auto-create/find a category "借出/借入".
-      // For simplicity, let's just create the transaction and let user recategorize if needed, 
-      // or we just don't categorize it (categoryId: null).
-      
-      // However, current system treats 'expense' as spending. 
-      // Maybe we need a 'transfer' type where toWallet is null? Or just accept it affects balance.
-      
       const txRes = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: formData.type === 'lend' ? 'expense' : 'income',
-          amount: parseFloat(formData.amount),
+          amount: parseFloat(formData.amount), // Note: This assumes 1:1 exchange rate if wallet currency differs. 
+                                               // Ideal UX would ask for exchange rate if currencies differ.
           walletId: parseInt(formData.walletId),
           date: new Date(formData.startDate).toISOString(),
           description: `${formData.type === 'lend' ? '借给' : '向某人借款'}: ${formData.person}`,
-          loanId: loan.id, // Link to the loan
-          // categoryId: ... (optional)
+          loanId: loan.id, 
         })
       });
 
       if (!txRes.ok) {
-         // If transaction fails, we should probably delete the loan or warn user.
          console.error("Failed to create transaction for loan");
          toast({ title: "借贷记录创建成功，但资金流水记录失败", variant: "destructive" });
       } else {
@@ -483,14 +470,32 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>金额</Label>
-              <Input 
-                type="number" 
-                placeholder="0.00" 
-                min="0.01"
-                step="0.01"
-                value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
-              />
+              <div className="flex gap-2">
+                <Input 
+                  type="number" 
+                  placeholder="0.00" 
+                  min="0.01"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                  className="flex-1"
+                />
+                <Select 
+                  value={formData.currency} 
+                  onValueChange={(v) => setFormData({...formData, currency: v})}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supportedCurrencies.map(c => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>关联钱包 (资金来源/去向)</Label>
