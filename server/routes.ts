@@ -1231,7 +1231,7 @@ export async function registerRoutes(
       // @ts-ignore
       if (loanData.dueDate) loanData.dueDate = new Date(loanData.dueDate);
       
-      const loan = await storage.createLoan(loanData);
+      const loan = await storage.createLoan(loanData as any);
       res.status(201).json(loan);
     } catch (error) {
       console.error("Error creating loan:", error);
