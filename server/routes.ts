@@ -855,6 +855,25 @@ export async function registerRoutes(
 
       // Create the transaction
       const transaction = await storage.createTransaction(transactionData);
+
+      // If transaction is linked to a loan, update loan paid amount
+      if (transactionData.loanId) {
+        const loan = await storage.getLoan(transactionData.loanId, userId);
+        if (loan) {
+          const currentPaid = parseFloat(loan.paidAmount || "0");
+          // If it's an income (repayment received) for a lend loan, add to paid amount
+          // If it's an expense (repayment made) for a borrow loan, add to paid amount
+          // Basically any transaction linked to a loan should update the paid amount
+          const newPaid = currentPaid + walletAmount;
+          
+          await storage.updateLoan(loan.id, userId, { 
+            paidAmount: newPaid.toString(),
+            // Auto update status if fully paid
+            status: newPaid >= parseFloat(loan.totalAmount) ? 'settled' : loan.status
+          });
+        }
+      }
+
       res.status(201).json(transaction);
     } catch (error) {
       console.error("Error creating transaction:", error);
