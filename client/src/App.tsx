@@ -25,6 +25,7 @@ const Analytics = lazy(() => import("@/pages/Analytics"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const Exchange = lazy(() => import("@/pages/Exchange"));
+const Loans = lazy(() => import("@/pages/Loans"));
 const SubLedgers = lazy(() => import("@/pages/SubLedgers"));
 const WalletDetail = lazy(() => import("@/pages/WalletDetail"));
 const Split = lazy(() => import("@/pages/Split"));
@@ -202,6 +203,11 @@ function AuthenticatedLayout() {
             <Route path="/exchange" component={() => (
               <Suspense fallback={SuspenseFallback}> 
                 <Exchange />
+              </Suspense>
+            )} />
+            <Route path="/loans" component={() => (
+              <Suspense fallback={SuspenseFallback}> 
+                <Loans />
               </Suspense>
             )} />
             <Route path="/budgets" component={() => (
