@@ -45,6 +45,9 @@ import {
   groupActivities,
   type GroupActivity,
   type InsertGroupActivity,
+  loans,
+  type Loan,
+  type InsertLoan,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, gte, lte, ilike, getTableColumns } from "drizzle-orm";
@@ -178,6 +181,14 @@ export interface IStorage {
   createGroupActivity(activity: InsertGroupActivity): Promise<GroupActivity>;
   updateGroupActivity(id: number, userId: string, data: Partial<InsertGroupActivity>): Promise<GroupActivity | undefined>;
   deleteGroupActivity(id: number, userId: string): Promise<boolean>;
+
+  // Loan operations
+  getLoans(userId: string): Promise<Loan[]>;
+  getLoan(id: number, userId: string): Promise<Loan | undefined>;
+  createLoan(loan: InsertLoan): Promise<Loan>;
+  updateLoan(id: number, userId: string, data: Partial<InsertLoan>): Promise<Loan | undefined>;
+  deleteLoan(id: number, userId: string): Promise<boolean>;
+  recalculateLoanStatus(loanId: number, userId: string): Promise<void>;
 }
 
 // Types for filters and stats
@@ -876,6 +887,39 @@ export class DatabaseStorage implements IStorage {
   async deleteGroupActivity(id: number, userId: string): Promise<boolean> {
     const result = await db.delete(groupActivities)
       .where(and(eq(groupActivities.id, id), eq(groupActivities.userId, userId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Loan operations
+  async getLoans(userId: string): Promise<Loan[]> {
+    return db.select().from(loans)
+      .where(eq(loans.userId, userId))
+      .orderBy(desc(loans.startDate));
+  }
+
+  async getLoan(id: number, userId: string): Promise<Loan | undefined> {
+    const [loan] = await db.select().from(loans)
+      .where(and(eq(loans.id, id), eq(loans.userId, userId)));
+    return loan;
+  }
+
+  async createLoan(loan: InsertLoan): Promise<Loan> {
+    const [newLoan] = await db.insert(loans).values(loan).returning();
+    return newLoan;
+  }
+
+  async updateLoan(id: number, userId: string, data: Partial<InsertLoan>): Promise<Loan | undefined> {
+    const [updated] = await db.update(loans)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(loans.id, id), eq(loans.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteLoan(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(loans)
+      .where(and(eq(loans.id, id), eq(loans.userId, userId)))
       .returning();
     return result.length > 0;
   }

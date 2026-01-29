@@ -45,6 +45,7 @@ const allNavItems = [
   { key: "wallets", href: "/wallets", icon: Wallet, label: "钱包" },
   { key: "analytics", href: "/analytics", icon: BarChart3, label: "分析" },
   { key: "exchange", href: "/exchange", icon: ArrowUpDown, label: "交易所" },
+  { key: "loans", href: "/loans", icon: HandCoins, label: "借贷" },
   { key: "sub-ledgers", href: "/sub-ledgers", icon: BookOpen, label: "子账本" },
   { key: "split", href: "/split", icon: UserIcon, label: "分摊" },
   { key: "categories", href: "/categories", icon: Tags, label: "分类" },

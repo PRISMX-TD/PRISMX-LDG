@@ -98,6 +98,11 @@ function AuthenticatedLayout() {
                   <Exchange />
                 </Suspense>
               )} />
+              <Route path="/loans" component={() => (
+                <Suspense fallback={SuspenseFallback}> 
+                  <Loans />
+                </Suspense>
+              )} />
               <Route path="/budgets" component={() => (
                 <Suspense fallback={SuspenseFallback}> 
                   <Budgets />

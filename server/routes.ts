@@ -10,6 +10,7 @@ import {
   insertRecurringTransactionSchema,
   insertBillReminderSchema,
   insertCategorySchema,
+  insertLoanSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { encrypt, decrypt, getBalancesWithValues, fetchMexcAccountInfo } from "./mexc";
@@ -35,6 +36,7 @@ export async function registerRoutes(
     toWalletId: z.number().int().positive().optional(),
     categoryId: z.number().int().positive().optional(),
     subLedgerId: z.number().int().positive().optional(),
+    loanId: z.number().int().positive().optional(),
     description: z.string().nullable().optional(),
     date: z.string().min(1),
   }).strict();
@@ -1071,6 +1073,11 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Transaction not found" });
       }
       
+      // Update loan status if linked
+      if (existingTransaction.loanId) {
+        await storage.recalculateLoanStatus(existingTransaction.loanId, userId);
+      }
+      
       res.json({ message: "Transaction deleted successfully" });
     } catch (error) {
       console.error("Error deleting transaction:", error);
@@ -1176,6 +1183,102 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting budget:", error);
       res.status(500).json({ message: "Failed to delete budget" });
+    }
+  });
+
+  // Loan routes
+  app.get('/api/loans', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const loans = await storage.getLoans(userId);
+      res.json(loans);
+    } catch (error) {
+      console.error("Error fetching loans:", error);
+      res.status(500).json({ message: "Failed to fetch loans" });
+    }
+  });
+
+  app.get('/api/loans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const loan = await storage.getLoan(id, userId);
+      if (!loan) {
+        return res.status(404).json({ message: "Loan not found" });
+      }
+      res.json(loan);
+    } catch (error) {
+      console.error("Error fetching loan:", error);
+      res.status(500).json({ message: "Failed to fetch loan" });
+    }
+  });
+
+  app.post('/api/loans', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const parsed = insertLoanSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      
+      const loanData = parsed.data;
+      
+      // Ensure userId matches
+      // @ts-ignore
+      loanData.userId = userId;
+      // @ts-ignore
+      if (loanData.startDate) loanData.startDate = new Date(loanData.startDate);
+      // @ts-ignore
+      if (loanData.dueDate) loanData.dueDate = new Date(loanData.dueDate);
+      
+      const loan = await storage.createLoan(loanData);
+      res.status(201).json(loan);
+    } catch (error) {
+      console.error("Error creating loan:", error);
+      res.status(500).json({ message: "Failed to create loan" });
+    }
+  });
+
+  app.patch('/api/loans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const existingLoan = await storage.getLoan(id, userId);
+      if (!existingLoan) {
+        return res.status(404).json({ message: "Loan not found" });
+      }
+      
+      const updateData = { ...req.body };
+      if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
+      if (updateData.dueDate) updateData.dueDate = new Date(updateData.dueDate);
+      
+      // Remove fields that shouldn't be updated directly if necessary, 
+      // but for now we trust the client to send correct data or let schema handle it
+      // if we were using a schema for updates.
+      
+      const updated = await storage.updateLoan(id, userId, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating loan:", error);
+      res.status(500).json({ message: "Failed to update loan" });
+    }
+  });
+
+  app.delete('/api/loans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      
+      const deleted = await storage.deleteLoan(id, userId);
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Loan not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting loan:", error);
+      res.status(500).json({ message: "Failed to delete loan" });
     }
   });
 

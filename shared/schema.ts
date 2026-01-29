@@ -82,6 +82,7 @@ export const transactions = pgTable("transactions", {
   toExchangeRate: decimal("to_exchange_rate", { precision: 15, scale: 6 }), // exchange rate for destination wallet
   categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
   subLedgerId: integer("sub_ledger_id").references(() => subLedgers.id, { onDelete: "set null" }), // optional sub-ledger association
+  loanId: integer("loan_id").references(() => loans.id, { onDelete: "set null" }), // optional loan association
   description: text("description"),
   tags: text("tags").array(), // tags for transaction
   date: timestamp("date").notNull().defaultNow(),
@@ -89,7 +90,27 @@ export const transactions = pgTable("transactions", {
 }, (table) => [
   index("IDX_transactions_user_date").on(table.userId, table.date),
   index("IDX_transactions_wallet").on(table.walletId),
-  index("IDX_transactions_category").on(table.categoryId)
+  index("IDX_transactions_category").on(table.categoryId),
+  index("IDX_transactions_loan").on(table.loanId)
+]);
+
+// Loans table - for tracking debts (lending and borrowing)
+export const loans = pgTable("loans", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 20 }).notNull(), // lend (I lent to someone), borrow (I borrowed from someone)
+  person: varchar("person", { length: 100 }).notNull(), // The person involved
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull().default("MYR"),
+  paidAmount: decimal("paid_amount", { precision: 15, scale: 2 }).default("0"),
+  status: varchar("status", { length: 20 }).default("active"), // active, settled, bad_debt
+  startDate: timestamp("start_date").defaultNow(),
+  dueDate: timestamp("due_date"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_loans_user").on(table.userId)
 ]);
 
 // Budgets table - monthly budget per category
@@ -258,6 +279,16 @@ export const subLedgersRelations = relations(subLedgers, ({ one, many }) => ({
   transactions: many(transactions),
 }));
 
+export const loansRelations = relations(loans, ({ one, many }) => ({
+  user: one(users, { fields: [loans.userId], references: [users.id] }),
+  transactions: many(transactions),
+}));
+
+export const loansRelations = relations(loans, ({ one, many }) => ({
+  user: one(users, { fields: [loans.userId], references: [users.id] }),
+  transactions: many(transactions),
+}));
+
 export const userDashboardPreferencesRelations = relations(userDashboardPreferences, ({ one }) => ({
   user: one(users, { fields: [userDashboardPreferences.userId], references: [users.id] }),
 }));
@@ -291,6 +322,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   toWallet: one(wallets, { fields: [transactions.toWalletId], references: [wallets.id] }),
   category: one(categories, { fields: [transactions.categoryId], references: [categories.id] }),
   subLedger: one(subLedgers, { fields: [transactions.subLedgerId], references: [subLedgers.id] }),
+  loan: one(loans, { fields: [transactions.loanId], references: [loans.id] }),
 }));
 
 export const budgetsRelations = relations(budgets, ({ one }) => ({

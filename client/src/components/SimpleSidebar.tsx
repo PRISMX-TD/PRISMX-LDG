@@ -21,6 +21,7 @@ import {
   ArrowUpDown,
   BookOpen,
   Users,
+  HandCoins,
 } from "lucide-react";
 import type { User, BillReminder } from "@shared/schema";
 
@@ -59,6 +60,7 @@ export function SimpleSidebar({ user }: SimpleSidebarProps) {
     { href: "/transactions", icon: Receipt, label: "交易记录" },
     { href: "/wallets", icon: Wallet, label: "钱包管理" },
     { href: "/exchange", icon: ArrowUpDown, label: "交易所" },
+    { href: "/loans", icon: HandCoins, label: "借贷管理" },
     { href: "/categories", icon: Tags, label: "分类管理" },
     { href: "/split", icon: Users, label: "费用分摊" },
   ];
