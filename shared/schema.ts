@@ -393,6 +393,9 @@ export type UserWalletPreferences = typeof userWalletPreferences.$inferSelect;
 export type InsertSubLedger = typeof subLedgers.$inferInsert;
 export type SubLedger = typeof subLedgers.$inferSelect;
 
+export type InsertLoan = typeof loans.$inferInsert;
+export type Loan = typeof loans.$inferSelect;
+
 // Zod schemas for validation
 export const insertWalletSchema = (createInsertSchema(wallets) as any).omit({
   id: true,
