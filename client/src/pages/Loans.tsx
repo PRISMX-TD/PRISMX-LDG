@@ -436,7 +436,7 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>新增借贷</DialogTitle>
         </DialogHeader>
@@ -618,7 +618,7 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className="sm:max-w-[400px]" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{loan.type === 'lend' ? "收款 (对方还钱)" : "还款 (我还钱)"}</DialogTitle>
         </DialogHeader>
