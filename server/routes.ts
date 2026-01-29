@@ -1216,22 +1216,18 @@ export async function registerRoutes(
   app.post('/api/loans', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const parsed = insertLoanSchema.safeParse(req.body);
+      
+      const loanBody = { ...req.body, userId };
+      // Convert dates before validation to ensure schema compliance
+      if (loanBody.startDate) loanBody.startDate = new Date(loanBody.startDate);
+      if (loanBody.dueDate) loanBody.dueDate = new Date(loanBody.dueDate);
+
+      const parsed = insertLoanSchema.safeParse(loanBody);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid payload" });
       }
       
-      const loanData = parsed.data;
-      
-      // Ensure userId matches
-      // @ts-ignore
-      loanData.userId = userId;
-      // @ts-ignore
-      if (loanData.startDate) loanData.startDate = new Date(loanData.startDate);
-      // @ts-ignore
-      if (loanData.dueDate) loanData.dueDate = new Date(loanData.dueDate);
-      
-      const loan = await storage.createLoan(loanData as any);
+      const loan = await storage.createLoan(parsed.data);
       res.status(201).json(loan);
     } catch (error) {
       console.error("Error creating loan:", error);

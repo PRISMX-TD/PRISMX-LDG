@@ -465,7 +465,6 @@ export const insertSubLedgerSchema = (createInsertSchema(subLedgers) as any).omi
 
 export const insertLoanSchema = (createInsertSchema(loans) as any).omit({
   id: true,
-  userId: true,
   createdAt: true,
   updatedAt: true,
 });
