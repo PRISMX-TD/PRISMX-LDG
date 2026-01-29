@@ -463,6 +463,12 @@ export const insertSubLedgerSchema = (createInsertSchema(subLedgers) as any).omi
   updatedAt: true,
 });
 
+export const insertLoanSchema = (createInsertSchema(loans) as any).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Transaction types enum
 export const transactionTypes = ['expense', 'income', 'transfer'] as const;
 export type TransactionType = typeof transactionTypes[number];
