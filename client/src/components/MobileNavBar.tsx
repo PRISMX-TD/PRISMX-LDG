@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   BookOpen,
   User as UserIcon,
+  HandCoins,
 } from "lucide-react";
 import {
   Sheet,
