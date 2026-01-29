@@ -61,7 +61,6 @@ export function getSession() {
       createTableIfMissing: true,
       ttl: sessionTtl,
       tableName: "sessions",
-      errorLog: console.error,
     });
   } else {
     sessionStore = new session.MemoryStore();
