@@ -284,11 +284,6 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
   transactions: many(transactions),
 }));
 
-export const loansRelations = relations(loans, ({ one, many }) => ({
-  user: one(users, { fields: [loans.userId], references: [users.id] }),
-  transactions: many(transactions),
-}));
-
 export const userDashboardPreferencesRelations = relations(userDashboardPreferences, ({ one }) => ({
   user: one(users, { fields: [userDashboardPreferences.userId], references: [users.id] }),
 }));
