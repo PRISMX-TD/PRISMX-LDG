@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { PageContainer } from "@/components/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -179,8 +180,7 @@ function LoanCard({ loan }: { loan: Loan }) {
   // Delete loan mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/loans/${loan.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error("Failed to delete loan");
+      await apiRequest('DELETE', `/api/loans/${loan.id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
@@ -191,12 +191,7 @@ function LoanCard({ loan }: { loan: Loan }) {
   // Mark bad debt mutation
   const statusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const res = await fetch(`/api/loans/${loan.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error("Failed to update status");
+      await apiRequest('PATCH', `/api/loans/${loan.id}`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
@@ -372,45 +367,31 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
     setIsSubmitting(true);
     try {
       // 1. Create Loan Record
-      const loanRes = await fetch('/api/loans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: formData.type,
-          person: formData.person,
-          totalAmount: formData.amount,
-          currency: formData.currency,
-          startDate: new Date(formData.startDate).toISOString(),
-          dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
-          description: formData.description,
-          status: 'active'
-        })
+      const loanRes = await apiRequest('POST', '/api/loans', {
+        type: formData.type,
+        person: formData.person,
+        totalAmount: formData.amount,
+        currency: formData.currency,
+        startDate: new Date(formData.startDate).toISOString(),
+        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
+        description: formData.description,
+        status: 'active'
       });
 
-      if (!loanRes.ok) throw new Error("Failed to create loan record");
       const loan = await loanRes.json();
 
       // 2. Create Initial Transaction (Money moving out/in)
-      const txRes = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: formData.type === 'lend' ? 'expense' : 'income',
-          amount: parseFloat(formData.amount), // Note: This assumes 1:1 exchange rate if wallet currency differs. 
-                                               // Ideal UX would ask for exchange rate if currencies differ.
-          walletId: parseInt(formData.walletId),
-          date: new Date(formData.startDate).toISOString(),
-          description: `${formData.type === 'lend' ? '借给' : '向某人借款'}: ${formData.person}`,
-          loanId: loan.id, 
-        })
+      const txRes = await apiRequest('POST', '/api/transactions', {
+        type: formData.type === 'lend' ? 'expense' : 'income',
+        amount: parseFloat(formData.amount), // Note: This assumes 1:1 exchange rate if wallet currency differs. 
+                                             // Ideal UX would ask for exchange rate if currencies differ.
+        walletId: parseInt(formData.walletId),
+        date: new Date(formData.startDate).toISOString(),
+        description: `${formData.type === 'lend' ? '借给' : '向某人借款'}: ${formData.person}`,
+        loanId: loan.id, 
       });
 
-      if (!txRes.ok) {
-         console.error("Failed to create transaction for loan");
-         toast({ title: "借贷记录创建成功，但资金流水记录失败", variant: "destructive" });
-      } else {
-         toast({ title: "借贷记录已创建", description: "已自动记录资金流水" });
-      }
+      toast({ title: "借贷记录已创建", description: "已自动记录资金流水" });
 
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
@@ -588,20 +569,14 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
       // If Loan is 'borrow' (I borrowed), repayment means I pay back -> 'expense'
       const type = loan.type === 'lend' ? 'income' : 'expense';
       
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          amount: parseFloat(formData.amount),
-          walletId: parseInt(formData.walletId),
-          date: new Date(formData.date).toISOString(),
-          description: `还款: ${loan.person} ${formData.description ? `(${formData.description})` : ''}`,
-          loanId: loan.id, // Linking this transaction will trigger auto-recalculation of loan status
-        })
+      await apiRequest('POST', '/api/transactions', {
+        type,
+        amount: parseFloat(formData.amount),
+        walletId: parseInt(formData.walletId),
+        date: new Date(formData.date).toISOString(),
+        description: `还款: ${loan.person} ${formData.description ? `(${formData.description})` : ''}`,
+        loanId: loan.id, // Linking this transaction will trigger auto-recalculation of loan status
       });
-
-      if (!res.ok) throw new Error("Failed to record repayment");
 
       toast({ title: "还款记录已保存", description: "借贷状态已更新" });
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
