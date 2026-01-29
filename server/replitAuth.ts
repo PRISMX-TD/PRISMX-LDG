@@ -7,7 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
@@ -57,13 +57,11 @@ export function getSession() {
   if (storeType === "pg" && process.env.DATABASE_URL) {
     const PgStore = connectPg(session);
     sessionStore = new PgStore({
-      conObject: {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-      },
+      pool,
       createTableIfMissing: true,
       ttl: sessionTtl,
       tableName: "sessions",
+      errorLog: console.error,
     });
   } else {
     sessionStore = new session.MemoryStore();
