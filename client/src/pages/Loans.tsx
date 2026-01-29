@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { 
@@ -42,6 +43,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 export default function Loans() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -58,13 +60,25 @@ export default function Loans() {
   });
 
   // Calculate totals
+  const getExchangeRate = (currency: string) => {
+    if (currency === (user?.defaultCurrency || 'MYR')) return 1;
+    const wallet = wallets.find(w => w.currency === currency);
+    return wallet ? parseFloat(wallet.exchangeRateToDefault || '1') : 1;
+  };
+
   const totalLent = loans
     .filter(l => l.type === 'lend' && l.status !== 'bad_debt')
-    .reduce((sum, l) => sum + (parseFloat(l.totalAmount) - parseFloat(l.paidAmount || '0')), 0);
+    .reduce((sum, l) => {
+      const amount = parseFloat(l.totalAmount) - parseFloat(l.paidAmount || '0');
+      return sum + amount * getExchangeRate(l.currency);
+    }, 0);
 
   const totalBorrowed = loans
     .filter(l => l.type === 'borrow')
-    .reduce((sum, l) => sum + (parseFloat(l.totalAmount) - parseFloat(l.paidAmount || '0')), 0);
+    .reduce((sum, l) => {
+      const amount = parseFloat(l.totalAmount) - parseFloat(l.paidAmount || '0');
+      return sum + amount * getExchangeRate(l.currency);
+    }, 0);
 
   const netPosition = totalLent - totalBorrowed;
 
@@ -89,7 +103,7 @@ export default function Loans() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">
-                {totalLent.toLocaleString('zh-CN', { style: 'currency', currency: 'MYR' })}
+                {totalLent.toLocaleString('zh-CN', { style: 'currency', currency: user?.defaultCurrency || 'MYR' })}
               </div>
               <p className="text-xs text-muted-foreground">
                 借出未还总额
@@ -103,7 +117,7 @@ export default function Loans() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-500">
-                {totalBorrowed.toLocaleString('zh-CN', { style: 'currency', currency: 'MYR' })}
+                {totalBorrowed.toLocaleString('zh-CN', { style: 'currency', currency: user?.defaultCurrency || 'MYR' })}
               </div>
               <p className="text-xs text-muted-foreground">
                 借入未还总额
@@ -120,7 +134,7 @@ export default function Loans() {
                 "text-2xl font-bold",
                 netPosition >= 0 ? "text-primary" : "text-red-500"
               )}>
-                {netPosition.toLocaleString('zh-CN', { style: 'currency', currency: 'MYR' })}
+                {netPosition.toLocaleString('zh-CN', { style: 'currency', currency: user?.defaultCurrency || 'MYR' })}
               </div>
               <p className="text-xs text-muted-foreground">
                 应收 - 应付
