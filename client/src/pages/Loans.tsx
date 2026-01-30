@@ -227,7 +227,9 @@ function LoanCard({ loan }: { loan: Loan }) {
     <Card className={cn(
       "relative overflow-hidden transition-all hover:shadow-md",
       isSettled && "opacity-75 bg-muted/30",
-      isBadDebt && "opacity-75 border-red-200 bg-red-50 dark:bg-red-900/10"
+      // Bad Debt: Use a very subtle red gradient on top of standard card background
+      // This maintains contrast for text while giving the "bad" vibe
+      isBadDebt && "border-red-500/40 dark:border-red-900/50 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-background"
     )}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
