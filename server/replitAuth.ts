@@ -55,13 +55,9 @@ export function getSession() {
   let sessionStore: session.Store;
   const storeType = (process.env.SESSION_STORE || (isLocalAuth ? "memory" : "memory")).toLowerCase();
   if (storeType === "pg" && process.env.DATABASE_URL) {
-    const PgStore = connectPg(session);
-    sessionStore = new PgStore({
-      pool,
-      createTableIfMissing: true,
-      ttl: sessionTtl,
-      tableName: "sessions",
-    });
+    // Force use memory store to avoid connection issues on Railway
+    console.warn("Using MemoryStore for sessions to avoid PG connection issues");
+    sessionStore = new session.MemoryStore();
   } else {
     sessionStore = new session.MemoryStore();
   }
