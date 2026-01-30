@@ -189,6 +189,7 @@ export interface IStorage {
   updateLoan(id: number, userId: string, data: Partial<InsertLoan>): Promise<Loan | undefined>;
   deleteLoan(id: number, userId: string): Promise<boolean>;
   recalculateLoanStatus(loanId: number, userId: string): Promise<void>;
+  getTransactionsByLoanId(loanId: number, userId: string): Promise<Transaction[]>;
 }
 
 // Types for filters and stats
@@ -509,6 +510,9 @@ export class DatabaseStorage implements IStorage {
 
     for (const t of allTransactions) {
       // Skip loan-related transactions for income/expense stats
+      // BUT: If it's a Bad Debt write-off (has loanId but is explicitly marked as bad debt expense), we might want to include it?
+      // Currently, my plan is to create Bad Debt transactions WITHOUT loanId so they are automatically included.
+      // So this check remains valid for excluding the initial lending and normal repayments.
       if (t.loanId) continue;
 
       const rawAmount = parseFloat(t.amount);
@@ -988,6 +992,62 @@ export class DatabaseStorage implements IStorage {
     if (missingIncome.length > 0) {
       await db.insert(categories).values(missingIncome);
     }
+  }
+
+  async recalculateLoanStatus(loanId: number, userId: string): Promise<void> {
+    const loan = await this.getLoan(loanId, userId);
+    if (!loan) return;
+
+    // Recalculate paid amount from all linked transactions
+    const loanTxs = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.loanId, loanId), eq(transactions.userId, userId)));
+
+    let totalPaid = 0;
+    for (const t of loanTxs) {
+      // Logic for summing up payments
+      // For lend: income = repayment received
+      // For borrow: expense = repayment made
+      const type = t.type;
+      const loanType = loan.type;
+      
+      let amount = parseFloat(t.amount);
+      
+      // Handle cross-currency: if transaction currency != loan currency
+      // We need to convert transaction amount (Wallet Currency) to Loan Currency.
+      // t.exchangeRate usually stores (Wallet Amount / Loan Amount) if we set it correctly in frontend.
+      // So Loan Amount = Wallet Amount / Rate.
+      if (t.currency !== loan.currency) {
+          const rate = parseFloat(t.exchangeRate || "1");
+          if (rate > 0) {
+              amount = amount / rate;
+          }
+      }
+
+      if (loanType === 'lend' && type === 'income') {
+        totalPaid += amount;
+      } else if (loanType === 'borrow' && type === 'expense') {
+        totalPaid += amount;
+      }
+    }
+
+    const totalAmount = parseFloat(loan.totalAmount);
+    // Allow small float error
+    const isPaid = totalPaid >= totalAmount - 0.01;
+    
+    await this.updateLoan(loanId, userId, {
+      paidAmount: totalPaid.toFixed(2),
+      status: isPaid ? 'settled' : loan.status === 'settled' ? 'active' : loan.status
+    });
+  }
+
+  async getTransactionsByLoanId(loanId: number, userId: string): Promise<Transaction[]> {
+    return db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.loanId, loanId), eq(transactions.userId, userId)))
+      .orderBy(desc(transactions.date));
   }
 }
 

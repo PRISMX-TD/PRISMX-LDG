@@ -1293,9 +1293,64 @@ export async function registerRoutes(
       if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
       if (updateData.dueDate) updateData.dueDate = new Date(updateData.dueDate);
       
-      // Remove fields that shouldn't be updated directly if necessary, 
-      // but for now we trust the client to send correct data or let schema handle it
-      // if we were using a schema for updates.
+      // Handle Bad Debt Logic
+      if (updateData.status === 'bad_debt' && existingLoan.status !== 'bad_debt') {
+        const remaining = parseFloat(existingLoan.totalAmount) - parseFloat(existingLoan.paidAmount || '0');
+        if (remaining > 0.01) {
+          // Find original wallet
+          const loanTxs = await storage.getTransactionsByLoanId(id, userId);
+          const lendTx = loanTxs.find(t => t.type === 'expense') || loanTxs[0];
+          
+          if (lendTx && lendTx.walletId) {
+            // Find or create Bad Debt category
+            let badDebtCat = await storage.getCategoryByName(userId, "坏账", "expense");
+            if (!badDebtCat) {
+              badDebtCat = await storage.createCategory({
+                userId,
+                name: "坏账",
+                type: "expense",
+                icon: "file-warning", 
+                color: "#EF4444",
+                isDefault: false
+              });
+            }
+
+            // Create expense transaction (Accounting only - does not reduce wallet balance)
+            // We do this by calling storage.createTransaction directly and NOT updating wallet balance
+            await storage.createTransaction({
+              userId,
+              type: 'expense',
+              amount: remaining.toFixed(2),
+              currency: existingLoan.currency,
+              walletId: lendTx.walletId,
+              categoryId: badDebtCat.id,
+              description: `坏账核销: ${existingLoan.person} (账面支出，不扣减余额)`,
+              date: new Date(),
+              // We intentionally do NOT set loanId so it appears in stats
+            });
+          }
+        }
+      } else if (existingLoan.status === 'bad_debt' && updateData.status && updateData.status !== 'bad_debt') {
+        // Reverting from bad debt - try to remove the auto-generated transaction
+        // This is a best-effort cleanup based on description convention
+        const searchDesc = `坏账核销: ${existingLoan.person}`;
+        const recentTxs = await storage.getTransactions(userId, { 
+          search: searchDesc, 
+          limit: 5 
+        });
+        
+        // Find the one that matches our pattern and looks recent/relevant
+        const txToDelete = recentTxs.find(t => 
+          t.description?.includes(searchDesc) && 
+          t.type === 'expense' && 
+          !t.loanId
+        );
+
+        if (txToDelete) {
+          await storage.deleteTransaction(txToDelete.id, userId);
+          // Note: We don't need to refund the wallet because we never deducted it
+        }
+      }
       
       const updated = await storage.updateLoan(id, userId, updateData);
       res.json(updated);
