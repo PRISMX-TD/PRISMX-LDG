@@ -14,6 +14,6 @@ export const pool = new Pool({
   ssl: { rejectUnauthorized: false }, // Revert to explicit object config which is often safer for Neon/Railway
   max: 20, // Explicitly set pool size
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000, // Reduced timeout to fail faster
+  connectionTimeoutMillis: 10000, // Increased timeout for serverless cold starts
 });
 export const db = drizzle(pool, { schema });

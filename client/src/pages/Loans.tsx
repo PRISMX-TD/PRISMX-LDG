@@ -338,8 +338,8 @@ function LoanCard({ loan }: { loan: Loan }) {
         </div>
       )}
       {isBadDebt && (
-        <div className="absolute top-4 right-4 rotate-[15deg] opacity-20 pointer-events-none select-none z-0">
-           <div className="border-[4px] border-red-600 text-red-600 px-2 py-1 rounded-sm font-black text-xl uppercase tracking-[0.2em] mix-blend-multiply dark:mix-blend-normal">
+        <div className="absolute top-2 right-2 rotate-12 opacity-100 pointer-events-none z-10">
+           <div className="border-2 border-red-700 text-red-700 px-2 py-1 rounded font-bold text-xs uppercase tracking-widest bg-background/20 backdrop-blur-[1px]">
              坏账
            </div>
         </div>
