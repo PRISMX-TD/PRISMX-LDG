@@ -2269,6 +2269,9 @@ export async function registerRoutes(
       let totalIncome = 0;
       let totalExpense = 0;
       for (const t of transactions) {
+        // Skip loan transactions for insights
+        if (t.loanId) continue;
+
         const amt = parseFloat(t.amount);
         const key = monthKey(new Date(t.date));
         if (!monthly[key]) monthly[key] = { income: 0, expense: 0 };

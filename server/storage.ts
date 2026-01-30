@@ -595,7 +595,11 @@ export class DatabaseStorage implements IStorage {
         type: 'expense',
       });
       
-      const spent = transactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      const spent = transactions.reduce((sum, t) => {
+        // Skip loan transactions for budget spending
+        if (t.loanId) return sum;
+        return sum + parseFloat(t.amount);
+      }, 0);
       
       result.push({
         ...budget,

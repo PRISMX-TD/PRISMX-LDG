@@ -262,7 +262,7 @@ export default function Dashboard() {
           {/* Charts & Cards Section */}
           <div className="flex flex-col lg:flex-row gap-6 mb-8">
             {(analyticsPrefs?.showCashflowTrend !== false) && (
-              <CashFlowChart transactions={transactions} />
+              <CashFlowChart transactions={transactions.filter(t => !t.loanId)} />
             )}
             {(dashboardPrefs?.showWallets !== false) && (
               <WalletSection 
