@@ -223,22 +223,10 @@ function LoanCard({ loan }: { loan: Loan }) {
   const isSettled = loan.status === 'settled';
   const isBadDebt = loan.status === 'bad_debt';
 
-  // 坏账卡片配色优化：增加文字对比度，背景色更柔和
-  const cardBg = isBadDebt 
-    ? "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/10" 
-    : isSettled 
-      ? "opacity-75 bg-muted/30" 
-      : "";
-      
-  const mutedText = isBadDebt 
-    ? "text-red-900/70 dark:text-red-200/70" 
-    : "text-muted-foreground";
-
   return (
     <Card className={cn(
       "relative overflow-hidden transition-all hover:shadow-md",
-      cardBg,
-      isBadDebt && "border-red-300 dark:border-red-800"
+      (isSettled || isBadDebt) && "opacity-75 bg-muted/30"
     )}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
@@ -251,7 +239,7 @@ function LoanCard({ loan }: { loan: Loan }) {
               </Badge>
               <CardTitle className="text-lg">{loan.person}</CardTitle>
             </div>
-            <CardDescription className={cn("mt-1 flex items-center gap-1 text-xs", mutedText)}>
+            <CardDescription className="mt-1 flex items-center gap-1 text-xs">
               <Calendar className="h-3 w-3" />
               {format(new Date(loan.startDate), "yyyy年MM月dd日", { locale: zhCN })}
               {loan.dueDate && (
@@ -266,10 +254,10 @@ function LoanCard({ loan }: { loan: Loan }) {
             </CardDescription>
           </div>
           <div className="text-right z-20">
-            <div className={cn("text-lg font-bold", isBadDebt ? "text-red-950 dark:text-red-100" : "")}>
+            <div className="text-lg font-bold">
               {remaining.toLocaleString('zh-CN', { style: 'currency', currency: loan.currency })}
             </div>
-            <div className={cn("text-xs", mutedText)}>
+            <div className="text-xs text-muted-foreground">
               总额: {parseFloat(loan.totalAmount).toLocaleString()}
             </div>
           </div>
@@ -279,7 +267,7 @@ function LoanCard({ loan }: { loan: Loan }) {
         <div className="space-y-3">
           {/* Progress Bar */}
           <div className="space-y-1">
-            <div className={cn("flex justify-between text-xs", mutedText)}>
+            <div className="flex justify-between text-xs text-muted-foreground">
               <span>已还: {paid.toLocaleString()}</span>
               <span>{progress.toFixed(0)}%</span>
             </div>
@@ -292,7 +280,7 @@ function LoanCard({ loan }: { loan: Loan }) {
           </div>
 
           {loan.description && (
-            <p className={cn("text-sm line-clamp-2", mutedText)}>
+            <p className="text-sm text-muted-foreground line-clamp-2">
               {loan.description}
             </p>
           )}
