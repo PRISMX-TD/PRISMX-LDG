@@ -11,6 +11,7 @@ import { db, pool } from "./db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { isDbUnavailableError } from "./errors";
 
 const isAuthDisabled = process.env.DISABLE_AUTH === "true";
 const isLocalAuth = process.env.LOCAL_AUTH === "true" || !process.env.REPL_ID;
@@ -37,16 +38,6 @@ function verifyPassword(password: string, stored: string) {
   const expected = Buffer.from(hashHex, "hex");
   const actual = crypto.scryptSync(password, salt, expected.length);
   return crypto.timingSafeEqual(actual, expected);
-}
-
-function isDbUnavailableError(err: unknown) {
-  const code = (err as any)?.code;
-  return (
-    code === "ETIMEDOUT" ||
-    code === "ENETUNREACH" ||
-    code === "ECONNREFUSED" ||
-    code === "EHOSTUNREACH"
-  );
 }
 const getOidcConfig = memoize(
   async () => {
