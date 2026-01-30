@@ -71,7 +71,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: isProduction,
+      secure: false, // Force false for debugging
       sameSite: "lax",
       path: "/",
       maxAge: sessionTtl,
