@@ -53,7 +53,7 @@ export function getSession() {
   
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   let sessionStore: session.Store;
-  const storeType = (process.env.SESSION_STORE || (isLocalAuth ? "memory" : "pg")).toLowerCase();
+  const storeType = (process.env.SESSION_STORE || (isLocalAuth ? "memory" : "memory")).toLowerCase();
   if (storeType === "pg" && process.env.DATABASE_URL) {
     const PgStore = connectPg(session);
     sessionStore = new PgStore({
