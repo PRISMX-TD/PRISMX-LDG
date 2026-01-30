@@ -38,6 +38,16 @@ function verifyPassword(password: string, stored: string) {
   const actual = crypto.scryptSync(password, salt, expected.length);
   return crypto.timingSafeEqual(actual, expected);
 }
+
+function isDbUnavailableError(err: unknown) {
+  const code = (err as any)?.code;
+  return (
+    code === "ETIMEDOUT" ||
+    code === "ENETUNREACH" ||
+    code === "ECONNREFUSED" ||
+    code === "EHOSTUNREACH"
+  );
+}
 const getOidcConfig = memoize(
   async () => {
     return await client.discovery(
@@ -123,6 +133,9 @@ export async function setupAuth(app: Express) {
         await storage.initializeUserDefaults(created.id, created.defaultCurrency);
         res.status(201).json(created);
       } catch (e) {
+        if (isDbUnavailableError(e)) {
+          return res.status(503).json({ message: "Database unavailable" });
+        }
         res.status(500).json({ message: "Registration failed" });
       }
     });
@@ -143,6 +156,9 @@ export async function setupAuth(app: Express) {
         res.json(user);
       } catch (e) {
         console.error("Login error:", e);
+        if (isDbUnavailableError(e)) {
+          return res.status(503).json({ message: "Database unavailable" });
+        }
         res.status(500).json({ message: "Login failed" });
       }
     });

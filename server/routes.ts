@@ -85,6 +85,10 @@ export async function registerRoutes(
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
+      const code = (error as any)?.code;
+      if (code === "ETIMEDOUT" || code === "ENETUNREACH" || code === "ECONNREFUSED" || code === "EHOSTUNREACH") {
+        return res.status(503).json({ message: "Database unavailable" });
+      }
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
