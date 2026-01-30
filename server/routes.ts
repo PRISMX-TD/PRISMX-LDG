@@ -859,45 +859,7 @@ export async function registerRoutes(
 
       // If transaction is linked to a loan, update loan paid amount
       if (transactionData.loanId) {
-        const loan = await storage.getLoan(transactionData.loanId, userId);
-        if (loan) {
-          const currentPaid = parseFloat(loan.paidAmount || "0");
-          // If it's an income (repayment received) for a lend loan, add to paid amount
-          // If it's an expense (repayment made) for a borrow loan, add to paid amount
-          // Basically any transaction linked to a loan should update the paid amount
-          
-          // Calculate loan paid amount adjustment based on transaction amount and potentially original amount (if cross-currency)
-          // For cross-currency loan repayment:
-          // Transaction amount (walletAmount) is in Wallet Currency.
-          // We need the value in Loan Currency to update paidAmount.
-          // If originalAmount is present (from cross-currency input), it might represent the input amount.
-          // BUT: In our frontend logic, we calculated walletAmount = loanAmount * exchangeRate.
-          // So loanAmount = walletAmount / exchangeRate.
-          
-          let paidIncrement = walletAmount;
-          
-          // Check if it's a cross-currency repayment that needs conversion back to loan currency
-          // If the transaction currency (wallet currency) is different from loan currency
-          if (loan.currency && transactionData.currency && loan.currency !== transactionData.currency) {
-             // We need the exchange rate used.
-             // transactionData.exchangeRate is stored as "Rate from Input to Wallet" usually.
-             // In our frontend: walletAmount = loanAmount * rate.
-             // So rate = walletAmount / loanAmount.
-             // If we stored the rate in transactionData.exchangeRate, we can use it.
-             const rate = parseFloat(transactionData.exchangeRate || "1");
-             if (rate > 0) {
-                 paidIncrement = walletAmount / rate;
-             }
-          }
-
-          const newPaid = currentPaid + paidIncrement;
-          
-          await storage.updateLoan(loan.id, userId, { 
-            paidAmount: newPaid.toString(),
-            // Auto update status if fully paid
-            status: newPaid >= parseFloat(loan.totalAmount) - 0.01 ? 'settled' : loan.status // Tolerance for float math
-          });
-        }
+        await storage.recalculateLoanStatus(transactionData.loanId, userId);
       }
 
       res.status(201).json(transaction);
