@@ -1069,6 +1069,15 @@ export async function registerRoutes(
 
       // Update the transaction
       const updatedTransaction = await storage.updateTransaction(transactionId, userId, transactionData);
+      
+      // If transaction is linked to a loan, recalculate status
+      if (updatedTransaction?.loanId) {
+        await storage.recalculateLoanStatus(updatedTransaction.loanId, userId);
+      } else if (existingTransaction.loanId) {
+        // If loanId was removed or changed, recalculate the old loan
+        await storage.recalculateLoanStatus(existingTransaction.loanId, userId);
+      }
+      
       res.json(updatedTransaction);
     } catch (error) {
       console.error("Error updating transaction:", error);
