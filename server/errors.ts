@@ -1,4 +1,12 @@
-const dbUnavailableCodes = new Set(["ETIMEDOUT", "ENETUNREACH", "ECONNREFUSED", "EHOSTUNREACH"]);
+const dbUnavailableCodes = new Set([
+  "ETIMEDOUT",
+  "ENETUNREACH",
+  "ECONNREFUSED",
+  "EHOSTUNREACH",
+  "ECONNRESET",
+  "EPIPE",
+  "57P01",
+]);
 
 function collectCodes(err: unknown, out: Set<string>, depth: number) {
   if (!err || depth <= 0) return;
@@ -26,6 +34,11 @@ export function isDbUnavailableError(err: unknown) {
     if (dbUnavailableCodes.has(c)) return true;
   }
   const msg = (err as any)?.message;
-  if (typeof msg === "string" && /(ETIMEDOUT|ENETUNREACH|ECONNREFUSED|EHOSTUNREACH)/.test(msg)) return true;
+  if (
+    typeof msg === "string" &&
+    /(ETIMEDOUT|ENETUNREACH|ECONNREFUSED|EHOSTUNREACH|ECONNRESET|EPIPE)/.test(msg)
+  ) {
+    return true;
+  }
   return false;
 }

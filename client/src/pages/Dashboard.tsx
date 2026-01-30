@@ -256,7 +256,7 @@ export default function Dashboard() {
             showTotalAssets={dashboardPrefs?.showTotalAssets !== false}
             showMonthlyIncome={dashboardPrefs?.showMonthlyIncome !== false}
             showMonthlyExpense={dashboardPrefs?.showMonthlyExpense !== false}
-            showFlexibleFunds={dashboardPrefs?.showFlexibleFunds === true}
+            showFlexibleFunds={dashboardPrefs?.showFlexibleFunds !== false}
           />
 
           {/* Charts & Cards Section */}

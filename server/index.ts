@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { isDbUnavailableError } from "./errors";
+import { pool } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -181,8 +183,9 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const dbUnavailable = isDbUnavailableError(err);
+    const status = dbUnavailable ? 503 : err.status || err.statusCode || 500;
+    const message = dbUnavailable ? "Database unavailable" : err.message || "Internal Server Error";
     console.error("Server error:", err);
     res.status(status).json({ message });
   });
@@ -212,4 +215,17 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
     },
   );
+
+  async function shutdown() {
+    try {
+      await (pool as any)?.end?.();
+    } catch (e) {
+      console.error("Error closing database pool:", e);
+    }
+    httpServer.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 5000).unref();
+  }
+
+  process.once("SIGTERM", () => void shutdown());
+  process.once("SIGINT", () => void shutdown());
 })();
