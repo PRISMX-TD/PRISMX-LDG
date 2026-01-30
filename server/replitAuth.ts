@@ -71,7 +71,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Force false for debugging
+      secure: isProduction,
       sameSite: "lax",
       path: "/",
       maxAge: sessionTtl,
@@ -100,7 +100,7 @@ async function upsertUser(claims: any) {
 }
 
 export async function setupAuth(app: Express) {
-  app.set("trust proxy", 1);
+  app.set("trust proxy", 1); // Trust first proxy (Railway/Nginx)
 
   if (isLocalAuth) {
     app.use(getSession());
