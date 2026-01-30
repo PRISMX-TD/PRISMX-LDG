@@ -11,6 +11,9 @@ if (!process.env.DATABASE_URL) {
 // Force standard TCP connection with robust SSL for external Postgres (Neon/Railway)
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Required for some cloud DB providers to accept connection
+  ssl: true, // Use simpler ssl: true shorthand which often works better with auto-negotiation
+  max: 20, // Explicitly set pool size
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000, // Fail fast if connection hangs
 });
 export const db = drizzle(pool, { schema });
