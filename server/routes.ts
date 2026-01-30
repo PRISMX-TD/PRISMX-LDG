@@ -789,6 +789,7 @@ export async function registerRoutes(
         toWalletId: body.toWalletId || null,
         categoryId: body.categoryId || null,
         subLedgerId: body.subLedgerId || null,
+        loanId: body.loanId || null,
         description: body.description || null,
         date: new Date(body.date),
       };
@@ -1004,6 +1005,7 @@ export async function registerRoutes(
         toWalletId: body.toWalletId || null,
         categoryId: body.categoryId || null,
         subLedgerId: body.subLedgerId || null,
+        loanId: body.loanId || null,
         description: body.description || null,
         date: new Date(body.date),
       };
