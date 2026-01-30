@@ -565,6 +565,7 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
 
   const [formData, setFormData] = useState({
     amount: remaining.toFixed(2),
+    currency: loan.currency,
     walletId: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     description: '',
@@ -572,7 +573,14 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
   });
 
   const selectedWallet = wallets.find(w => w.id.toString() === formData.walletId);
-  const isCrossCurrency = selectedWallet && selectedWallet.currency !== loan.currency;
+  const inputCurrency = formData.currency;
+  const walletCurrency = selectedWallet?.currency;
+  
+  // Case 1: Input Currency != Wallet Currency (e.g. Input LoanCurrency, Wallet in USD)
+  const isInputDiffWallet = selectedWallet && inputCurrency !== walletCurrency;
+  
+  // Case 2: Input Currency != Loan Currency (e.g. Input WalletCurrency, Loan in CNY)
+  const isInputDiffLoan = inputCurrency !== loan.currency;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -581,30 +589,75 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
       return;
     }
 
-    if (isCrossCurrency && !formData.exchangeRate) {
+    if ((isInputDiffWallet || isInputDiffLoan) && !formData.exchangeRate) {
         toast({ title: "跨币种还款需要填写汇率", variant: "destructive" });
         return;
     }
 
     setIsSubmitting(true);
     try {
-      // Create Repayment Transaction
-      // If Loan is 'lend' (I lent), repayment means I get money back -> 'income'
-      // If Loan is 'borrow' (I borrowed), repayment means I pay back -> 'expense'
       const type = loan.type === 'lend' ? 'income' : 'expense';
+      const inputAmount = parseFloat(formData.amount);
+      let walletAmount = inputAmount;
+      let finalRate = 1;
+      let finalCurrency = inputCurrency;
+
+      // Logic:
+      // 1. If Input Currency == Wallet Currency (e.g. Pay 100 USD from USD Wallet to CNY Loan)
+      //    We need to send: amount=100, currency=USD, exchangeRate = 1 / (Rate USD->CNY)
+      //    So backend sees: Currency USD != Loan CNY. Rate = 1/R. 
+      //    Backend calculates PaidIncrement = Amount / Rate = 100 / (1/R) = 100 * R (CNY). Correct.
+      //
+      // 2. If Input Currency == Loan Currency (e.g. Pay 100 CNY from USD Wallet)
+      //    We need to send: amount=100*Rate(CNY->USD), currency=USD, exchangeRate = Rate(CNY->USD)
+      //    Backend sees: Currency USD != Loan CNY. Rate = R.
+      //    Backend calculates PaidIncrement = WalletAmount / Rate = (100*R) / R = 100. Correct.
       
-      // Calculate transaction amount (Wallet Currency)
-      // If same currency, amount is same
-      // If cross currency, amount (Wallet) = amount (Loan) * exchangeRate
-      const loanAmount = parseFloat(formData.amount);
-      const rate = isCrossCurrency ? parseFloat(formData.exchangeRate) : 1;
-      const walletAmount = loanAmount * rate;
+      if (inputCurrency === walletCurrency) {
+         // User entered amount in Wallet Currency.
+         // If Wallet Currency != Loan Currency, we need Rate (Wallet -> Loan).
+         // Let's say User inputs Rate R (1 Wallet = R Loan).
+         // We send ExchangeRate = 1/R.
+         if (isInputDiffLoan) {
+             const rateWalletToLoan = parseFloat(formData.exchangeRate); // 1 Wallet = ? Loan
+             finalRate = 1 / rateWalletToLoan; // Backend expects Rate Input(Wallet) -> Wallet(Same) ?? No.
+             // Backend Logic:
+             // if (transaction.currency != loan.currency)
+             //    paidIncrement = transaction.amount / transaction.exchangeRate
+             // Here transaction.currency = Wallet Currency. loan.currency = Loan Currency.
+             // transaction.amount = Input Amount (Wallet Currency).
+             // We want paidIncrement = Input Amount * Rate(Wallet->Loan).
+             // So Input * Rate = Input / exchangeRate
+             // => exchangeRate = 1 / Rate.
+             // Correct.
+         } else {
+             finalRate = 1;
+         }
+         walletAmount = inputAmount;
+         finalCurrency = walletCurrency;
+      } else {
+         // User entered amount in Loan Currency (or other).
+         // Assume Input Currency == Loan Currency (as we only allow picking Loan or Wallet currency).
+         // So Input is Loan Currency.
+         // We need Rate (Loan -> Wallet).
+         // User inputs Rate R (1 Loan = ? Wallet).
+         // walletAmount = Input * R.
+         // exchangeRate = R.
+         // Backend sees:
+         // transaction.currency = Wallet Currency (we should send wallet currency if we converted).
+         // No wait, backend uses transaction.currency.
+         
+         const rateLoanToWallet = parseFloat(formData.exchangeRate);
+         walletAmount = inputAmount * rateLoanToWallet;
+         finalRate = rateLoanToWallet;
+         finalCurrency = walletCurrency || loan.currency; // Should be Wallet Currency since we converted
+      }
 
       await apiRequest('POST', '/api/transactions', {
         type,
-        amount: walletAmount, // Transaction stores amount in Wallet Currency
-        currency: selectedWallet?.currency || loan.currency,
-        exchangeRate: rate, // Store the rate used for conversion (Loan -> Wallet)
+        amount: walletAmount, 
+        currency: finalCurrency,
+        exchangeRate: finalRate,
         walletId: parseInt(formData.walletId),
         date: new Date(formData.date).toISOString(),
         description: `还款: ${loan.person} ${formData.description ? `(${formData.description})` : ''}`,
@@ -632,22 +685,48 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>还款金额 (剩余: {remaining.toFixed(2)})</Label>
-            <Input 
-              type="number" 
-              placeholder="0.00" 
-              min="0.01"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) => setFormData({...formData, amount: e.target.value})}
-            />
+            <Label>还款金额 (剩余: {remaining.toFixed(2)} {loan.currency})</Label>
+            <div className="flex gap-2">
+                <Input 
+                  type="number" 
+                  placeholder="0.00" 
+                  min="0.01"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                  className="flex-1"
+                />
+                <Select 
+                  value={formData.currency} 
+                  onValueChange={(v) => setFormData({...formData, currency: v})}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={loan.currency}>{loan.currency}</SelectItem>
+                    {selectedWallet && selectedWallet.currency !== loan.currency && (
+                        <SelectItem value={selectedWallet.currency}>{selectedWallet.currency}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+            </div>
           </div>
           
           <div className="space-y-2">
             <Label>{loan.type === 'lend' ? "存入钱包" : "扣款钱包"}</Label>
             <Select 
               value={formData.walletId} 
-              onValueChange={(v) => setFormData({...formData, walletId: v})}
+              onValueChange={(v) => {
+                  const w = wallets.find(w => w.id.toString() === v);
+                  // If currency was set to old wallet currency, update to new wallet currency?
+                  // Better logic: if current currency is NOT loan currency, switch to new wallet currency.
+                  let newCurrency = formData.currency;
+                  if (formData.currency !== loan.currency) {
+                      newCurrency = w?.currency || loan.currency;
+                  }
+                  setFormData({...formData, walletId: v, currency: newCurrency});
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="选择钱包" />
@@ -662,13 +741,25 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
             </Select>
           </div>
 
-          {isCrossCurrency && (
+          {(isInputDiffWallet || isInputDiffLoan) && (
             <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
               <Label className="text-yellow-500">汇率换算</Label>
               <div className="text-xs text-muted-foreground mb-2">
-                借贷币种 ({loan.currency}) 与 钱包币种 ({selectedWallet?.currency}) 不同。
-                <br />
-                请设置汇率: 1 {loan.currency} = ? {selectedWallet?.currency}
+                {isInputDiffLoan ? (
+                    // Input is Wallet Currency. Need Rate Wallet -> Loan.
+                    <>
+                    还款币种 ({inputCurrency}) 与 借贷币种 ({loan.currency}) 不同。
+                    <br />
+                    请设置汇率: 1 {inputCurrency} = ? {loan.currency}
+                    </>
+                ) : (
+                    // Input is Loan Currency. Need Rate Loan -> Wallet.
+                    <>
+                    还款币种 ({inputCurrency}) 与 钱包币种 ({walletCurrency}) 不同。
+                    <br />
+                    请设置汇率: 1 {inputCurrency} = ? {walletCurrency}
+                    </>
+                )}
               </div>
               <Input 
                 type="number" 
@@ -680,10 +771,21 @@ function RepayDialog({ open, onOpenChange, loan }: { open: boolean, onOpenChange
               />
               {formData.amount && formData.exchangeRate && (
                 <div className="mt-2 text-sm text-right">
-                  实际{loan.type === 'lend' ? "入账" : "扣款"}: 
-                  <span className="font-bold ml-1">
-                    {(parseFloat(formData.amount) * parseFloat(formData.exchangeRate)).toFixed(2)} {selectedWallet?.currency}
-                  </span>
+                    {isInputDiffLoan ? (
+                        <>
+                        实际抵消借贷: 
+                        <span className="font-bold ml-1">
+                            {(parseFloat(formData.amount) * parseFloat(formData.exchangeRate)).toFixed(2)} {loan.currency}
+                        </span>
+                        </>
+                    ) : (
+                        <>
+                        实际{loan.type === 'lend' ? "入账" : "扣款"}: 
+                        <span className="font-bold ml-1">
+                            {(parseFloat(formData.amount) * parseFloat(formData.exchangeRate)).toFixed(2)} {walletCurrency}
+                        </span>
+                        </>
+                    )}
                 </div>
               )}
             </div>
