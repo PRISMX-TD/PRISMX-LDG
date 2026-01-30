@@ -508,6 +508,9 @@ export class DatabaseStorage implements IStorage {
     const categoryTotals: Map<number, { name: string; total: number; color: string }> = new Map();
 
     for (const t of allTransactions) {
+      // Skip loan-related transactions for income/expense stats
+      if (t.loanId) continue;
+
       const rawAmount = parseFloat(t.amount);
       // Convert to default currency using wallet's exchange rate
       const exchangeRate = parseFloat(t.wallet?.exchangeRateToDefault || "1");
