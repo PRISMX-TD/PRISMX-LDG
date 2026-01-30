@@ -223,13 +223,22 @@ function LoanCard({ loan }: { loan: Loan }) {
   const isSettled = loan.status === 'settled';
   const isBadDebt = loan.status === 'bad_debt';
 
+  // 坏账卡片配色优化：增加文字对比度，背景色更柔和
+  const cardBg = isBadDebt 
+    ? "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/10" 
+    : isSettled 
+      ? "opacity-75 bg-muted/30" 
+      : "";
+      
+  const mutedText = isBadDebt 
+    ? "text-red-900/70 dark:text-red-200/70" 
+    : "text-muted-foreground";
+
   return (
     <Card className={cn(
       "relative overflow-hidden transition-all hover:shadow-md",
-      isSettled && "opacity-75 bg-muted/30",
-      // Bad Debt: Use a very subtle red gradient on top of standard card background
-      // This maintains contrast for text while giving the "bad" vibe
-      isBadDebt && "border-red-500/40 dark:border-red-900/50 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-background"
+      cardBg,
+      isBadDebt && "border-red-300 dark:border-red-800"
     )}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
@@ -242,7 +251,7 @@ function LoanCard({ loan }: { loan: Loan }) {
               </Badge>
               <CardTitle className="text-lg">{loan.person}</CardTitle>
             </div>
-            <CardDescription className="mt-1 flex items-center gap-1 text-xs">
+            <CardDescription className={cn("mt-1 flex items-center gap-1 text-xs", mutedText)}>
               <Calendar className="h-3 w-3" />
               {format(new Date(loan.startDate), "yyyy年MM月dd日", { locale: zhCN })}
               {loan.dueDate && (
@@ -256,11 +265,11 @@ function LoanCard({ loan }: { loan: Loan }) {
               )}
             </CardDescription>
           </div>
-          <div className="text-right">
-            <div className="text-lg font-bold">
+          <div className="text-right z-20">
+            <div className={cn("text-lg font-bold", isBadDebt ? "text-red-950 dark:text-red-100" : "")}>
               {remaining.toLocaleString('zh-CN', { style: 'currency', currency: loan.currency })}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className={cn("text-xs", mutedText)}>
               总额: {parseFloat(loan.totalAmount).toLocaleString()}
             </div>
           </div>
@@ -270,7 +279,7 @@ function LoanCard({ loan }: { loan: Loan }) {
         <div className="space-y-3">
           {/* Progress Bar */}
           <div className="space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className={cn("flex justify-between text-xs", mutedText)}>
               <span>已还: {paid.toLocaleString()}</span>
               <span>{progress.toFixed(0)}%</span>
             </div>
@@ -283,7 +292,7 @@ function LoanCard({ loan }: { loan: Loan }) {
           </div>
 
           {loan.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
+            <p className={cn("text-sm line-clamp-2", mutedText)}>
               {loan.description}
             </p>
           )}
@@ -341,8 +350,8 @@ function LoanCard({ loan }: { loan: Loan }) {
         </div>
       )}
       {isBadDebt && (
-        <div className="absolute top-3 right-3 rotate-[15deg] opacity-90 pointer-events-none select-none z-10">
-           <div className="border-[3px] border-red-600 text-red-600 px-3 py-1 rounded-sm font-black text-sm uppercase tracking-[0.2em] bg-transparent shadow-sm mix-blend-multiply dark:mix-blend-normal">
+        <div className="absolute top-4 right-4 rotate-[15deg] opacity-20 pointer-events-none select-none z-0">
+           <div className="border-[4px] border-red-600 text-red-600 px-2 py-1 rounded-sm font-black text-xl uppercase tracking-[0.2em] mix-blend-multiply dark:mix-blend-normal">
              坏账
            </div>
         </div>
