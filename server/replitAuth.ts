@@ -142,6 +142,7 @@ export async function setupAuth(app: Express) {
         await storage.initializeUserDefaults(user.id, user.defaultCurrency);
         res.json(user);
       } catch (e) {
+        console.error("Login error:", e);
         res.status(500).json({ message: "Login failed" });
       }
     });
