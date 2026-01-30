@@ -16,8 +16,8 @@ if (!databaseUrl) {
 }
 
 const hostname = new URL(databaseUrl).hostname;
-const useNeonWebsocket =
-  hostname.endsWith(".neon.tech") || hostname.endsWith(".neon.database.azure.com");
+const dbTransport = (process.env.DB_TRANSPORT ?? "tcp").toLowerCase();
+const useNeonWebsocket = dbTransport === "ws";
 
 let pool: PgPool | NeonPool;
 let db: unknown;
