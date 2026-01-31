@@ -436,7 +436,7 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
           <DialogTitle>新增借贷</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>类型</Label>
               <Select 
@@ -462,7 +462,7 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>金额</Label>
               <div className="flex gap-2">
@@ -479,7 +479,7 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
                   value={formData.currency} 
                   onValueChange={(v) => setFormData({...formData, currency: v})}
                 >
-                  <SelectTrigger className="w-[100px]">
+                  <SelectTrigger className="w-28">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -512,7 +512,7 @@ function CreateLoanDialog({ open, onOpenChange, wallets }: { open: boolean, onOp
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>借款日期</Label>
               <Input 
