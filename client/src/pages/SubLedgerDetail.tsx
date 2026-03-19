@@ -310,15 +310,6 @@ export default function SubLedgerDetail() {
           )}
         </div>
 
-        {/* 悬浮添加按钮 (移动端) */}
-        <Button
-          size="icon"
-          className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-lg shadow-primary/25 md:hidden z-50"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-
         {/* 使用已有的 TransactionModal 来支持添加、编辑和删除 */}
         <TransactionModal
           open={isModalOpen}
