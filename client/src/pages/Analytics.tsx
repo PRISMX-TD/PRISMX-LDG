@@ -644,7 +644,11 @@ export default function Analytics() {
                         </div>
                         <div className="flex-1 space-y-2">
                           {expenseCategoryData.slice(0, 4).map((c, i) => {
-                            const percentage = (c.total / Math.max(yearlyTotals.expense, 1)) * 100;
+                            // Denominator must match the category data's time scope: the pie is
+                            // built for the selected period (month or year), so use displayTotals
+                            // (period-consistent) — not yearlyTotals — or a month view divides a
+                            // month's category by the whole year's total and shows ~1% for everything.
+                            const percentage = (c.total / Math.max(displayTotals.expense, 1)) * 100;
                             return (
                               <div key={i} className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
@@ -676,7 +680,8 @@ export default function Analytics() {
                         </div>
                         <div className="flex-1 space-y-2">
                           {incomeCategoryData.slice(0, 4).map((c, i) => {
-                            const percentage = (c.total / Math.max(yearlyTotals.income, 1)) * 100;
+                            // Period-consistent denominator (see 支出构成 above).
+                            const percentage = (c.total / Math.max(displayTotals.income, 1)) * 100;
                             return (
                               <div key={i} className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
