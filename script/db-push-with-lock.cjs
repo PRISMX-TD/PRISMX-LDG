@@ -63,7 +63,13 @@ async function main() {
     if (rows[0].locked) {
       await dropOrphanIdentitySequences(client);
       console.log("[db-push] lock acquired — running drizzle-kit push...");
-      const result = spawnSync("npx", ["drizzle-kit", "push", "--force"], {
+      // --verbose: without it, a run that silently applies nothing (e.g. because it
+      // couldn't reach an interactive confirmation in this non-TTY container) looks
+      // identical in the logs to a run that applied everything correctly — the only
+      // way to tell them apart was to manually inspect the live table columns after
+      // the fact. --verbose prints every statement it actually executes, so a "did
+      // nothing" run is now visible directly in the deploy logs.
+      const result = spawnSync("npx", ["drizzle-kit", "push", "--force", "--verbose"], {
         stdio: "inherit",
         shell: true,
       });
