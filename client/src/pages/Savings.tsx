@@ -127,8 +127,17 @@ export default function Savings() {
 
   const active = goals.filter(g => !g.isCompleted);
   const completed = goals.filter(g => g.isCompleted);
-  const totalSaved = goals.reduce((s, g) => s + parseFloat(g.currentAmount || "0"), 0);
-  const totalTarget = goals.reduce((s, g) => s + parseFloat(g.targetAmount), 0);
+  // Goals can be in different currencies; the hero total is shown in the default currency,
+  // so convert each goal via a wallet that uses its currency before summing.
+  const defaultCur = user?.defaultCurrency || "MYR";
+  const rate = (currency?: string | null) => {
+    if (!currency || currency === defaultCur) return 1;
+    const w = wallets.find((x: any) => x.currency === currency);
+    const r = w ? parseFloat(w.exchangeRateToDefault || "1") : 1;
+    return isNaN(r) || r <= 0 ? 1 : r;
+  };
+  const totalSaved = goals.reduce((s, g) => s + parseFloat(g.currentAmount || "0") * rate(g.currency), 0);
+  const totalTarget = goals.reduce((s, g) => s + parseFloat(g.targetAmount) * rate(g.currency), 0);
 
   return (
     <div className="text-foreground">

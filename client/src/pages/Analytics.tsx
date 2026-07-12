@@ -275,6 +275,15 @@ export default function Analytics() {
     return raw;
   };
 
+  // Convert a wallet's own balance to the user's default currency for cross-wallet totals
+  // and distribution charts (otherwise a USD balance is summed as if it were MYR).
+  const walletRate = (w: WalletType): number => {
+    const defaultCur = user?.defaultCurrency || "MYR";
+    if (w.currency === defaultCur) return 1;
+    const r = parseFloat(w.exchangeRateToDefault || "1");
+    return isNaN(r) || r <= 0 ? 1 : r;
+  };
+
   const filteredTransactions = useMemo(() => {
     if (selectedSubLedgerId === "all") return transactions;
     if (selectedSubLedgerId === "main") {
@@ -341,9 +350,9 @@ export default function Analytics() {
   }, [filteredTransactions, categories, selectedYear, timePeriod, selectedMonth, wallets, user]);
 
   const walletData = useMemo(() => wallets.map((w, i) => ({
-    name: w.name, balance: parseFloat(w.balance || "0"),
+    name: w.name, balance: parseFloat(w.balance || "0") * walletRate(w),
     color: w.color || CHART_COLORS[i % CHART_COLORS.length],
-  })).filter(w => w.balance > 0), [wallets]);
+  })).filter(w => w.balance > 0), [wallets, user]);
 
   const yearlyTotals = useMemo(() => {
     let income = 0, expense = 0;
@@ -382,7 +391,7 @@ export default function Analytics() {
     return { expenseChange, incomeChange };
   }, [monthlyData, selectedMonth]);
 
-  const totalBalance = useMemo(() => wallets.reduce((s, w) => s + parseFloat(w.balance || "0"), 0), [wallets]);
+  const totalBalance = useMemo(() => wallets.reduce((s, w) => s + parseFloat(w.balance || "0") * walletRate(w), 0), [wallets, user]);
 
   const cumulativeSavingsData = useMemo(() => {
     const target = selectedMonth !== null ? selectedMonth : new Date().getMonth();

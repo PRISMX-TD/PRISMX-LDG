@@ -287,8 +287,15 @@ export default function Transactions() {
         ) : (
           <div className="space-y-5">
             {byDay.map(([dayKey, txs], dayIdx) => {
-              const dayInc = txs.filter(t => t.type === "income" && !t.loanId).reduce((s, t) => s + parseFloat(t.amount), 0);
-              const dayExp = txs.filter(t => t.type === "expense" && !t.loanId).reduce((s, t) => s + parseFloat(t.amount), 0);
+              // Convert each transaction from its wallet's currency to the user's default
+              // currency before summing — the subtotal is labelled with the default symbol,
+              // so raw amounts (e.g. USD) must be rescaled or the total is wrong.
+              const fx = (t: TxRel) => {
+                const r = parseFloat(t.wallet?.exchangeRateToDefault || "1");
+                return isNaN(r) || r <= 0 ? 1 : r;
+              };
+              const dayInc = txs.filter(t => t.type === "income" && !t.loanId).reduce((s, t) => s + parseFloat(t.amount) * fx(t), 0);
+              const dayExp = txs.filter(t => t.type === "expense" && !t.loanId).reduce((s, t) => s + parseFloat(t.amount) * fx(t), 0);
               return (
                 <section key={dayKey}>
                   <div className="flex items-baseline justify-between mb-2 px-1">
