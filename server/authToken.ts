@@ -28,18 +28,33 @@ export async function ensureAuthSecret(): Promise<void> {
 
   if (process.env.NODE_ENV === "production") {
     const noRealDb = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes("dummy");
-    if (noRealDb) {
-      throw new Error(
-        "AUTH_SECRET is required in production when no database is configured. " +
-        "Set a stable, high-entropy value (e.g. `openssl rand -hex 32`)."
+    if (!noRealDb) {
+      try {
+        SECRET = await loadOrCreatePersistedSecret();
+        console.warn(
+          "[authToken] AUTH_SECRET env var not set — using a secret persisted in the " +
+          "database (app_secrets table). Works across restarts/instances, but setting " +
+          "AUTH_SECRET explicitly is still recommended."
+        );
+        return;
+      } catch (err) {
+        // CRITICAL: a DB/table hiccup here must NOT stop the server from starting (that
+        // turned into a hard 502). Fall back to an ephemeral per-process secret so the app
+        // still boots. Downside until AUTH_SECRET is set: sessions don't survive a restart
+        // and aren't shared across instances.
+        console.error(
+          "[authToken] Could not load/persist AUTH_SECRET from the database — booting with " +
+          "an EPHEMERAL secret instead. Set the AUTH_SECRET env var to fix this permanently.",
+          err
+        );
+      }
+    } else {
+      console.error(
+        "[authToken] Production has no AUTH_SECRET and no database — booting with an " +
+        "EPHEMERAL secret. Set the AUTH_SECRET env var."
       );
     }
-    SECRET = await loadOrCreatePersistedSecret();
-    console.warn(
-      "[authToken] AUTH_SECRET env var not set — using a secret persisted in the " +
-      "database (app_secrets table) instead. This works across restarts/instances, " +
-      "but setting AUTH_SECRET explicitly is still recommended."
-    );
+    SECRET = crypto.randomBytes(32).toString("hex");
     return;
   }
 
