@@ -44,6 +44,13 @@ export default function Recurring() {
 
   const { data: recurring = [], isLoading } = useQuery<RecurringTransaction[]>({ queryKey: ["/api/recurring-transactions"] });
   const { data: wallets = [] } = useQuery<Wallet[]>({ queryKey: ["/api/wallets"] });
+  // A recurring entry's amount is booked in its WALLET's currency (the scheduler materialises
+  // it that way, and there's no separate currency field), so label/show it with the wallet's
+  // symbol — not the account default — or a USD-wallet entry looks like RM.
+  const walletCurSym = (walletId?: string | number | null) => {
+    const w = wallets.find(x => String(x.id) === String(walletId));
+    return getCurrencyInfo(w?.currency || user?.defaultCurrency || "MYR").symbol;
+  };
   const { data: categories = [] } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
 
   const createMut = useMutation({
@@ -169,7 +176,7 @@ export default function Recurring() {
                     </div>
                   </div>
                   <p className={`text-[14px] font-mono font-semibold shrink-0 ${item.type === "expense" ? "text-expense" : "text-income"}`}>
-                    {item.type === "expense" ? "−" : "+"}{cur.symbol}{parseFloat(item.amount).toFixed(2)}
+                    {item.type === "expense" ? "−" : "+"}{getCurrencyInfo(w?.currency || user?.defaultCurrency || "MYR").symbol}{parseFloat(item.amount).toFixed(2)}
                   </p>
                   <div className="flex items-center gap-1 shrink-0">
                     <Switch checked={item.isActive ?? true} onCheckedChange={c => toggleMut.mutate({ id: item.id, isActive: c })} />
@@ -210,7 +217,7 @@ export default function Recurring() {
                   <SelectContent>{filteredCats.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>金额 ({cur.symbol})</Label><Input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
+              <div className="space-y-2"><Label>金额 ({walletCurSym(form.walletId)})</Label><Input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
               <div className="space-y-2">
                 <Label>频率</Label>
                 <Select value={form.frequency} onValueChange={v => setForm({ ...form, frequency: v })}>
@@ -249,7 +256,7 @@ export default function Recurring() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader><DialogTitle>编辑定期交易</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <div className="space-y-2"><Label>金额 ({cur.symbol})</Label><Input type="number" step="0.01" value={eForm.amount} onChange={e => setEForm({ ...eForm, amount: e.target.value })} /></div>
+              <div className="space-y-2"><Label>金额 ({walletCurSym(eForm.walletId)})</Label><Input type="number" step="0.01" value={eForm.amount} onChange={e => setEForm({ ...eForm, amount: e.target.value })} /></div>
               <div className="space-y-2">
                 <Label>频率</Label>
                 <Select value={eForm.frequency} onValueChange={v => setEForm({ ...eForm, frequency: v })}>

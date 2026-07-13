@@ -2597,8 +2597,17 @@ export async function registerRoutes(
           totalExpense += amt;
         }
       }
-      const distinctMonths = Object.keys(monthly).length || 1;
-      const avgMonthlyExpense = totalExpense / distinctMonths;
+      // Average over the span of months the data actually covers (first active month → last),
+      // capped at the requested range. Dividing by only the months that HAD a transaction
+      // (the old approach) overstated the figure whenever some months in between were empty.
+      const monthKeysSorted = Object.keys(monthly).sort();
+      let spanMonths = 1;
+      if (monthKeysSorted.length > 0) {
+        const [fy, fm] = monthKeysSorted[0].split('-').map(Number);
+        const [ly, lm] = monthKeysSorted[monthKeysSorted.length - 1].split('-').map(Number);
+        spanMonths = Math.min(rangeMonths, (ly - fy) * 12 + (lm - fm) + 1);
+      }
+      const avgMonthlyExpense = totalExpense / Math.max(1, spanMonths);
       const savingsRate = totalIncome > 0 ? (totalIncome - totalExpense) / totalIncome : 0;
 
       // Expense category breakdown — compute from the transactions we've already loaded

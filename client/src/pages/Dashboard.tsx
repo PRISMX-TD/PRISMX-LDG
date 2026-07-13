@@ -85,10 +85,26 @@ export default function Dashboard() {
     }
   }, [searchString, isAuthenticated, isAuthLoading, setLocation]);
 
+  // Roll "today" over at midnight without a manual refresh: re-render just after 00:00 so
+  // today's income/expense and the date-based buckets recompute for the new day.
+  const [dayTick, setDayTick] = useState(0);
+  useEffect(() => {
+    const d = new Date();
+    const msToMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 5).getTime() - Date.now();
+    const timer = setTimeout(() => setDayTick(t => t + 1), Math.max(1000, msToMidnight));
+    return () => clearTimeout(timer);
+  }, [dayTick]);
+
   const { data: wallets = [] } = useQuery<WalletType[]>({ queryKey: ["/api/wallets"], enabled: isAuthenticated });
   const { data: categories = [] } = useQuery<Category[]>({ queryKey: ["/api/categories"], enabled: isAuthenticated });
   const { data: subLedgers = [] } = useQuery<SubLedger[]>({ queryKey: ["/api/sub-ledgers"], enabled: isAuthenticated });
-  const { data: transactions = [] } = useQuery<TxRel[]>({ queryKey: ["/api/transactions", { limit: 100 }], enabled: isAuthenticated });
+  // Load ~13 months of history (a date window, not a fixed 100 rows) so the 12-month charts
+  // and the asset trend cover the whole period instead of just the most recent ~100 rows.
+  const txWindowStartIso = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() - 12, 1).toISOString();
+  }, []);
+  const { data: transactions = [] } = useQuery<TxRel[]>({ queryKey: ["/api/transactions", { startDate: txWindowStartIso }], enabled: isAuthenticated });
   const { data: reminders = [] } = useQuery<BillReminder[]>({ queryKey: ["/api/bill-reminders"], enabled: isAuthenticated });
   const { data: dashboardPrefs = {} } = useQuery<DashboardPrefs>({ queryKey: ["/api/dashboard-preferences"], enabled: isAuthenticated });
   const showTotalAssets        = dashboardPrefs.showTotalAssets        !== false;
@@ -114,23 +130,26 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  const fxRate = (t: TxRel): number => {
-    const w = wallets.find(x => x.id === t.walletId);
+  const walletFxRate = (w?: WalletType | null): number => {
     if (!w) return 1;
-    const defaultCur = user?.defaultCurrency || "MYR";
-    if (w.currency === defaultCur) return 1;
+    if (w.currency === (user?.defaultCurrency || "MYR")) return 1;
     const r = parseFloat(w.exchangeRateToDefault || "1");
-    return isNaN(r) || r <= 0 ? 1 : r;
+    return isNaN(r) || r <= 0 ? 1 : r;  // guard against 0/negative/NaN rates
+  };
+  // Prefer the wallet joined onto the transaction so archived wallets (absent from the
+  // /api/wallets list) still convert instead of silently falling back to rate 1.
+  const fxRate = (t: TxRel): number => {
+    return walletFxRate((t as any).wallet || wallets.find(x => x.id === t.walletId));
   };
 
   const totalAssets = useMemo(() =>
-    wallets.reduce((s, w) => s + parseFloat(w.balance || "0") * (parseFloat(w.exchangeRateToDefault || "1") || 1), 0),
-  [wallets]);
+    wallets.reduce((s, w) => s + parseFloat(w.balance || "0") * walletFxRate(w), 0),
+  [wallets, user]);
 
   const flexibleFunds = useMemo(() =>
     wallets.filter(w => w.isFlexible !== false)
-      .reduce((s, w) => s + parseFloat(w.balance || "0") * (parseFloat(w.exchangeRateToDefault || "1") || 1), 0),
-  [wallets]);
+      .reduce((s, w) => s + parseFloat(w.balance || "0") * walletFxRate(w), 0),
+  [wallets, user]);
   const flexibleCount = useMemo(() => wallets.filter(w => w.isFlexible !== false).length, [wallets]);
 
   const totalSparkline = useMemo(() => {
@@ -141,9 +160,14 @@ export default function Dashboard() {
     const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     for (let i = 0; i < Math.min(29, sorted.length); i++) {
       const t = sorted[i];
-      const amt = parseFloat(t.amount) * fxRate(t);
-      if (t.type === "income") running -= amt;
-      else if (t.type === "expense") running += amt;
+      if (t.type === "income") running -= parseFloat(t.amount) * fxRate(t);
+      else if (t.type === "expense") running += parseFloat(t.amount) * fxRate(t);
+      else if (t.type === "transfer") {
+        // A cross-currency transfer changes total assets (out != in after FX); undo it.
+        const out = parseFloat(t.amount) * fxRate(t);
+        const inn = parseFloat(t.toWalletAmount || t.amount) * walletFxRate((t as any).toWallet || wallets.find(x => x.id === t.toWalletId));
+        running -= (inn - out);
+      }
       points.unshift(running);
     }
     return points;
@@ -236,9 +260,14 @@ export default function Dashboard() {
       for (const t of transactions) {
         const tm = new Date(t.date).getTime();
         if (tm < monthStart || tm >= monthEnd) continue;
-        const amt = parseFloat(t.amount) * fxRate(t);
-        if (t.type === "income") net += amt;
-        else if (t.type === "expense") net -= amt;
+        if (t.type === "income") net += parseFloat(t.amount) * fxRate(t);
+        else if (t.type === "expense") net -= parseFloat(t.amount) * fxRate(t);
+        else if (t.type === "transfer") {
+          // Cross-currency transfers shift total assets by (in − out) after FX.
+          const out = parseFloat(t.amount) * fxRate(t);
+          const inn = parseFloat(t.toWalletAmount || t.amount) * walletFxRate((t as any).toWallet || wallets.find(x => x.id === t.toWalletId));
+          net += (inn - out);
+        }
       }
       running -= net;
     }
@@ -308,7 +337,7 @@ export default function Dashboard() {
 
   const fmt2 = (n: number) => isPrivacyMode ? "***" : n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtInt = (n: number) => isPrivacyMode ? "***" : Math.floor(n).toLocaleString("zh-CN");
-  const fmtDec = (n: number) => isPrivacyMode ? "00" : (n % 1).toFixed(2).slice(2);
+  const fmtDec = (n: number) => isPrivacyMode ? "00" : (Math.abs(n) % 1).toFixed(2).slice(2);
 
   const greeting = (() => {
     const h = now.getHours();
