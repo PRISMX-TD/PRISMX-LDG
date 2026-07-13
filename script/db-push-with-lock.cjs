@@ -64,6 +64,10 @@ async function main() {
   const client = new Client({
     connectionString: databaseUrl,
     ssl: { rejectUnauthorized: !sslInsecure },
+    // Hard caps so a slow/unreachable DB can never hang container boot forever.
+    connectionTimeoutMillis: 15000,
+    query_timeout: 20000,
+    statement_timeout: 20000,
   });
 
   await client.connect();
@@ -82,22 +86,34 @@ async function main() {
       const result = spawnSync("npx", ["drizzle-kit", "push", "--force", "--verbose"], {
         stdio: "inherit",
         shell: true,
+        timeout: 90000, // hard cap: a hung/interactive push can't hold the lock or block boot
       });
       await client.query("SELECT pg_advisory_unlock($1)", [LOCK_KEY]);
       if (result.status !== 0) {
-        // IMPORTANT: a failed migration must NOT keep the whole app down (502). Log it
-        // loudly (the --verbose output above shows exactly what failed) and continue to
-        // boot — schema-dependent features may 500 until it's resolved, but the site stays
-        // up and the error is visible in logs instead of an opaque bad gateway.
-        console.error("[db-push] drizzle-kit push FAILED — see output above. Booting the app anyway; schema-dependent features may error until this is fixed.");
+        // IMPORTANT: a failed/timed-out migration must NOT keep the whole app down (502).
+        // Log it (the --verbose output above shows what happened) and continue to boot —
+        // schema-dependent features may 500 until it's resolved, but the site stays up.
+        console.error("[db-push] drizzle-kit push did not complete cleanly (nonzero status or timeout). Booting the app anyway.");
       }
     } else {
-      console.log("[db-push] another instance is migrating — waiting for it to finish...");
-      // Blocks until the migrating instance releases the lock, then we release our
-      // own hold immediately (we don't need to run push ourselves).
-      await client.query("SELECT pg_advisory_lock($1)", [LOCK_KEY]);
-      await client.query("SELECT pg_advisory_unlock($1)", [LOCK_KEY]);
-      console.log("[db-push] migration finished elsewhere — continuing startup.");
+      // Another instance (e.g. the other service on this shared DB) is migrating. Wait for
+      // it, but with a HARD CAP — an unbounded pg_advisory_lock wait would keep the loser of
+      // the race from ever binding a port, which Railway surfaces as a 502. After the cap we
+      // just start the app; our migrations are additive, so racing a bit is safe.
+      console.log("[db-push] another instance is migrating — waiting (bounded) for it to finish...");
+      const deadline = Date.now() + 45000;
+      let acquired = false;
+      while (Date.now() < deadline) {
+        const r = await client.query("SELECT pg_try_advisory_lock($1) AS locked", [LOCK_KEY]);
+        if (r.rows[0].locked) { acquired = true; break; }
+        await new Promise((res) => setTimeout(res, 1000));
+      }
+      if (acquired) {
+        await client.query("SELECT pg_advisory_unlock($1)", [LOCK_KEY]);
+        console.log("[db-push] migration finished elsewhere — continuing startup.");
+      } else {
+        console.warn("[db-push] timed out waiting for the migrator — starting the app anyway.");
+      }
     }
   } finally {
     await client.end();
